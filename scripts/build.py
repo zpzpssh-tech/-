@@ -55,6 +55,12 @@ def to_num(value, where, blank=None):
 def main():
     settings = json.loads((DATA / "settings.json").read_text(encoding="utf-8"))
     accounts = settings["계정"]
+    ship = settings.get("택배비", {})
+    n_rate = float(ship.get("N배송비율", 0) or 0)
+    if not 0 <= n_rate <= 1:
+        sys.exit(f"[오류] settings.json의 N배송비율은 0~1 사이여야 합니다. 현재: {n_rate}")
+    ship_unit = round(n_rate * float(ship.get("N배송단가", 0) or 0)
+                      + (1 - n_rate) * float(ship.get("판매자배송단가", 0) or 0))
     account_names = {a["계정"] for a in accounts}
 
     products = read_csv(DATA / "products.csv", ["상품코드", "상품명", "카테고리"])
@@ -166,6 +172,8 @@ def main():
         "원가없는상품": need_cost,
         "일별주문": daily_orders,
         "원가": cogs_rows,
+        "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
+                 "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
     }
 
     template = TEMPLATE.read_text(encoding="utf-8")
@@ -191,6 +199,19 @@ def main():
         print("  원가일계.csv 가 없습니다. scripts/import_costs.py 를 먼저 실행해 주세요.")
     if not costs:
         print("  고정지출·마케팅비가 비어 있어 영업이익은 아직 계산하지 않습니다.")
+    else:
+        months_in = sorted({d[:7] for d in dates})
+        cg = sum(r[3] for r in cogs_rows if dates[0] <= r[0] <= dates[-1])
+        orders = sum(v for k, v in daily_orders.items() if dates[0] <= k <= dates[-1])
+        shipping = orders * ship_unit
+        ad = sum(c[4] for c in costs if c[0] in months_in and c[1] == "마케팅비" and c[3])
+        common_mkt = sum(c[4] for c in costs if c[0] in months_in and c[1] == "마케팅비" and not c[3])
+        fixed = sum(c[4] for c in costs if c[0] in months_in and c[1] == "고정지출")
+        contrib = total - cg - shipping - ad
+        print(f"  택배비: ₩{shipping:,} (주문 {orders:,}건 × ₩{ship_unit:,})")
+        print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")
+        print(f"  네이버 기여이익: ₩{contrib:,} ({contrib / total * 100:.1f}%)")
+        print(f"  영업이익(회사 공통비 전액 반영): ₩{contrib - common_mkt - fixed:,}")
 
 
 if __name__ == "__main__":

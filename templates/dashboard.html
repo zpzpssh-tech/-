@@ -114,6 +114,22 @@
   .tip .r { display: flex; justify-content: space-between; gap: 14px; }
   .cross { stroke: var(--line-strong); stroke-dasharray: 3 3; }
 
+  /* 손익 단계 */
+  .pnl { display: grid; gap: 2px; }
+  .pl { display: grid; grid-template-columns: 168px minmax(0,1fr) 150px 74px; align-items: center;
+    gap: 12px; padding: 8px 10px; border-radius: 8px; }
+  .pl:hover { background: var(--surface-2); }
+  .pl.sum { background: var(--surface-2); font-weight: 600; margin: 4px 0; }
+  .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 4px; }
+  .pl-n { font-size: 13px; display: flex; align-items: center; gap: 7px; }
+  .pl-n .op { font-family: var(--mono); color: var(--ink-3); width: 12px; flex: none; text-align: center; }
+  .pl-bar { height: 16px; background: var(--surface-2); border-radius: 3px; overflow: hidden; position: relative; }
+  .pl.sum .pl-bar, .pl.final .pl-bar { background: var(--surface-3); }
+  .pl-fill { height: 100%; border-radius: 3px; }
+  .pl-v { text-align: right; font-size: 13px; }
+  .pl-p { text-align: right; font-size: 12px; color: var(--ink-2); }
+  @media (max-width: 720px) { .pl { grid-template-columns: 1fr auto; } .pl-bar { display: none; } }
+
   /* 부위별 막대 */
   .cats { display: grid; gap: 9px; }
   .cat { display: grid; grid-template-columns: 72px minmax(0,1fr) auto; align-items: center; gap: 10px; }
@@ -191,6 +207,15 @@
 
   <section class="kpis" id="kpis"></section>
 
+  <section class="card" id="pnlCard" hidden>
+    <div class="card-head">
+      <h2>손익 단계</h2>
+      <span class="hint">매출에서 무엇이 얼마씩 빠지는지</span>
+    </div>
+    <div class="pnl" id="pnl"></div>
+    <p class="hint" id="pnlNote" style="margin:14px 0 0;line-height:1.7"></p>
+  </section>
+
   <section class="g2">
     <div class="card">
       <div class="card-head">
@@ -209,7 +234,13 @@
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>월별 매출과 정산 상태 반영 내역</h2><span class="hint">규칙이 제대로 적용됐는지 확인하는 표</span></div>
+    <div class="card-head">
+      <h2>월별 손익</h2>
+      <div class="seg" role="group" aria-label="표 보기 전환">
+        <button data-mv="pnl" aria-pressed="true">손익</button>
+        <button data-mv="check" aria-pressed="false">정산 검증</button>
+      </div>
+    </div>
     <div class="tw"><table id="mtab"></table></div>
   </section>
 
@@ -241,6 +272,11 @@
       <b>광고비·택배비·고정비는 아직 빠지지 않았습니다.</b>
       같은 상품이 시기에 따라 이름이 달라도 상품번호로 하나로 묶습니다.
     </p>
+    <p class="hint" style="margin:8px 0 0;line-height:1.7">
+      <b>택배비</b>는 주문 건수 × 건당 단가입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
+      <b>고정지출과 공통 마케팅비</b>는 월 단위 금액을 선택한 기간의 날짜 수만큼 나눠서 반영합니다.
+      기간을 짧게 잡으면 그만큼만 반영되니, 월 전체를 보시려면 위에서 월을 선택해 주세요.
+    </p>
   </section>
 
   <section class="todo" id="todo" hidden>
@@ -259,6 +295,7 @@
 (function () {
   const D = JSON.parse(document.getElementById('data').textContent);
   const P = D['상품'], SALES = D['매출'], DAILY = D['일별주문'] || {}, COGS = D['원가'] || [];
+  const EXP = D['비용'] || [], SHIP = D['택배비'] || {};
   const el = id => document.getElementById(id);
   const won = n => (n < 0 ? '-₩' : '₩') + Math.abs(Math.round(n)).toLocaleString('ko-KR');
   const cnt = n => Math.round(n).toLocaleString('ko-KR');
@@ -289,7 +326,7 @@
   months.forEach(m => { const o = document.createElement('option'); o.value = m;
     o.textContent = m.slice(0, 4) + '년 ' + Number(m.slice(5)) + '월'; el('msel').appendChild(o); });
 
-  let range = { s: first, e: last }, smooth = 7, showAllProducts = false;
+  let range = { s: first, e: last }, smooth = 7, showAllProducts = false, monthView = 'pnl';
 
   function compute() {
     const rows = SALES.filter(r => r[0] >= range.s && r[0] <= range.e);
@@ -317,7 +354,25 @@
     }
     let orders = 0;
     for (let d = range.s; d <= range.e; d = addD(d, 1)) orders += DAILY[d] || 0;
+
+    // 택배비: 주문 건수 × 건당 단가
+    const shipping = orders * (SHIP['건당단가'] || 0);
+
+    // 월 단위 비용은 선택한 기간에 들어가는 날짜 수만큼 비례 배분합니다.
+    let ad = 0, mkt = 0, fixed = 0;
+    for (const [ym, kind, , acct, amt] of EXP) {
+      const mS = ym + '-01', mE = ym + '-' + String(dim(ym)).padStart(2, '0');
+      const a = range.s > mS ? range.s : mS, b = range.e < mE ? range.e : mE;
+      if (a > b) continue;
+      const part = amt * span(a, b) / dim(ym);
+      if (kind === '고정지출') fixed += part;
+      else if (acct) ad += part;              // 계정이 적힌 마케팅비 = 그 채널 광고비
+      else mkt += part;                       // 계정이 빈 마케팅비 = 회사 공통
+    }
+    const contrib = rev - cogs - shipping - ad;      // 채널 기여이익
+    const op = contrib - mkt - fixed;                // 공통비까지 뺀 영업이익
     return { rev, cogs, gross: rev - cogs, qty: qty || lineQty, lineQty, unk, orders,
+             shipping, ad, mkt, fixed, contrib, op, hasExp: EXP.length > 0,
              byDay, byCode, byCat, hasCogs: qty > 0, days: span(range.s, range.e) };
   }
 
@@ -326,15 +381,25 @@
     const t = [
       { hero: 1, lab: '총매출 (정산예정금)', val: won(S.rev), cap: `일평균 <b>${shortWon(S.rev / S.days)}원</b> · ${S.days}일` },
     ];
-    if (S.hasCogs) t.push(
-      { hero: 2, lab: '매출총이익 (매출 − 원가)', val: won(S.gross), cap: `이익률 <b>${pct(S.gross, S.rev)}</b> · 광고·택배·고정비 빼기 전` },
-      { lab: '상품 원가', val: won(S.cogs), cap: `매출 대비 <b>${pct(S.cogs, S.rev)}</b> · 반영률 ${cover.toFixed(1)}%` });
-    t.push(
-      { lab: '주문 건수', val: cnt(S.orders) + '건', cap: `일평균 <b>${cnt(Math.round(S.orders / S.days))}건</b>` },
-      { lab: '판매 수량', val: cnt(S.qty) + '개', cap: S.hasCogs ? '주문 내역의 실제 수량' : '상품주문 줄 수 기준' },
-      { lab: '주문당 평균 매출', val: won(S.orders ? S.rev / S.orders : 0), cap: '수수료 빠진 실수령 기준' });
+    if (S.hasExp) {
+      t.push({ hero: 2, lab: '네이버 기여이익', val: won(S.contrib),
+               cap: `매출 대비 <b>${pct(S.contrib, S.rev)}</b> · 회사 공통비 빼기 전` });
+      t.push(
+        { lab: '매출총이익', val: won(S.gross), cap: `매출 대비 <b>${pct(S.gross, S.rev)}</b> · 원가만 뺀 값` },
+        { lab: '네이버 광고비', val: won(S.ad), cap: `매출 대비 <b>${pct(S.ad, S.rev)}</b>` },
+        { lab: '상품 원가', val: won(S.cogs), cap: `매출 대비 <b>${pct(S.cogs, S.rev)}</b> · 반영률 ${cover.toFixed(1)}%` },
+        { lab: '택배비', val: won(S.shipping), cap: `주문 ${cnt(S.orders)}건 × <b>${won(SHIP['건당단가'])}</b>` });
+    } else {
+      if (S.hasCogs) t.push(
+        { hero: 2, lab: '매출총이익 (매출 − 원가)', val: won(S.gross), cap: `이익률 <b>${pct(S.gross, S.rev)}</b>` },
+        { lab: '상품 원가', val: won(S.cogs), cap: `매출 대비 <b>${pct(S.cogs, S.rev)}</b> · 반영률 ${cover.toFixed(1)}%` });
+      t.push(
+        { lab: '주문 건수', val: cnt(S.orders) + '건', cap: `일평균 <b>${cnt(Math.round(S.orders / S.days))}건</b>` },
+        { lab: '판매 수량', val: cnt(S.qty) + '개', cap: '주문 내역의 실제 수량' });
+    }
     el('kpis').innerHTML = t.map(k => `<div class="kpi${k.hero === 1 ? ' hero' : k.hero === 2 ? ' hero2' : ''}">
-      <div class="lab">${k.lab}</div><div class="val num">${k.val}</div><div class="cap num">${k.cap}</div></div>`).join('');
+      <div class="lab">${k.lab}</div><div class="val num${!k.hero && /^-/.test(k.val) ? ' neg' : ''}">${k.val}</div>
+      <div class="cap num">${k.cap}</div></div>`).join('');
   }
 
   function renderLine(S) {
@@ -388,6 +453,39 @@
     svg.querySelector('#hit').addEventListener('mouseleave', () => { tip.style.display = 'none'; hv.style.display = 'none'; });
   }
 
+  function renderPnl(S) {
+    if (!S.hasExp) { el('pnlCard').hidden = true; return; }
+    el('pnlCard').hidden = false;
+    const base = Math.max(1, S.rev);
+    const w = v => Math.min(100, Math.abs(v) / base * 100);
+    const step = (name, op, val, color, cls) => ({ name, op, val, color, cls });
+    const rows = [
+      step('매출 (정산예정금)', '', S.rev, 'var(--accent)', 'sum'),
+      step('상품 원가', '−', -S.cogs, 'var(--k2)'),
+      step('매출총이익', '=', S.gross, 'var(--accent)', 'sum'),
+      step('택배비', '−', -S.shipping, 'var(--k4)'),
+      step('네이버 광고비', '−', -S.ad, 'var(--k5)'),
+      step('네이버 기여이익', '=', S.contrib, 'var(--accent)', 'sum'),
+      step('회사 공통 마케팅비', '−', -S.mkt, 'var(--k7)'),
+      step('회사 고정지출', '−', -S.fixed, 'var(--k1)'),
+      step('영업이익', '=', S.op, S.op >= 0 ? 'var(--good)' : 'var(--bad)', 'final'),
+    ];
+    el('pnl').innerHTML = rows.map(r => `
+      <div class="pl ${r.cls || ''}">
+        <div class="pl-n"><span class="op">${r.op}</span>${r.name}</div>
+        <div class="pl-bar"><div class="pl-fill" style="width:${w(r.val)}%;background:${r.color}"></div></div>
+        <div class="pl-v num ${r.val < 0 && r.cls ? 'neg' : ''}">${won(r.val)}</div>
+        <div class="pl-p num">${pct(Math.abs(r.val), S.rev)}</div>
+      </div>`).join('');
+    const monthly = S.op / (S.days / 30.4);
+    el('pnlNote').innerHTML =
+      `<b>기여이익</b>은 네이버 채널이 벌어들인 돈에서 그 채널에 직접 드는 비용(원가·택배비·검색광고비)만 뺀 값입니다. ` +
+      `월 평균 <b>${shortWon(S.contrib / (S.days / 30.4))}원</b>을 남깁니다.<br>` +
+      `<b>회사 고정지출과 공통 마케팅비는 네이버·쿠팡 전 채널이 함께 쓰는 비용</b>인데, 지금은 네이버 매출에만 전부 물려 계산했습니다. ` +
+      `그래서 맨 아래 영업이익은 실제보다 낮게 나옵니다. 쿠팡 4개 계정 자료가 들어오면 제대로 나뉩니다. ` +
+      `현재 회사 고정지출과 공통 마케팅비는 합쳐서 월 <b>${shortWon((S.mkt + S.fixed) / (S.days / 30.4))}원</b>입니다.`;
+  }
+
   function renderCats(S) {
     const list = Object.entries(S.byCat).sort((a, b) => b[1].rev - a[1].rev);
     const max = Math.max(1, ...list.map(c => c[1].rev));
@@ -414,28 +512,49 @@
       for (const [d, , , , q, v] of SALES) if (d >= s && d <= e) { rev += v; qty += q; }
       for (const [d, , , c] of COGS) if (d >= s && d <= e) cg += c;
       for (let d = s; d <= e; d = addD(d, 1)) ord += DAILY[d] || 0;
-      return { m, rev, qty, ord, cogs: cg, x: sm[m] };
+      let ad = 0, mkt = 0, fx = 0;
+      for (const [ym, kind, , acct, amt] of EXP) {
+        if (ym !== m) continue;
+        if (kind === '고정지출') fx += amt; else if (acct) ad += amt; else mkt += amt;
+      }
+      const shp = ord * (SHIP['건당단가'] || 0);
+      return { m, rev, qty, ord, cogs: cg, ship: shp, ad, mkt, fixed: fx,
+               contrib: rev - cg - shp - ad, x: sm[m] };
     });
-    const has = rows.some(r => r.x), hasC = rows.some(r => r.cogs);
-    const T = rows.reduce((t, r) => ({ rev: t.rev + r.rev, ord: t.ord + r.ord, cogs: t.cogs + r.cogs,
-      minus: t.minus + (r.x ? r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액'] : 0),
-      exc: t.exc + (r.x ? r.x['정산전 취소_금액'] : 0),
-      excN: t.excN + (r.x ? r.x['정산전 취소_건수'] : 0) }), { rev: 0, ord: 0, cogs: 0, minus: 0, exc: 0, excN: 0 });
+    const has = rows.some(r => r.x), hasC = rows.some(r => r.cogs), hasE = EXP.length > 0;
+    const k = ['rev', 'ord', 'cogs', 'ship', 'ad', 'contrib'];
+    const T = { minus: 0, exc: 0, excN: 0 };
+    k.forEach(x => T[x] = rows.reduce((a, r) => a + (r[x] || 0), 0));
+    rows.forEach(r => {
+      if (!r.x) return;
+      T.minus += r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액'];
+      T.exc += r.x['정산전 취소_금액']; T.excN += r.x['정산전 취소_건수'];
+    });
     const mx = Math.max(...rows.map(x => x.rev), 1);
-    el('mtab').innerHTML = `
-      <thead><tr><th>월</th><th>주문</th><th>매출 (정산예정금)</th>
-        ${hasC ? '<th>원가</th><th>매출총이익</th><th>이익률</th>' : ''}
-        ${has ? '<th>회수·정산후취소 (－)</th><th>정산전 취소 (제외)</th>' : ''}</tr></thead>
+    const view = monthView;
+    el('mtab').innerHTML = view === 'pnl' ? `
+      <thead><tr><th>월</th><th>주문</th><th>매출</th>${hasC ? '<th>원가</th>' : ''}
+        ${hasE ? '<th>택배비</th><th>광고비</th><th>기여이익</th><th>기여이익률</th>' : ''}</tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
         <td class="num"><span class="mt"><span class="mf" style="width:${r.rev / mx * 100}%"></span></span>${won(r.rev)}</td>
-        ${hasC ? `<td class="num">${won(r.cogs)}</td><td class="num">${won(r.rev - r.cogs)}</td>
-        <td class="num">${pct(r.rev - r.cogs, r.rev)}</td>` : ''}
-        ${has ? `<td class="num neg">${r.x ? won(r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액']) : '–'}</td>
-        <td class="num">${r.x ? won(r.x['정산전 취소_금액']) + ' · ' + cnt(r.x['정산전 취소_건수']) + '건' : '–'}</td>` : ''}</tr>`).join('')}</tbody>
+        ${hasC ? `<td class="num">${won(r.cogs)}</td>` : ''}
+        ${hasE ? `<td class="num">${won(r.ship)}</td><td class="num">${won(r.ad)}</td>
+        <td class="num ${r.contrib < 0 ? 'neg' : ''}">${won(r.contrib)}</td>
+        <td class="num">${pct(r.contrib, r.rev)}</td>` : ''}</tr>`).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.rev)}</td>
-        ${hasC ? `<td class="num">${won(T.cogs)}</td><td class="num">${won(T.rev - T.cogs)}</td><td class="num">${pct(T.rev - T.cogs, T.rev)}</td>` : ''}
-        ${has ? `<td class="num neg">${won(T.minus)}</td><td class="num">${won(T.exc)} · ${cnt(T.excN)}건</td>` : ''}</tr></tfoot>`;
+        ${hasC ? `<td class="num">${won(T.cogs)}</td>` : ''}
+        ${hasE ? `<td class="num">${won(T.ship)}</td><td class="num">${won(T.ad)}</td>
+        <td class="num">${won(T.contrib)}</td><td class="num">${pct(T.contrib, T.rev)}</td>` : ''}</tr></tfoot>` : `
+      <thead><tr><th>월</th><th>주문</th><th>매출 (정산예정금)</th>
+        <th>회수·정산후취소 (－)</th><th>정산전 취소 (제외)</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
+        <td class="num"><span class="mt"><span class="mf" style="width:${r.rev / mx * 100}%"></span></span>${won(r.rev)}</td>
+        <td class="num neg">${r.x ? won(r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액']) : '–'}</td>
+        <td class="num">${r.x ? won(r.x['정산전 취소_금액']) + ' · ' + cnt(r.x['정산전 취소_건수']) + '건' : '–'}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.rev)}</td>
+        <td class="num neg">${won(T.minus)}</td><td class="num">${won(T.exc)} · ${cnt(T.excN)}건</td></tr></tfoot>`;
   }
 
   function renderProducts(S) {
@@ -473,28 +592,32 @@
   }
 
   function renderTodo() {
-    const noCost = !(D['비용'] || []).length;
     const S0 = compute();
     const items = [];
+    if (SHIP['N배송단가'] && SHIP['N배송단가'] !== SHIP['판매자배송단가']) {
+      const diff = (SHIP['N배송단가'] - SHIP['판매자배송단가']) * S0.orders;
+      items.push(`<b>N배송 비율</b> — 정산 파일에 배송 방식 구분이 없어, 지금은 전체를 ` +
+        `${SHIP['N배송비율'] ? 'N배송 ' + (SHIP['N배송비율'] * 100).toFixed(0) + '% 섞어' : '판매자배송으로만'} 계산했습니다 ` +
+        `(건당 ${won(SHIP['건당단가'])}). 전부 N배송이면 택배비가 ${shortWon(diff)}원 더 늘어납니다. ` +
+        `실제 비율을 알려주시면 <code>data/settings.json</code>의 N배송비율에 넣습니다.`);
+    }
     if (S0.unk > 0) {
       const cov = ((S0.qty - S0.unk) / S0.qty * 100).toFixed(1);
       items.push(`<b>원가를 못 찾은 옵션</b> — 지금 원가 반영률이 ${cov}%입니다. 나머지 ${cnt(S0.unk)}개는 원가를 0으로 잡아 이익이 실제보다 조금 높게 나옵니다. <code>data/원가_미매칭.csv</code>에 목록이 있으니 원가관리 엑셀의 '원가' 시트에 그 옵션들을 추가해 주세요.`);
     }
-    if (noCost) items.push(`<b>월별 고정비와 광고비</b> — 인건비, 창고·사무실, 물류 솔루션, 채널별 광고비. <code>data/costs.csv</code>에 월별로 적으면 영업이익이 나옵니다.`);
-    items.push(`<b>택배비</b> — 건당 실제 지급하는 택배 단가. <code>data/settings.json</code>의 건당배송비에 넣습니다.`);
     const have = new Set(D['계정'].map(a => a['계정']));
     const want = ['올투게더나우', '휴책', '유큐어', '로켓배송'].filter(a => !have.has(a));
     if (want.length) items.push(`<b>쿠팡 계정 (${want.join(', ')})</b> — 정산 파일을 <code>data/원본/</code>에 넣어 주시면 같은 규칙으로 합산합니다.`);
     el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
     el('todo').querySelector('h2').textContent =
-      `영업이익까지 보려면 이 자료가 더 필요합니다 (현재 ${months.length}개월 반영)`;
+      `숫자를 더 정확히 하려면 이 자료가 필요합니다 (현재 ${months.length}개월 반영)`;
     el('todo').hidden = false;
   }
 
   function all() {
     const S = compute();
     el('rnote').textContent = `${range.s} ~ ${range.e} · ${S.days}일`;
-    renderKpis(S); renderLine(S); renderCats(S); renderProducts(S);
+    renderKpis(S); renderPnl(S); renderLine(S); renderCats(S); renderProducts(S);
   }
 
   document.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => {
@@ -517,6 +640,10 @@
     smooth = Number(b.dataset.sm); renderLine(compute());
   }));
   el('pmore').addEventListener('click', () => { showAllProducts = !showAllProducts; renderProducts(compute()); });
+  document.querySelectorAll('[data-mv]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-mv]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    monthView = b.dataset.mv; renderMonths();
+  }));
 
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
   renderMonths(); renderTodo(); all();
