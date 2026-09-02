@@ -1123,10 +1123,14 @@
     const want = ['휴책', '유큐어', '올투게더나우', '로켓배송'].filter(a => !ACCT_LIST.includes(a));
     if (want.length) items.push(`<b>쿠팡 ${want.join(', ')} 계정</b> — 자료를 <code>data/원본/쿠팡/</code>에 넣어 주시면 같은 규칙으로 합산합니다. 지금 회사 영업이익에는 빠져 있습니다.`);
     items.push(`<b>현재 재고 수량</b> — 재고 회전율과 품절까지 남은 일수를 계산하려면 필요합니다. 발주 제안에서 재고를 빼야 실제 발주량이 나옵니다.`);
-    items.push(`<b>기타 사이트 매출</b> — 지금 대시보드에 없습니다. 자료를 주시면 채널에 추가합니다.`);
+
     el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
     el('todo').querySelector('h2').textContent =
       `숫자를 더 정확히 하려면 이 자료가 필요합니다 (${first} ~ ${last} 반영)`;
+    el('todo').insertAdjacentHTML('beforeend',
+      `<p class="hint" style="margin:12px 0 0;line-height:1.7">` +
+      `<b>기타 사이트는 이 장부에서 제외합니다.</b> 네이버와 쿠팡만 집계합니다. ` +
+      `대표님 다른 앱에는 기타 사이트가 매출의 약 12%로 들어가 있으니, 두 숫자를 비교하실 때 참고하세요.</p>`);
     el('todo').hidden = false;
   }
 
