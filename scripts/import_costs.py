@@ -87,7 +87,8 @@ def main():
     if extra_path.exists():
         with open(extra_path, newline="", encoding="utf-8-sig") as f:
             for i, r in enumerate(csv.DictReader(f), start=2):
-                keys = {k.lstrip("\ufeff").strip(): (v or "") for k, v in r.items()}
+                keys = {(k or "").lstrip("\ufeff").strip(): (v if isinstance(v, str) else "")
+                        for k, v in r.items()}
                 no = pid(keys.get("상품번호"))
                 opt = keys.get("옵션정보", "").strip()
                 raw = keys.get("원가", "").replace(",", "").strip()
