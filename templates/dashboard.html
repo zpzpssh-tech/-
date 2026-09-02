@@ -3,207 +3,235 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+  /* ── 색 ──
+     눈이 편하도록 따뜻한 종이색 바탕에 낮은 채도를 씁니다.
+     차트 색 7가지는 색약 구분 검사를 통과한 조합입니다. */
   :root {
     color-scheme: light;
-    --bg: #f1f3f5; --surface: #ffffff; --surface-2: #f6f8f9; --surface-3: #eceff1;
-    --ink: #131a20; --ink-2: #59656f; --ink-3: #8994a0;
-    --line: #e0e5e9; --line-strong: #c6cfd6;
-    --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #d7efeb;
-    --good: #1a7f37; --good-soft: #ddf5e4;
-    --warn: #b45309; --warn-soft: #fdecd2;
-    --bad: #c2262e;  --bad-soft: #fbdcdd;
-    --k1: #2a78d6; --k2: #eb6834; --k3: #1baf7a; --k4: #eda100;
-    --k5: #e87ba4; --k6: #008300; --k7: #4a3aa7;
-    --shadow: 0 1px 2px rgba(19,26,32,.05), 0 8px 24px rgba(19,26,32,.05);
+    --bg: #f5f3ef;            /* 따뜻한 종이색 바탕 */
+    --surface: #fdfcfa;       /* 카드 (순백색보다 부드럽게) */
+    --surface-2: #f2efe9;     /* 카드 안쪽 옅은 면 */
+    --surface-3: #e8e4dc;
+    --ink: #262b31;           /* 본문 (순검정보다 부드럽게) */
+    --ink-2: #5d6771;
+    --ink-3: #8b939b;
+    --line: #e5e1d9;
+    --line-strong: #cec9bf;
+    --accent: #2f6f62;        /* 차분한 청록 */
+    --accent-ink: #ffffff;
+    --accent-soft: #e2ece9;
+    --good: #2f6f3f; --good-soft: #e4eee6;
+    --warn: #9a6212; --warn-soft: #f6ecdb;
+    --bad:  #a83c3c; --bad-soft:  #f6e3e1;
+    --k1: #3a6fb0; --k2: #d1663c; --k3: #1f9b78; --k4: #c98a1e;
+    --k5: #c26f92; --k6: #2f7a3f; --k7: #6257a8;
+    --cost: #b8836a;          /* 빠지는 금액 (차분한 테라코타) */
+    --shadow: 0 1px 2px rgba(38,43,49,.04);
+    --shadow-lift: 0 1px 3px rgba(38,43,49,.05), 0 8px 22px rgba(38,43,49,.04);
     --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
     --mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #0f1317; --surface: #171c22; --surface-2: #1e242b; --surface-3: #262d35;
-      --ink: #eef1f4; --ink-2: #a8b2bb; --ink-3: #78838d;
-      --line: #29313a; --line-strong: #3a444e;
-      --accent: #34b3a4; --accent-ink: #08211e; --accent-soft: #143b36;
-      --good: #4ade80; --good-soft: #14351f;
-      --warn: #fbbf24; --warn-soft: #3d2a09;
-      --bad: #f87171;  --bad-soft: #3f1416;
-      --k1: #3987e5; --k2: #d95926; --k3: #199e70; --k4: #c98500;
-      --k5: #d55181; --k6: #008300; --k7: #9085e9;
-      --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.3);
+      --bg: #14161a; --surface: #1c1f24; --surface-2: #23272d; --surface-3: #2c3138;
+      --ink: #e8e9ea; --ink-2: #a4acb4; --ink-3: #757d86;
+      --line: #2b3037; --line-strong: #3b424a;
+      --accent: #4f9c8a; --accent-ink: #0d1f1b; --accent-soft: #1c3b35;
+      --good: #6bb37f; --good-soft: #1b3324;
+      --warn: #d3a24e; --warn-soft: #34290f;
+      --bad:  #d97a76; --bad-soft:  #391f1e;
+      --k1: #5488c8; --k2: #d06c3e; --k3: #17a37e; --k4: #b78a24;
+      --k5: #c47394; --k6: #3d8a4e; --k7: #7c6fc0;
+      --cost: #b07c62;
+      --shadow: 0 1px 2px rgba(0,0,0,.3);
+      --shadow-lift: 0 1px 3px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.22);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0f1317; --surface: #171c22; --surface-2: #1e242b; --surface-3: #262d35;
-    --ink: #eef1f4; --ink-2: #a8b2bb; --ink-3: #78838d;
-    --line: #29313a; --line-strong: #3a444e;
-    --accent: #34b3a4; --accent-ink: #08211e; --accent-soft: #143b36;
-    --good: #4ade80; --good-soft: #14351f;
-    --warn: #fbbf24; --warn-soft: #3d2a09;
-    --bad: #f87171;  --bad-soft: #3f1416;
-    --k1: #3987e5; --k2: #d95926; --k3: #199e70; --k4: #c98500;
-    --k5: #d55181; --k6: #008300; --k7: #9085e9;
-    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.3);
+    --bg: #14161a; --surface: #1c1f24; --surface-2: #23272d; --surface-3: #2c3138;
+    --ink: #e8e9ea; --ink-2: #a4acb4; --ink-3: #757d86;
+    --line: #2b3037; --line-strong: #3b424a;
+    --accent: #4f9c8a; --accent-ink: #0d1f1b; --accent-soft: #1c3b35;
+    --good: #6bb37f; --good-soft: #1b3324;
+    --warn: #d3a24e; --warn-soft: #34290f;
+    --bad:  #d97a76; --bad-soft:  #391f1e;
+    --k1: #5488c8; --k2: #d06c3e; --k3: #17a37e; --k4: #b78a24;
+    --k5: #c47394; --k6: #3d8a4e; --k7: #7c6fc0;
+    --cost: #b07c62;
+    --shadow: 0 1px 2px rgba(0,0,0,.3);
+    --shadow-lift: 0 1px 3px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.22);
   }
 
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-    font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    font-family: var(--sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
   .num { font-variant-numeric: tabular-nums; }
   .mono { font-family: var(--mono); }
   button, select { font: inherit; color: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .page { max-width: 1280px; margin: 0 auto; padding: 26px 22px 60px; display: grid; gap: 18px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 30px 24px 72px; display: grid; gap: 22px; }
 
-  /* 헤더 */
-  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
-  .brand { display: flex; align-items: center; gap: 12px; }
-  .mark { width: 42px; height: 42px; border-radius: 11px; background: var(--accent); color: var(--accent-ink);
-    display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: none; }
-  h1 { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
-  .sub { margin: 3px 0 0; color: var(--ink-2); font-size: 12.5px; }
-  .tag { display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+  /* ── 헤더 ── */
+  .top { display: grid; gap: 16px; padding-bottom: 4px; }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .mark { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none; letter-spacing: -.02em; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.015em; }
+  .sub { margin: 2px 0 0; color: var(--ink-2); font-size: 12.5px; }
+  .tag { display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 8px; border-radius: 6px;
     background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 600; vertical-align: middle; }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg button { border: 0; background: transparent; padding: 6px 11px; border-radius: 7px; cursor: pointer;
-    color: var(--ink-2); font-weight: 500; font-size: 13px; }
-  .seg button:hover { color: var(--ink); }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 11px; cursor: pointer; font-size: 13px; }
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    color: var(--ink-2); font-weight: 500; font-size: 13px; transition: background .12s, color .12s; }
+  .seg button:hover { color: var(--ink); background: var(--surface-2); }
+  .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  select { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; cursor: pointer; font-size: 13px; }
   .note { color: var(--ink-3); font-size: 12px; }
 
-  /* KPI */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 11px; }
+  /* ── KPI ── */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 12px; }
   @media (min-width: 1000px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  .kpi.hero { grid-column: span 2; }
-  .kpi.hero2 { grid-column: span 2; border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
+    display: grid; gap: 5px; align-content: start; box-shadow: var(--shadow); }
+  .kpi.hero { grid-column: span 2; background: var(--accent); border-color: transparent; color: var(--accent-ink);
+    box-shadow: var(--shadow-lift); }
+  .kpi.hero2 { grid-column: span 2; background: var(--accent-soft); border-color: transparent; }
   .kpi.hero2 .val { color: var(--accent); }
-  @media (max-width: 700px) { .kpi.hero2 { grid-column: span 1; } }
-  @media (max-width: 700px) { .kpi.hero { grid-column: span 1; } }
-  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 15px 17px; display: grid; gap: 3px; align-content: start; }
-  .kpi.hero { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .kpi .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; color: var(--ink-2); }
-  .kpi.hero .lab, .kpi.hero .cap { color: var(--accent-ink); opacity: .88; }
-  .kpi .val { font-size: 22px; font-weight: 700; letter-spacing: -.02em; line-height: 1.18; }
-  .kpi.hero .val { font-size: 30px; letter-spacing: -.03em; }
-  .kpi.hero2 .val { font-size: 27px; letter-spacing: -.03em; }
+  .kpi.hero2 .lab, .kpi.hero2 .cap { color: var(--ink-2); }
+  .kpi.hero2 .cap b { color: var(--accent); }
+  @media (max-width: 700px) { .kpi.hero, .kpi.hero2 { grid-column: span 1; } }
+  .kpi .lab { font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: .01em; }
+  .kpi.hero .lab, .kpi.hero .cap { color: var(--accent-ink); opacity: .82; }
+  .kpi .val { font-size: 21px; font-weight: 600; letter-spacing: -.025em; line-height: 1.2; }
+  .kpi.hero .val { font-size: 28px; }
+  .kpi.hero2 .val { font-size: 25px; }
   .kpi .cap { font-size: 12px; color: var(--ink-3); }
   .kpi .cap b { color: var(--ink-2); font-weight: 600; }
-  .kpi.hero .cap b { color: var(--accent-ink); }
+  .kpi.hero .cap b { color: var(--accent-ink); opacity: 1; }
 
-  /* 카드 */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 17px 19px; min-width: 0; }
-  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 13px; flex-wrap: wrap; }
-  .card h2 { margin: 0; font-size: 14.5px; font-weight: 600; }
-  .hint { color: var(--ink-3); font-size: 12px; }
-  .only { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px;
-    font-weight: 600; background: var(--surface-3); color: var(--ink-2); vertical-align: middle; }
-  .g2 { display: grid; grid-template-columns: minmax(0,7fr) minmax(0,5fr); gap: 18px; }
+  /* ── 카드 ── */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; min-width: 0; box-shadow: var(--shadow); }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    margin-bottom: 16px; flex-wrap: wrap; }
+  .card h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .hint { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+  .only { display: inline-block; margin-left: 7px; padding: 2px 7px; border-radius: 5px; font-size: 10.5px;
+    font-weight: 500; background: var(--surface-2); color: var(--ink-3); vertical-align: middle; }
+  .g2 { display: grid; grid-template-columns: minmax(0,7fr) minmax(0,5fr); gap: 20px; }
   @media (max-width: 940px) { .g2 { grid-template-columns: 1fr; } }
 
-  /* 차트 */
+  /* ── 셀러 지표 ── */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); gap: 12px; }
+  .met { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px;
+    align-content: start; background: var(--surface); }
+  .met .t { font-size: 12px; font-weight: 500; color: var(--ink-2); display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .met .v { font-size: 20px; font-weight: 600; letter-spacing: -.025em; }
+  .met .d { font-size: 11.5px; color: var(--ink-3); line-height: 1.6; }
+  .met.ok { border-left: 3px solid var(--good); }
+  .met.mid { border-left: 3px solid var(--warn); }
+  .met.low { border-left: 3px solid var(--bad); }
+  .trend { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px; }
+  .trend.up { color: var(--good); background: var(--good-soft); }
+  .trend.down { color: var(--bad); background: var(--bad-soft); }
+  .trend.flat { color: var(--ink-2); background: var(--surface-2); }
+
+  /* ── 손익 단계 ── */
+  .pnl { display: grid; gap: 1px; }
+  .pl { display: grid; grid-template-columns: 236px minmax(0,1fr) 152px 66px; align-items: center;
+    gap: 14px; padding: 9px 12px; border-radius: 9px; }
+  .pl:hover { background: var(--surface-2); }
+  .pl.sum { background: var(--surface-2); font-weight: 600; margin: 3px 0; }
+  .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 3px; }
+  .pl-n { font-size: 13px; display: flex; align-items: center; gap: 9px; }
+  .pl-n .op { font-family: var(--mono); color: var(--ink-3); width: 10px; flex: none; text-align: center; font-size: 12px; }
+  .pl-n small { display: block; color: var(--ink-3); font-size: 11px; font-weight: 400; margin-top: 1px; line-height: 1.45; }
+  .pl-bar { height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .pl.sum .pl-bar, .pl.final .pl-bar { background: var(--surface-3); }
+  .pl-fill { height: 100%; border-radius: 4px; opacity: .9; }
+  .pl-v { text-align: right; font-size: 13px; }
+  .pl-p { text-align: right; font-size: 12px; color: var(--ink-2); }
+  @media (max-width: 760px) { .pl { grid-template-columns: 1fr auto; } .pl-bar, .pl-p { display: none; } }
+
+  /* ── 차트 ── */
   .chart { position: relative; }
   .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
   .grid line { stroke: var(--line); }
   .axis line { stroke: var(--line-strong); }
   .axis text { fill: var(--ink-3); font-size: 11px; font-family: var(--mono); }
-  .tip { position: absolute; pointer-events: none; z-index: 3; background: var(--surface); border: 1px solid var(--line-strong);
-    border-radius: 9px; box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; min-width: 132px; display: none; }
-  .tip .d { font-family: var(--mono); color: var(--ink-3); margin-bottom: 3px; }
+  .tip { position: absolute; pointer-events: none; z-index: 3; background: var(--surface);
+    border: 1px solid var(--line-strong); border-radius: 10px; box-shadow: var(--shadow-lift);
+    padding: 9px 11px; font-size: 12px; min-width: 136px; display: none; }
+  .tip .d { font-family: var(--mono); color: var(--ink-3); margin-bottom: 4px; }
   .tip .r { display: flex; justify-content: space-between; gap: 14px; }
   .cross { stroke: var(--line-strong); stroke-dasharray: 3 3; }
 
-  /* 셀러 지표 */
-  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 11px; }
-  .met { border: 1px solid var(--line); border-radius: 11px; padding: 13px 15px; display: grid; gap: 3px; align-content: start; }
-  .met .t { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
-  .met .v { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
-  .met .d { font-size: 11.5px; color: var(--ink-3); line-height: 1.55; }
-  .met.ok { border-left: 3px solid var(--good); }
-  .met.mid { border-left: 3px solid var(--warn); }
-  .met.low { border-left: 3px solid var(--bad); }
-  .trend { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; }
-  .trend.up { color: var(--good); background: var(--good-soft); }
-  .trend.down { color: var(--bad); background: var(--bad-soft); }
-  .trend.flat { color: var(--ink-2); background: var(--surface-3); }
-
-  /* 손익 단계 */
-  .pnl { display: grid; gap: 2px; }
-  .pl { display: grid; grid-template-columns: 232px minmax(0,1fr) 150px 74px; align-items: center;
-    gap: 12px; padding: 8px 10px; border-radius: 8px; }
-  .pl:hover { background: var(--surface-2); }
-  .pl.sum { background: var(--surface-2); font-weight: 600; margin: 4px 0; }
-  .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 4px; }
-  .pl-n { font-size: 13px; display: flex; align-items: center; gap: 7px; }
-  .pl-n small { display: block; color: var(--ink-3); font-size: 11px; font-weight: 400; margin-top: 1px; }
-  .pl-n .op { font-family: var(--mono); color: var(--ink-3); width: 12px; flex: none; text-align: center; }
-  .pl-bar { height: 16px; background: var(--surface-2); border-radius: 3px; overflow: hidden; position: relative; }
-  .pl.sum .pl-bar, .pl.final .pl-bar { background: var(--surface-3); }
-  .pl-fill { height: 100%; border-radius: 3px; }
-  .pl-v { text-align: right; font-size: 13px; }
-  .pl-p { text-align: right; font-size: 12px; color: var(--ink-2); }
-  @media (max-width: 720px) { .pl { grid-template-columns: 1fr auto; } .pl-bar { display: none; } }
-
-  /* 부위별 막대 */
-  .cats { display: grid; gap: 9px; }
-  .cat { display: grid; grid-template-columns: 72px minmax(0,1fr) auto; align-items: center; gap: 10px; }
-  .cat-n { display: flex; align-items: center; gap: 7px; font-size: 13px; }
-  .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-  .track { height: 20px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
-  .fill { height: 100%; border-radius: 3px; min-width: 2px; }
+  /* ── 부위별 막대 ── */
+  .cats { display: grid; gap: 10px; }
+  .cat { display: grid; grid-template-columns: 74px minmax(0,1fr) auto; align-items: center; gap: 11px; }
+  .cat-n { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .track { height: 16px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 4px; min-width: 2px; opacity: .9; }
   .cat-v { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 
-  /* 표 */
-  .tw { overflow-x: auto; }
+  /* ── 표 ── */
+  .tw { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 8px 9px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); }
+  th, td { padding: 10px 11px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--ink-3);
+    border-bottom-color: var(--line-strong); padding-bottom: 8px; }
   th:first-child, td:first-child { text-align: left; }
   td.nm { font-weight: 500; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
-  td.opt { max-width: 320px; white-space: normal; line-height: 1.4; }
+  td.nm small { display: block; color: var(--ink-3); font-weight: 400; font-size: 11px; margin-top: 1px; }
+  td.opt { max-width: 320px; white-space: normal; line-height: 1.45; }
   td.opt small { display: block; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
-  td.nm small { display: block; color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 10.5px; }
   tbody tr:hover td { background: var(--surface-2); }
-  tr.we td { background: var(--surface-2); }
+  tr.we td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
   tr.we td:first-child { color: var(--ink-2); }
   td.best { font-weight: 600; }
-  tfoot td { font-weight: 600; border-top: 2px solid var(--line-strong); border-bottom: 0; }
+  tfoot td { font-weight: 600; border-top: 1px solid var(--line-strong); border-bottom: 0; padding-top: 11px; }
   .neg { color: var(--bad); }
-  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 6px;
+    font-size: 11.5px; font-weight: 600; }
   .pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
   .pill.good { color: var(--good); background: var(--good-soft); }
   .pill.warn { color: var(--warn); background: var(--warn-soft); }
   .pill.bad { color: var(--bad); background: var(--bad-soft); }
   .warnmark { margin-left: 5px; padding: 1px 5px; border-radius: 4px; font-size: 10.5px; font-weight: 600;
     background: var(--warn-soft); color: var(--warn); cursor: help; }
-  .pos { color: var(--good); }
-  .more { margin-top: 10px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px;
-    padding: 7px 14px; cursor: pointer; color: var(--ink-2); font-size: 12.5px; }
-  .more:hover { color: var(--ink); border-color: var(--line-strong); }
-  .mt { display: inline-block; width: 62px; height: 5px; background: var(--surface-3); border-radius: 3px;
-    vertical-align: middle; margin-right: 7px; overflow: hidden; }
-  .mf { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .more { margin-top: 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px;
+    padding: 7px 15px; cursor: pointer; color: var(--ink-2); font-size: 12.5px; transition: all .12s; }
+  .more:hover { color: var(--ink); border-color: var(--line-strong); background: var(--surface-2); }
+  .mt { display: inline-block; width: 58px; height: 5px; background: var(--surface-3); border-radius: 3px;
+    vertical-align: middle; margin-right: 8px; overflow: hidden; }
+  .mf { display: block; height: 100%; border-radius: 3px; background: var(--accent); opacity: .75; }
 
-  /* 규칙 설명 */
-  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
-  .rule { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--surface-2); display: grid; gap: 3px; }
-  .rule .h { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-  .rule .b { font-size: 12px; color: var(--ink-2); line-height: 1.55; }
-  .sign { font-family: var(--mono); font-weight: 600; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  /* ── 계산 규칙 ── */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(228px, 1fr)); gap: 11px; }
+  .rule { border: 1px solid var(--line); border-radius: 11px; padding: 13px 15px; display: grid; gap: 4px; }
+  .rule .h { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .rule .b { font-size: 12px; color: var(--ink-2); line-height: 1.65; }
+  .sign { font-family: var(--mono); font-weight: 600; font-size: 11px; padding: 1px 6px; border-radius: 5px; }
   .sign.plus { background: var(--good-soft); color: var(--good); }
   .sign.minus { background: var(--bad-soft); color: var(--bad); }
-  .sign.zero { background: var(--surface-3); color: var(--ink-2); }
+  .sign.zero { background: var(--surface-2); color: var(--ink-2); }
 
-  /* 안내 */
-  .todo { border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 11px 11px 0; padding: 14px 17px; }
+  /* ── 안내 ── */
+  .todo { border: 1px solid var(--line); border-left: 3px solid var(--warn); background: var(--surface);
+    border-radius: 12px; padding: 17px 20px; box-shadow: var(--shadow); }
   .todo h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink); }
-  .todo ol { margin: 6px 0 0; padding-left: 19px; color: var(--ink-2); font-size: 12.5px; line-height: 1.75; }
-  .todo code { font-family: var(--mono); font-size: 11.5px; background: var(--surface); padding: 1px 5px; border-radius: 4px; }
-  footer { color: var(--ink-3); font-size: 11.5px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  @media (prefers-reduced-motion: no-preference) { .fill, .mf { transition: width .3s ease; } }
+  .todo ol { margin: 8px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 12.5px; line-height: 1.85; }
+  .todo li { padding-left: 3px; }
+  .todo code, .card code { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2);
+    padding: 1px 5px; border-radius: 4px; color: var(--ink-2); }
+  footer { color: var(--ink-3); font-size: 11.5px; display: flex; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+  @media (prefers-reduced-motion: no-preference) { .fill, .mf, .pl-fill { transition: width .3s ease; } }
 </style>
 
 <div class="page">
@@ -246,7 +274,7 @@
   <section class="card" id="chCard" hidden>
     <div class="card-head">
       <h2>계정별 손익 비교</h2>
-      <span class="hint">총매출에서 수수료·원가·물류비·광고비를 뺀 '남는 돈' 기준</span>
+      <span class="hint" id="chHint"></span>
     </div>
     <div class="tw"><table id="chtab"></table></div>
     <p class="hint" id="chNote" style="margin:12px 0 0;line-height:1.7"></p>
@@ -481,7 +509,9 @@
   // ── 날짜 도구 ──
   const allDates = [...new Set(DAYS.map(r => r.d))].sort();
   const first = allDates[0], last = allDates[allDates.length - 1];
-  el('basis').textContent = ACCT_LIST.join(' · ') + ' · 총매출 기준(판매 수수료 빼기 전) · ' + first + ' ~ ' + last;
+  const setBasis = () => { el('basis').textContent = ACCT_LIST.join(' · ')
+    + (basis === 'gross' ? ' · 총매출 기준(판매 수수료 빼기 전)' : ' · 정산금 기준(판매 수수료 뺀 뒤)')
+    + ' · ' + first + ' ~ ' + last; };
   const addD = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
   const span = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5) + 1;
   const dim = ym => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
@@ -644,10 +674,11 @@
     const step = (name, op, val, color, cls, note) => ({ name, op, val, color, cls, note });
     const who = scope === 'all' ? '전 채널' : scope;
     const nvOnly = scope === '네이버';
+    const C = 'var(--cost)';          // 빠지는 줄은 한 가지 색으로 (읽기 쉽게)
     const head = basis === 'gross' ? [
       step('총매출', '', S.gross, 'var(--accent)', 'sum',
            nvOnly ? '정산기준금액. 수수료 떼기 전 판매 금액' : '고객이 결제한 금액'),
-      step('판매 수수료', '−', -S.fee, 'var(--k3)', '',
+      step('판매 수수료', '−', -S.fee, C, '',
            nvOnly ? '정산 파일에 이미 빠져 있는 금액을 보이게 적은 것' : '네이버·쿠팡이 떼 가는 몫'),
       step('정산금', '=', S.rev, 'var(--accent)', 'sum',
            nvOnly ? '정산예정금액. 이익은 여기서부터 계산' : '수수료 빼고 실제로 들어오는 돈'),
@@ -656,22 +687,22 @@
            nvOnly ? '네이버 정산예정금액 그대로. 수수료는 이미 빠져 있음' : '수수료 빼고 실제로 들어오는 돈'),
     ];
     const rows = head.concat([
-      step('상품 원가', '−', -S.cogs, 'var(--k2)', '', '만드는 데 든 돈'),
+      step('상품 원가', '−', -S.cogs, C, '', '만드는 데 든 돈'),
       step('상품 마진', '=', S.gross_profit, 'var(--accent)', 'sum', '팔아서 남은 1차 이익'),
-      step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '',
+      step('물류비 (택배·입출고)', '−', -S.logi, C, '',
            `보내고 보관하는 데 든 돈 · 발송 ${cnt(S.ships)}건`),
     ]);
-    if (S.coupon) rows.push(step('판매자 할인쿠폰', '−', -S.coupon, 'var(--k6)', '', '우리가 부담한 쿠폰 할인'));
-    rows.push(step('광고비', '−', -S.ad, 'var(--k5)', '', '검색광고·쿠팡광고에 쓴 돈'));
+    if (S.coupon) rows.push(step('판매자 할인쿠폰', '−', -S.coupon, C, '', '우리가 부담한 쿠폰 할인'));
+    rows.push(step('광고비', '−', -S.ad, C, '', '검색광고·쿠팡광고에 쓴 돈'));
     if (S.vat) rows.push(
-      step('부가세 내기 전', '=', S.preVat, 'var(--ink-2)', 'sum', '여기까지가 통장에 남는 돈'),
-      step('부가세', '−', -S.vat, 'var(--k3)', '', '매출세액에서 매입세액을 뺀 실제 납부액'));
+      step('부가세 내기 전', '=', S.preVat, 'var(--accent)', 'sum', '여기까지가 통장에 남는 돈'),
+      step('부가세', '−', -S.vat, C, '', '매출세액에서 매입세액을 뺀 실제 납부액'));
     rows.push(step(who + '에서 남은 돈', '=', S.contrib,
                    S.contrib >= 0 ? 'var(--accent)' : 'var(--bad)',
                    scope === 'all' ? 'sum' : 'final', '이 장사만 놓고 본 이익'));
     if (scope === 'all') rows.push(
-      step('회사 공통 마케팅비', '−', -S.mkt, 'var(--k7)', '', '전 채널이 함께 쓰는 비용'),
-      step('회사 고정지출', '−', -S.fixed, 'var(--k1)', '', '인건비·월세·차량 등'),
+      step('회사 공통 마케팅비', '−', -S.mkt, C, '', '전 채널이 함께 쓰는 비용'),
+      step('회사 고정지출', '−', -S.fixed, C, '', '인건비·월세·차량 등'),
       step('회사 영업이익', '=', S.op, S.op >= 0 ? 'var(--good)' : 'var(--bad)', 'final',
            '로켓배송 계정은 아직 빠져 있음'));
     el('pnl').innerHTML = rows.map(r => `
@@ -711,6 +742,9 @@
       .sort((x, y) => y[bk] - x[bk]);
     if (list.length < 2) { el('chCard').hidden = true; return; }
     el('chCard').hidden = false;
+    el('chHint').textContent = basis === 'gross'
+      ? "총매출에서 수수료·원가·물류비·광고비·부가세를 뺀 '남는 돈' 기준"
+      : "정산금에서 원가·물류비·광고비·부가세를 뺀 '남는 돈' 기준";
     const T = list.reduce((t, x) => { ['gross','net','fee','cogs','logi','coupon','ad','vat','left','ord'].forEach(k => t[k] += x[k] || 0); return t; },
       { gross: 0, net: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0, ord: 0 });
     const bK = basis === 'gross' ? 'gross' : 'net';
@@ -721,7 +755,7 @@
     el('chtab').innerHTML = `
       <thead><tr><th>계정</th><th>주문</th><th>${basis === 'gross' ? '총매출' : '정산금'}</th>
         ${basis === 'gross' ? '<th>수수료</th>' : ''}<th>원가</th>
-        <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
+        <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${list.map(x => {
         const bv = x[bK], m = bv ? x.left / bv * 100 : 0;
         return `<tr>
@@ -732,15 +766,13 @@
           <td class="num">${won(x.logi + x.coupon)}</td>
           <td class="num">${won(x.ad)}</td>
           <td class="num"><span class="pill ${x.ad / bv <= .2 ? 'good' : x.ad / bv <= .3 ? 'warn' : 'bad'}">${pct(x.ad, bv)}</span></td>
-          <td class="num">${won(x.vat || 0)}</td>
           <td class="num ${x.left < 0 ? 'neg' : ''}"><b>${won(x.left)}</b></td>
           <td class="num"><span class="pill ${badge(m)}">${m.toFixed(1)}%</span></td></tr>`;
       }).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}</td><td class="num">${won(T[bK])}</td>
         ${basis === 'gross' ? `<td class="num">${won(T.fee)}</td>` : ''}<td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
-        <td class="num">${pct(T.ad, T[bK])}</td><td class="num">${won(T.vat)}</td>
-        <td class="num">${won(T.left)}</td>
+        <td class="num">${pct(T.ad, T[bK])}</td><td class="num">${won(T.left)}</td>
         <td class="num">${pct(T.left, T[bK])}</td></tr></tfoot>`;
     const best = list[0], top = [...list].sort((a, b) => (b.left / b[bK]) - (a.left / a[bK]))[0];
     const worst = [...list].sort((a, b) => (a.left / a[bK]) - (b.left / b[bK]))[0];
@@ -876,7 +908,7 @@
                growth: prev ? (cur - prev) / prev * 100 : (cur ? 100 : 0) };
     }).filter(o => o.total > 0).sort((a, b) => b.forecast - a.forecast || b.total - a.total);
     if (stockProd) list = list.filter(o => o.code === stockProd);
-    const shown = stockAll ? list : list.slice(0, 20);
+    const shown = stockAll ? list : list.slice(0, 12);
     const mx = Math.max(1, ...list.map(o => o.forecast));
     const show = fullM.slice(-4);
     el('stab').innerHTML = `
@@ -898,8 +930,8 @@
         <td class="num">${cnt(list.reduce((a, o) => a + o.forecast, 0))}</td><td></td>
         <td class="num">${cnt(list.reduce((a, o) => a + o.forecast * leadMonths, 0))}개</td></tr></tfoot>`;
     const b = el('smore');
-    b.hidden = list.length <= 20;
-    b.textContent = stockAll ? '상위 20개만 보기' : `전체 ${list.length}개 옵션 보기`;
+    b.hidden = list.length <= 12;
+    b.textContent = stockAll ? '상위 12개만 보기' : `전체 ${list.length}개 옵션 보기`;
   }
 
   // ── 일별 손익 ──
@@ -925,33 +957,36 @@
       { ord: 0, gross: 0, net: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0 });
     const n = rows.length || 1;
     const sorted = daySort === 'desc' ? [...rows].reverse() : rows;
-    const shown = dayAll ? sorted : sorted.slice(0, 31);
-    const mx = Math.max(1, ...rows.map(r => r.gross));
+    const shown = dayAll ? sorted : sorted.slice(0, 14);
+    const mx = Math.max(1, ...rows.map(r => basis === 'gross' ? r.gross : r.net));
     const best = Math.max(...rows.map(r => r.left)), worst = Math.min(...rows.map(r => r.left));
-    el('dayHint').textContent = `${rows.length}일 · 하루 평균 매출 ${won(T.gross / n)} · 하루 평균 남는 돈 ${won(T.left / n)}`;
+    el('dayHint').textContent = `${rows.length}일 · 하루 평균 매출 ${won((basis === 'gross' ? T.gross : T.net) / n)} · 하루 평균 남는 돈 ${won(T.left / n)}`;
+    const G = basis === 'gross';
+    const bv = r => G ? r.gross : r.net;
     const row = r => `<tr class="${r.wd === 0 || r.wd === 6 ? 'we' : ''}">
         <td class="mono">${r.d.slice(5)} <span style="color:var(--ink-3)">${WD[r.wd]}</span></td>
         <td class="num">${cnt(r.ord)}</td>
-        <td class="num"><span class="mt"><span class="mf" style="width:${Math.max(0, r.gross) / mx * 100}%"></span></span>${won(r.gross)}</td>
-        <td class="num">${won(r.gross - r.net)}</td>
+        <td class="num"><span class="mt"><span class="mf" style="width:${Math.max(0, bv(r)) / mx * 100}%"></span></span>${won(bv(r))}</td>
+        ${G ? `<td class="num">${won(r.gross - r.net)}</td>` : ''}
         <td class="num">${won(r.cogs)}</td><td class="num">${won(r.logi + r.coupon)}</td><td class="num">${won(r.ad)}</td>
         <td class="num">${won(r.vat)}</td>
         <td class="num ${r.left < 0 ? 'neg' : ''} ${r.left === best || r.left === worst ? 'best' : ''}">${won(r.left)}</td>
-        <td class="num">${r.gross ? `<span class="pill ${r.left / r.gross >= .2 ? 'good' : r.left / r.gross >= .1 ? 'warn' : 'bad'}">${(r.left / r.gross * 100).toFixed(0)}%</span>` : '–'}</td>
+        <td class="num">${bv(r) ? `<span class="pill ${r.left / bv(r) >= .2 ? 'good' : r.left / bv(r) >= .1 ? 'warn' : 'bad'}">${(r.left / bv(r) * 100).toFixed(0)}%</span>` : '–'}</td>
       </tr>`;
     const foot = (lab, v, d) => `<tr><td>${lab}</td><td class="num">${cnt(Math.round(v.ord / d))}</td>
-        <td class="num">${won(v.gross / d)}</td><td class="num">${won((v.gross - v.net) / d)}</td>
+        <td class="num">${won((G ? v.gross : v.net) / d)}</td>
+        ${G ? `<td class="num">${won((v.gross - v.net) / d)}</td>` : ''}
         <td class="num">${won(v.cogs / d)}</td><td class="num">${won((v.logi + v.coupon) / d)}</td>
         <td class="num">${won(v.ad / d)}</td><td class="num">${won(v.vat / d)}</td><td class="num">${won(v.left / d)}</td>
-        <td class="num">${pct(v.left, v.gross)}</td></tr>`;
+        <td class="num">${pct(v.left, G ? v.gross : v.net)}</td></tr>`;
     el('dtab').innerHTML = `
-      <thead><tr><th>날짜</th><th>주문</th><th>총매출</th><th>수수료</th><th>원가</th><th>물류비</th><th>광고비</th>
-        <th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
+      <thead><tr><th>날짜</th><th>주문</th><th>${G ? '총매출' : '정산금'}</th>${G ? '<th>수수료</th>' : ''}
+        <th>원가</th><th>물류비</th><th>광고비</th><th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${shown.map(row).join('')}</tbody>
       <tfoot>${foot('하루 평균', T, n)}${foot(`합계 (${rows.length}일)`, T, 1)}</tfoot>`;
     const b = el('dmore');
-    b.hidden = rows.length <= 31;
-    b.textContent = dayAll ? '최근 31일만 보기' : `전체 ${rows.length}일 보기`;
+    b.hidden = rows.length <= 14;
+    b.textContent = dayAll ? '최근 14일만 보기' : `전체 ${rows.length}일 보기`;
   }
 
   function renderCats(S) {
@@ -992,7 +1027,7 @@
       T.minus += r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액'];
       T.exc += r.x['정산전 취소_금액']; T.excN += r.x['정산전 취소_건수'];
     });
-    const mx = Math.max(...rows.map(x => x.gross), 1);
+    const mx = Math.max(...rows.map(x => basis === 'gross' ? x.gross : x.net), 1);
     const showCheck = monthView === 'check' && (scope === 'all' || scope === '네이버');
     el('mtab').innerHTML = showCheck ? `
       <thead><tr><th>월</th><th>주문</th><th>매출 (정산예정금)</th>
@@ -1004,19 +1039,20 @@
         <td class="num">${r.x ? won(r.x['정산전 취소_금액']) + ' · ' + cnt(r.x['정산전 취소_건수']) + '건' : '–'}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.net)}</td>
         <td class="num neg">${won(T.minus)}</td><td class="num">${won(T.exc)} · ${cnt(T.excN)}건</td></tr></tfoot>` : `
-      <thead><tr><th>월</th><th>주문</th><th>총매출</th><th>수수료</th><th>원가</th><th>물류비</th><th>광고비</th>
+      <thead><tr><th>월</th><th>주문</th><th>${basis === 'gross' ? '총매출' : '정산금'}</th>
+        ${basis === 'gross' ? '<th>수수료</th>' : ''}<th>원가</th><th>물류비</th><th>광고비</th>
         <th>남는 돈</th><th>남는 비율</th></tr></thead>
-      <tbody>${rows.map(r => `<tr>
+      <tbody>${rows.map(r => { const v = basis === 'gross' ? r.gross : r.net; return `<tr>
         <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
-        <td class="num"><span class="mt"><span class="mf" style="width:${r.gross / mx * 100}%"></span></span>${won(r.gross)}</td>
-        <td class="num">${won(r.gross - r.net)}</td><td class="num">${won(r.cogs)}</td>
+        <td class="num"><span class="mt"><span class="mf" style="width:${v / mx * 100}%"></span></span>${won(v)}</td>
+        ${basis === 'gross' ? `<td class="num">${won(r.gross - r.net)}</td>` : ''}<td class="num">${won(r.cogs)}</td>
         <td class="num">${won(r.logi + r.coupon)}</td><td class="num">${won(r.ad)}</td>
         <td class="num ${r.left < 0 ? 'neg' : ''}">${won(r.left)}</td>
-        <td class="num"><span class="pill ${r.left / r.gross >= .2 ? 'good' : r.left / r.gross >= .1 ? 'warn' : 'bad'}">${pct(r.left, r.gross)}</span></td></tr>`).join('')}</tbody>
-      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.gross)}</td>
-        <td class="num">${won(T.gross - T.net)}</td><td class="num">${won(T.cogs)}</td>
+        <td class="num"><span class="pill ${r.left / v >= .2 ? 'good' : r.left / v >= .1 ? 'warn' : 'bad'}">${pct(r.left, v)}</span></td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(basis === 'gross' ? T.gross : T.net)}</td>
+        ${basis === 'gross' ? `<td class="num">${won(T.gross - T.net)}</td>` : ''}<td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
-        <td class="num">${won(T.left)}</td><td class="num">${pct(T.left, T.gross)}</td></tr></tfoot>`;
+        <td class="num">${won(T.left)}</td><td class="num">${pct(T.left, basis === 'gross' ? T.gross : T.net)}</td></tr></tfoot>`;
   }
 
   function renderProducts(S) {
@@ -1026,7 +1062,7 @@
     el('phint').textContent = hasC
       ? '이익률 = (매출 − 원가) ÷ 매출 · 광고비·택배비·고정비는 아직 빼기 전'
       : '원가 데이터를 넣으면 여기에 상품별 마진이 함께 나옵니다';
-    const rows = showAllProducts ? all : all.slice(0, 15);
+    const rows = showAllProducts ? all : all.slice(0, 10);
     const max = Math.max(1, ...all.map(r => r.rev));
     const badge = m => m < 30 ? 'bad' : m < 55 ? 'warn' : 'good';
     el('ptab').innerHTML = `
@@ -1049,8 +1085,8 @@
         <td class="num">${won(S.rev)}</td><td class="num">100%</td>
         ${hasC ? `<td class="num">${won(S.cogs)}</td><td class="num">${won(S.gross_profit)}</td><td class="num">${pct(S.gross_profit, S.rev)}</td>` : ''}</tr></tfoot>`;
     const more = el('pmore');
-    more.hidden = all.length <= 15;
-    more.textContent = showAllProducts ? '상위 15개만 보기' : `전체 ${all.length}개 보기`;
+    more.hidden = all.length <= 10;
+    more.textContent = showAllProducts ? '상위 10개만 보기' : `전체 ${all.length}개 보기`;
   }
 
   function renderTodo() {
@@ -1119,7 +1155,7 @@
     el('stockProd').addEventListener('change', e => { stockProd = e.target.value; stockAll = false; renderStock(); });
     document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('[data-basis]').forEach(x => x.setAttribute('aria-pressed', x === b));
-      basis = b.dataset.basis; renderMonths(); all();
+      basis = b.dataset.basis; setBasis(); renderMonths(); all();
     }));
     document.querySelectorAll('[data-lead]').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('[data-lead]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -1149,6 +1185,6 @@
   })();
 
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
-  renderMonths(); renderStock(); renderTodo(); all();
+  setBasis(); renderMonths(); renderStock(); renderTodo(); all();
 })();
 </script>
