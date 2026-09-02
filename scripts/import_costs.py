@@ -81,6 +81,26 @@ def main():
     if not cost:
         sys.exit("[오류] '원가' 시트에서 원가를 한 건도 읽지 못했습니다.")
 
+    # ── data/원가_추가.csv: 원가관리 엑셀에 아직 없는 옵션을 손으로 채워 넣는 파일 ──
+    extra_path = DATA / "원가_추가.csv"
+    extra_n = 0
+    if extra_path.exists():
+        with open(extra_path, newline="", encoding="utf-8-sig") as f:
+            for i, r in enumerate(csv.DictReader(f), start=2):
+                keys = {k.lstrip("\ufeff").strip(): (v or "") for k, v in r.items()}
+                no = pid(keys.get("상품번호"))
+                opt = keys.get("옵션정보", "").strip()
+                raw = keys.get("원가", "").replace(",", "").strip()
+                if not no or raw == "":
+                    continue
+                try:
+                    v = int(round(float(raw)))
+                except ValueError:
+                    sys.exit(f"[오류] 원가_추가.csv {i}행의 원가가 숫자가 아닙니다: '{raw}'")
+                cost[(no, opt)] = v
+                cost_by_no[no][opt] = v
+                extra_n += 1
+
     norm_by_no = defaultdict(dict)
     for no, opts in cost_by_no.items():
         for o, v in opts.items():
@@ -172,7 +192,8 @@ def main():
     total_qty = sum(tiers.values())
     known = total_qty - tiers["못 찾음"]
     print(f"원가관리 엑셀 읽음: {path.name} · 월별 시트 {len(sheets)}개")
-    print(f"원가 항목 {len(cost)}개 · 상품번호 {len(cost_by_no)}개")
+    print(f"원가 항목 {len(cost)}개 · 상품번호 {len(cost_by_no)}개"
+          + (f" (원가_추가.csv에서 {extra_n}개 보탬)" if extra_n else ""))
     print(f"주문 수량 {total_qty:,}개 (취소·반품 {excluded_qty:,}개 제외)\n")
     print("[원가를 어떻게 붙였는지]")
     for k in ["정확히 일치", "옵션없는 원가", "색상 무시 일치", "그 번호 원가 1개", "못 찾음"]:

@@ -273,7 +273,7 @@
       같은 상품이 시기에 따라 이름이 달라도 상품번호로 하나로 묶습니다.
     </p>
     <p class="hint" style="margin:8px 0 0;line-height:1.7">
-      <b>택배비</b>는 주문 건수 × 건당 단가입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
+      <b>택배비</b>는 주문 건수 × 건당 단가입니다. 1~8월은 전량 N배송(₩3,280) 기준입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
       <b>고정지출과 공통 마케팅비</b>는 월 단위 금액을 선택한 기간의 날짜 수만큼 나눠서 반영합니다.
       기간을 짧게 잡으면 그만큼만 반영되니, 월 전체를 보시려면 위에서 월을 선택해 주세요.
     </p>
@@ -388,7 +388,9 @@
         { lab: '매출총이익', val: won(S.gross), cap: `매출 대비 <b>${pct(S.gross, S.rev)}</b> · 원가만 뺀 값` },
         { lab: '네이버 광고비', val: won(S.ad), cap: `매출 대비 <b>${pct(S.ad, S.rev)}</b>` },
         { lab: '상품 원가', val: won(S.cogs), cap: `매출 대비 <b>${pct(S.cogs, S.rev)}</b> · 반영률 ${cover.toFixed(1)}%` },
-        { lab: '택배비', val: won(S.shipping), cap: `주문 ${cnt(S.orders)}건 × <b>${won(SHIP['건당단가'])}</b>` });
+        { lab: '택배비', val: won(S.shipping),
+          cap: `주문 ${cnt(S.orders)}건 × <b>${won(SHIP['건당단가'])}</b>` +
+               ((SHIP['N배송비율'] || 0) >= 1 ? ' · 전량 N배송' : '') });
     } else {
       if (S.hasCogs) t.push(
         { hero: 2, lab: '매출총이익 (매출 − 원가)', val: won(S.gross), cap: `이익률 <b>${pct(S.gross, S.rev)}</b>` },
@@ -594,12 +596,13 @@
   function renderTodo() {
     const S0 = compute();
     const items = [];
-    if (SHIP['N배송단가'] && SHIP['N배송단가'] !== SHIP['판매자배송단가']) {
-      const diff = (SHIP['N배송단가'] - SHIP['판매자배송단가']) * S0.orders;
-      items.push(`<b>N배송 비율</b> — 정산 파일에 배송 방식 구분이 없어, 지금은 전체를 ` +
-        `${SHIP['N배송비율'] ? 'N배송 ' + (SHIP['N배송비율'] * 100).toFixed(0) + '% 섞어' : '판매자배송으로만'} 계산했습니다 ` +
-        `(건당 ${won(SHIP['건당단가'])}). 전부 N배송이면 택배비가 ${shortWon(diff)}원 더 늘어납니다. ` +
-        `실제 비율을 알려주시면 <code>data/settings.json</code>의 N배송비율에 넣습니다.`);
+    const nr = SHIP['N배송비율'] || 0;
+    if (nr < 1) {
+      const diff = (SHIP['N배송단가'] - SHIP['판매자배송단가']) * S0.orders * (1 - nr);
+      items.push(`<b>N배송 비율</b> — 정산 파일에 배송 방식 구분이 없어 설정값으로 계산합니다. ` +
+        `지금은 N배송 ${(nr * 100).toFixed(0)}%, 건당 ${won(SHIP['건당단가'])}입니다. ` +
+        `전부 N배송이면 택배비가 ${shortWon(diff)}원 더 늘어납니다. ` +
+        `<code>data/settings.json</code>의 N배송비율을 고치면 반영됩니다.`);
     }
     if (S0.unk > 0) {
       const cov = ((S0.qty - S0.unk) / S0.qty * 100).toFixed(1);
