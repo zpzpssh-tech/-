@@ -92,6 +92,46 @@
   select { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 7px 11px; cursor: pointer; font-size: 13px; }
   .note { color: var(--ink-3); font-size: 12px; }
 
+  /* ── 달력 선택 ── */
+  .dp { position: relative; }
+  .dpbtn { display: inline-flex; align-items: center; gap: 7px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; cursor: pointer;
+    color: var(--ink-2); font-size: 13px; font-weight: 500; }
+  .dpbtn:hover { border-color: var(--line-strong); color: var(--ink); }
+  .dpbtn svg { width: 14px; height: 14px; flex: none; }
+  .dpbtn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+  .dppop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 274px;
+    background: var(--surface); border: 1px solid var(--line-strong); border-radius: 13px;
+    box-shadow: var(--shadow-lift); padding: 13px; }
+  .dpnav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .dpnav span { font-size: 13.5px; font-weight: 600; }
+  .dpnav button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px;
+    width: 27px; height: 27px; cursor: pointer; color: var(--ink-2); font-size: 15px; line-height: 1; }
+  .dpnav button:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); }
+  .dpnav button:disabled { opacity: .3; cursor: default; }
+  .dpdow, .dpgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .dpdow span { text-align: center; font-size: 11px; color: var(--ink-3); padding-bottom: 4px; }
+  .dpgrid button { position: relative; border: 0; background: transparent; border-radius: 7px;
+    height: 31px; cursor: pointer; font-size: 12.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dpgrid button:disabled { color: var(--ink-3); opacity: .4; cursor: default; }
+  .dpgrid button:hover:not(:disabled) { background: var(--surface-2); }
+  .dpgrid button .dot { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%);
+    width: 3px; height: 3px; border-radius: 50%; background: var(--accent); opacity: .55; }
+  .dpgrid button.in { background: var(--accent-soft); border-radius: 0; }
+  .dpgrid button.edge { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .dpgrid button.edge .dot { background: var(--accent-ink); opacity: .7; }
+  .dpgrid button.s { border-radius: 7px 0 0 7px; }
+  .dpgrid button.e { border-radius: 0 7px 7px 0; }
+  .dpgrid button.s.e { border-radius: 7px; }
+  .dpgrid button.empty { visibility: hidden; }
+  .dphint { margin: 9px 0 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+  .dpfoot { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px;
+    padding-top: 10px; border-top: 1px solid var(--line); }
+  .dpfoot button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px;
+    padding: 7px 8px; cursor: pointer; font-size: 12px; color: var(--ink-2); }
+  .dpfoot button:hover { border-color: var(--line-strong); color: var(--ink); }
+  .dpfoot button.prime { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+
   /* ── KPI ── */
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 12px; }
   @media (min-width: 1000px) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -267,7 +307,28 @@
         <button data-range="30" aria-pressed="false">30일</button>
         <button data-range="7" aria-pressed="false">7일</button>
       </div>
-      <select id="msel" aria-label="월 선택"><option value="">월별로 보기</option></select>
+      <div class="dp">
+        <button id="dpBtn" class="dpbtn" aria-expanded="false" aria-haspopup="dialog">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"
+            stroke="currentColor" stroke-width="1.4"/><path d="M2 6.5h12M5.5 2v2M10.5 2v2" stroke="currentColor"
+            stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span id="dpLabel"></span>
+        </button>
+        <div class="dppop" id="dpPop" role="dialog" aria-label="날짜 선택" hidden>
+          <div class="dpnav">
+            <button id="dpPrev" aria-label="이전 달">‹</button>
+            <span id="dpTitle"></span>
+            <button id="dpNext" aria-label="다음 달">›</button>
+          </div>
+          <div class="dpdow"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+          <div class="dpgrid" id="dpGrid"></div>
+          <p class="dphint" id="dpHint"></p>
+          <div class="dpfoot">
+            <button id="dpMonth">이 달 전체</button>
+            <button id="dpAll" class="prime"></button>
+          </div>
+        </div>
+      </div>
       <span class="note mono" id="rnote"></span>
     </div>
   </header>
@@ -531,8 +592,6 @@
   const span = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5) + 1;
   const dim = ym => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
   const months = [...new Set(allDates.map(d => d.slice(0, 7)))];
-  months.forEach(m => { const o = document.createElement('option'); o.value = m;
-    o.textContent = m.slice(0, 4) + '년 ' + Number(m.slice(5)) + '월'; el('msel').appendChild(o); });
 
   let range = { s: first, e: last }, smooth = 7, showAllProducts = false, monthView = 'pnl';
 
@@ -1136,25 +1195,18 @@
 
   function all() {
     const S = compute();
-    el('rnote').textContent = `${range.s} ~ ${range.e} · ${S.days}일`;
+    el('rnote').textContent = `${S.days}일치`;
     renderKpis(S); renderChannels(S); renderMetrics(S); renderPnl(S); renderLine(S); renderCats(S); renderDays(S); renderProducts(S);
   }
 
   document.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    el('msel').value = '';
     const r = b.dataset.range;
     range = r === 'all' ? { s: first, e: last } : { s: addD(last, -(Number(r) - 1)), e: last };
     if (range.s < first) range.s = first;
+    CAL.refresh();
     all();
   }));
-  el('msel').addEventListener('change', e => {
-    const m = e.target.value; if (!m) return;
-    document.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', 'false'));
-    range = { s: m + '-01', e: m + '-' + String(dim(m)).padStart(2, '0') };
-    if (range.e > last) range.e = last; if (range.s < first) range.s = first;
-    all();
-  });
   document.querySelectorAll('[data-sm]').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('[data-sm]').forEach(x => x.setAttribute('aria-pressed', x === b));
     smooth = Number(b.dataset.sm); renderLine(compute());
@@ -1251,6 +1303,101 @@
       });
       sync();
     });
+  })();
+
+
+  // ── 달력으로 날짜 고르기 ──
+  // 하루만 누르면 그 날 하루, 두 번 누르면 두 날짜 사이 기간이 됩니다.
+  const CAL = (function () {
+    const has = new Set(DAYS.filter(r => r.gross || r.ord).map(r => r.d));
+    let view = last.slice(0, 7);        // 지금 보고 있는 달
+    let pending = null;                 // 첫 번째로 누른 날짜
+    const pop = el('dpPop'), btn = el('dpBtn');
+
+    const ymd = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const label = () => {
+      const n = span(range.s, range.e);
+      if (range.s === first && range.e === last) return `전체 ${n}일`;
+      if (range.s === range.e) return `${range.s} 하루`;
+      return `${range.s} ~ ${range.e} · ${n}일`;
+    };
+
+    function draw() {
+      const [y, m] = view.split('-').map(Number);
+      el('dpTitle').textContent = `${y}년 ${m}월`;
+      el('dpPrev').disabled = view <= first.slice(0, 7);
+      el('dpNext').disabled = view >= last.slice(0, 7);
+      const firstDow = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+      const days = dim(view);
+      let html = '';
+      for (let i = 0; i < firstDow; i++) html += '<button class="empty" disabled></button>';
+      for (let d = 1; d <= days; d++) {
+        const key = ymd(y, m, d);
+        const ok = key >= first && key <= last;
+        const inR = key >= range.s && key <= range.e;
+        const isS = key === range.s, isE = key === range.e;
+        const cls = [inR ? (isS || isE ? 'edge' : 'in') : '', isS ? 's' : '', isE ? 'e' : '',
+                     pending === key ? 'edge s e' : ''].filter(Boolean).join(' ');
+        html += `<button data-d="${key}" class="${cls}"${ok ? '' : ' disabled'}>${d}` +
+                `${has.has(key) ? '<span class="dot"></span>' : ''}</button>`;
+      }
+      el('dpGrid').innerHTML = html;
+      el('dpGrid').querySelectorAll('button[data-d]').forEach(b =>
+        b.addEventListener('click', e => { e.stopPropagation(); pick(b.dataset.d); }));
+      el('dpHint').textContent = pending
+        ? `${pending} 부터. 끝나는 날을 한 번 더 누르세요.`
+        : '하루를 누르면 그 날 하루, 두 번 누르면 기간이 됩니다.';
+      el('dpAll').textContent = `전체 ${span(first, last)}일`;
+    }
+
+    function apply() {
+      document.querySelectorAll('[data-range]').forEach(x =>
+        x.setAttribute('aria-pressed', x.dataset.range === 'all' && range.s === first && range.e === last));
+      el('dpLabel').textContent = label();
+      dayAll = false;
+      all();
+    }
+
+    function pick(d) {
+      if (pending === null) {
+        pending = d; range = { s: d, e: d }; draw(); apply();
+      } else {
+        range = pending <= d ? { s: pending, e: d } : { s: d, e: pending };
+        pending = null; draw(); apply(); close();
+      }
+    }
+    function open() {
+      pop.hidden = false; btn.setAttribute('aria-expanded', 'true');
+      // 전체 기간이면 가장 최근 달을, 아니면 고른 기간의 시작 달을 엽니다.
+      view = (range.s === first && range.e === last) ? last.slice(0, 7) : range.s.slice(0, 7);
+      draw();
+    }
+    function close() { pop.hidden = true; btn.setAttribute('aria-expanded', 'false'); pending = null; }
+
+    btn.addEventListener('click', () => pop.hidden ? open() : close());
+    pop.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('click', e => {
+      if (!pop.hidden && !e.target.closest('.dp')) close();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    el('dpPrev').addEventListener('click', () => {
+      const [y, m] = view.split('-').map(Number);
+      view = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`; draw();
+    });
+    el('dpNext').addEventListener('click', () => {
+      const [y, m] = view.split('-').map(Number);
+      view = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`; draw();
+    });
+    el('dpMonth').addEventListener('click', () => {
+      const a = view + '-01', b = view + '-' + String(dim(view)).padStart(2, '0');
+      range = { s: a < first ? first : a, e: b > last ? last : b };
+      pending = null; draw(); apply(); close();
+    });
+    el('dpAll').addEventListener('click', () => {
+      range = { s: first, e: last }; pending = null; draw(); apply(); close();
+    });
+    el('dpLabel').textContent = label();
+    return { refresh: () => { el('dpLabel').textContent = label(); if (!pop.hidden) draw(); } };
   })();
 
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
