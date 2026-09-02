@@ -79,14 +79,15 @@ def load_costs():
             by_opt.setdefault(opt, c)
             if prd:
                 by_prod[prd].setdefault(cp.tail(opt), c)
-    add = ROOT / "data" / "원가_추가.csv"
+    # 대표가 직접 적어준 원가는 시트보다 우선합니다 (data/로켓_원가.csv: 상품명, 원가, 메모)
+    add = ROOT / "data" / "로켓_원가.csv"
     if add.exists():
         with open(add, newline="", encoding="utf-8-sig") as f:
             for r in csv.DictReader(f):
                 k = {(c or "").lstrip("\ufeff").strip(): v for c, v in r.items()}
-                nm, c = (k.get("옵션명") or k.get("상품명") or "").strip(), num(k.get("원가"))
+                nm, c = (k.get("상품명") or "").strip(), num(k.get("원가"))
                 if nm and c:
-                    by_opt[nm] = c          # 손으로 적은 값이 시트보다 우선입니다
+                    by_opt[nm] = c
 
     def find(name):
         """상품명 전체 → (원가, 어떻게 찾았는지). 못 찾으면 (None, '못 찾음')"""
