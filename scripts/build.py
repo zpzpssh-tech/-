@@ -258,6 +258,7 @@ def main():
         "쿠팡비용": cp_cost,
         "쿠팡옵션": cp_opt,
         "고객지표": cust,
+        "부가세": settings.get("부가세", {}),
         "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
                  "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
     }

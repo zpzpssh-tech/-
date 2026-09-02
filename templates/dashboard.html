@@ -380,6 +380,7 @@
   const EXP = D['비용'] || [], SHIP = D['택배비'] || {};
   const OPTS = D['옵션판매'] || [], ADS = D['광고지표'] || [], CUST = D['고객지표'] || {};
   const ADD = D['일별광고비'] || {};
+  const VAT = D['부가세'] || {};
   const CPD = D['쿠팡일별'] || [], CPC = D['쿠팡비용'] || [], CPO = D['쿠팡옵션'] || [];
   const ACCTS = D['계정'] || [];
 
@@ -519,10 +520,21 @@
       const part = amt * span(a, b) / dim(ym);
       if (kind === '고정지출') fixed += part; else mkt += part;
     }
+    // 부가세: 매출도 원가·물류비·광고비·수수료도 모두 부가세 포함 금액이라
+    // (총매출 − 그 비용들) ÷ 11 이 실제로 내는 부가세가 됩니다.
+    const rate = VAT['적용'] ? (VAT['세율'] || 0.1) : 0;
+    const preVat = t.left;                       // 부가세 빼기 전 남는 돈
+    const vat = rate ? preVat * rate / (1 + rate) : 0;
+    const contrib = preVat - vat;
+    Object.values(byAcct).forEach(a => {
+      a.vat = rate ? a.left * rate / (1 + rate) : 0;
+      a.preVat = a.left;
+      a.left = a.left - a.vat;
+    });
     return { rev: t.net, gross: t.gross, fee: t.fee, cogs: t.cogs, shipping: t.logi + t.coupon,
              logi: t.logi, coupon: t.coupon, ad: t.ad, orders: t.ord, qty: t.qty,
-             contrib: t.left, gross_profit: t.net - t.cogs, unk, nvQty,
-             mkt, fixed, op: t.left - mkt - fixed, hasExp: EXP.length > 0,
+             preVat, vat, contrib, gross_profit: t.net - t.cogs, unk, nvQty,
+             mkt, fixed, op: contrib - mkt - fixed, hasExp: EXP.length > 0,
              byDay, byAcct, byCode, byCat, hasCogs: t.cogs > 0,
              days: span(range.s, range.e) };
   }
@@ -543,6 +555,8 @@
       { lab: '광고비', val: won(S.ad),
         cap: `총매출 대비 <b>${pct(S.ad, S.gross)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
     ];
+    if (S.vat) t.push({ lab: '부가세', val: won(S.vat),
+      cap: `총매출 대비 <b>${pct(S.vat, S.gross)}</b> · 매출세액 − 매입세액` });
     el('kpis').innerHTML = t.map(k => `<div class="kpi${k.hero === 1 ? ' hero' : k.hero === 2 ? ' hero2' : ''}">
       <div class="lab">${k.lab}</div><div class="val num${!k.hero && /^-/.test(k.val) ? ' neg' : ''}">${k.val}</div>
       <div class="cap num">${k.cap}</div></div>`).join('');
@@ -617,13 +631,18 @@
       step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '', '보내고 보관하는 데 든 돈'),
     ];
     if (S.coupon) rows.push(step('판매자 할인쿠폰', '−', -S.coupon, 'var(--k6)', '', '우리가 부담한 쿠폰 할인'));
-    rows.push(
-      step('광고비', '−', -S.ad, 'var(--k5)', '', '검색광고·쿠팡광고에 쓴 돈'),
-      step(who + '에서 남은 돈', '=', S.contrib, 'var(--accent)', 'sum', '이 장사만 놓고 본 이익'),
+    rows.push(step('광고비', '−', -S.ad, 'var(--k5)', '', '검색광고·쿠팡광고에 쓴 돈'));
+    if (S.vat) rows.push(
+      step('부가세 내기 전', '=', S.preVat, 'var(--ink-2)', 'sum', '여기까지가 통장에 남는 돈'),
+      step('부가세', '−', -S.vat, 'var(--k3)', '', '매출세액에서 매입세액을 뺀 실제 납부액'));
+    rows.push(step(who + '에서 남은 돈', '=', S.contrib,
+                   S.contrib >= 0 ? 'var(--accent)' : 'var(--bad)',
+                   scope === 'all' ? 'sum' : 'final', '이 장사만 놓고 본 이익'));
+    if (scope === 'all') rows.push(
       step('회사 공통 마케팅비', '−', -S.mkt, 'var(--k7)', '', '전 채널이 함께 쓰는 비용'),
-      step('회사 고정지출', '−', -S.fixed, 'var(--k1)', '', '전 채널이 함께 쓰는 비용'),
+      step('회사 고정지출', '−', -S.fixed, 'var(--k1)', '', '인건비·월세·차량 등'),
       step('회사 영업이익', '=', S.op, S.op >= 0 ? 'var(--good)' : 'var(--bad)', 'final',
-           scope === 'all' ? '로켓배송 계정은 아직 빠져 있음' : '공통비를 이 계정에만 물린 값'));
+           '로켓배송 계정은 아직 빠져 있음'));
     el('pnl').innerHTML = rows.map(r => `
       <div class="pl ${r.cls || ''}">
         <div class="pl-n"><span class="op">${r.op}</span><span>${r.name}${r.note ? `<small>${r.note}</small>` : ''}</span></div>
@@ -632,19 +651,21 @@
         <div class="pl-p num">${pct(Math.abs(r.val), S.gross)}</div>
       </div>`).join('');
     const mo = S.days / 30.4;
+    const vatNote = S.vat
+      ? `매출과 원가·물류비·광고비·수수료가 모두 부가세 포함 금액이라, 그 차액의 <b>11분의 1</b>을 부가세로 뺐습니다. ` +
+        `회사 고정지출은 인건비 비중이 커서 매입세액을 반영하지 않았으니, 실제 납부액은 이보다 조금 적습니다.`
+      : '';
     if (scope === 'all') {
       el('pnlNote').innerHTML =
         `<b>회사 영업이익</b>이 전 채널을 합친 진짜 이익입니다. 월 평균 <b>${shortWon(S.op / mo)}원</b>입니다.<br>` +
-        `쿠팡 <b>로켓배송</b> 계정은 아직 자료가 없어 빠져 있습니다. 그만큼 실제보다 낮게 나옵니다.`;
+        vatNote + `<br>쿠팡 <b>로켓배송</b> 계정은 아직 자료가 없어 빠져 있습니다. 그만큼 실제보다 낮게 나옵니다.`;
       return;
     }
     el('pnlNote').innerHTML =
       `<b>'${scope}에서 남은 돈'이 이 계정의 실질 영업이익입니다.</b> 이 계정으로 판 매출에서 ` +
-      `수수료·원가·물류비·광고비를 뺀 값이라, 계정이 잘 되고 있는지 판단할 때 이 숫자를 보시면 됩니다. ` +
-      `월 평균 <b>${shortWon(S.contrib / mo)}원</b>입니다.<br>` +
-      `맨 아래 <b>회사 영업이익</b>은 회사 공통비를 이 계정 하나에만 전부 물린 값이라 실제보다 낮습니다. ` +
-      `공통비는 월 <b>${shortWon((S.mkt + S.fixed) / mo)}원</b>이고, 이 계정이 그중 ` +
-      `<b>${(S.contrib / (S.mkt + S.fixed) * 100).toFixed(0)}%</b>를 감당합니다. 전체를 보시려면 위에서 '전체'를 고르세요.`;
+      `수수료·원가·물류비·광고비와 부가세를 뺀 값입니다. 월 평균 <b>${shortWon(S.contrib / mo)}원</b>입니다.<br>` +
+      `회사 고정지출과 공통 마케팅비는 전 채널이 함께 쓰는 비용이라 계정별 화면에서는 빼지 않았습니다. ` +
+      `회사 전체 영업이익은 위에서 <b>'전체'</b>를 고르시면 나옵니다.<br>` + vatNote;
   }
 
   // ── 계정별 손익 비교 ──
@@ -653,15 +674,15 @@
       .sort((x, y) => y.gross - x.gross);
     if (list.length < 2) { el('chCard').hidden = true; return; }
     el('chCard').hidden = false;
-    const T = list.reduce((t, x) => { ['gross','fee','cogs','logi','coupon','ad','left','ord'].forEach(k => t[k] += x[k] || 0); return t; },
-      { gross: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, left: 0, ord: 0 });
+    const T = list.reduce((t, x) => { ['gross','fee','cogs','logi','coupon','ad','vat','left','ord'].forEach(k => t[k] += x[k] || 0); return t; },
+      { gross: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0, ord: 0 });
     const mx = Math.max(1, ...list.map(x => x.gross));
     const badge = m => m >= 20 ? 'good' : m >= 10 ? 'warn' : 'bad';
     const cfg = {}; ACCTS.forEach(a => cfg[a['계정']] = a);
     const assumed = a => (cfg[a] || {})['판매방식'] === '판매자배송';
     el('chtab').innerHTML = `
       <thead><tr><th>계정</th><th>주문</th><th>총매출</th><th>수수료</th><th>원가</th>
-        <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
+        <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${list.map(x => {
         const m = x.gross ? x.left / x.gross * 100 : 0;
         return `<tr>
@@ -672,13 +693,15 @@
           <td class="num">${won(x.logi + x.coupon)}</td>
           <td class="num">${won(x.ad)}</td>
           <td class="num"><span class="pill ${x.ad / x.gross <= .2 ? 'good' : x.ad / x.gross <= .3 ? 'warn' : 'bad'}">${pct(x.ad, x.gross)}</span></td>
+          <td class="num">${won(x.vat || 0)}</td>
           <td class="num ${x.left < 0 ? 'neg' : ''}"><b>${won(x.left)}</b></td>
           <td class="num"><span class="pill ${badge(m)}">${m.toFixed(1)}%</span></td></tr>`;
       }).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}</td><td class="num">${won(T.gross)}</td>
         <td class="num">${won(T.fee)}</td><td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
-        <td class="num">${pct(T.ad, T.gross)}</td><td class="num">${won(T.left)}</td>
+        <td class="num">${pct(T.ad, T.gross)}</td><td class="num">${won(T.vat)}</td>
+        <td class="num">${won(T.left)}</td>
         <td class="num">${pct(T.left, T.gross)}</td></tr></tfoot>`;
     const best = list[0], top = [...list].sort((a, b) => (b.left / b.gross) - (a.left / a.gross))[0];
     const worst = [...list].sort((a, b) => (a.left / a.gross) - (b.left / b.gross))[0];
@@ -830,14 +853,17 @@
       if (r.d < range.s || r.d > range.e || !inScope(r)) continue;
       const a = agg[r.d] || (agg[r.d] = { ord: 0, gross: 0, net: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, left: 0 });
       ['ord', 'gross', 'net', 'cogs', 'logi', 'coupon', 'ad', 'left'].forEach(k => a[k] += r[k]);
+      a.left = a.left;
     }
+    const vr = VAT['적용'] ? (VAT['세율'] || 0.1) : 0;
     const rows = [];
     for (let d = range.s; d <= range.e; d = addD(d, 1)) {
       const a = agg[d] || { ord: 0, gross: 0, net: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, left: 0 };
-      rows.push({ d, ...a, wd: new Date(d + 'T00:00:00Z').getUTCDay() });
+      const vat = vr ? a.left * vr / (1 + vr) : 0;
+      rows.push({ d, ...a, vat, left: a.left - vat, wd: new Date(d + 'T00:00:00Z').getUTCDay() });
     }
-    const T = rows.reduce((a, r) => { ['ord','gross','net','cogs','logi','coupon','ad','left'].forEach(k => a[k] += r[k]); return a; },
-      { ord: 0, gross: 0, net: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, left: 0 });
+    const T = rows.reduce((a, r) => { ['ord','gross','net','cogs','logi','coupon','ad','vat','left'].forEach(k => a[k] += r[k]); return a; },
+      { ord: 0, gross: 0, net: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0 });
     const n = rows.length || 1;
     const sorted = daySort === 'desc' ? [...rows].reverse() : rows;
     const shown = dayAll ? sorted : sorted.slice(0, 31);
@@ -850,17 +876,18 @@
         <td class="num"><span class="mt"><span class="mf" style="width:${Math.max(0, r.gross) / mx * 100}%"></span></span>${won(r.gross)}</td>
         <td class="num">${won(r.gross - r.net)}</td>
         <td class="num">${won(r.cogs)}</td><td class="num">${won(r.logi + r.coupon)}</td><td class="num">${won(r.ad)}</td>
+        <td class="num">${won(r.vat)}</td>
         <td class="num ${r.left < 0 ? 'neg' : ''} ${r.left === best || r.left === worst ? 'best' : ''}">${won(r.left)}</td>
         <td class="num">${r.gross ? `<span class="pill ${r.left / r.gross >= .2 ? 'good' : r.left / r.gross >= .1 ? 'warn' : 'bad'}">${(r.left / r.gross * 100).toFixed(0)}%</span>` : '–'}</td>
       </tr>`;
     const foot = (lab, v, d) => `<tr><td>${lab}</td><td class="num">${cnt(Math.round(v.ord / d))}</td>
         <td class="num">${won(v.gross / d)}</td><td class="num">${won((v.gross - v.net) / d)}</td>
         <td class="num">${won(v.cogs / d)}</td><td class="num">${won((v.logi + v.coupon) / d)}</td>
-        <td class="num">${won(v.ad / d)}</td><td class="num">${won(v.left / d)}</td>
+        <td class="num">${won(v.ad / d)}</td><td class="num">${won(v.vat / d)}</td><td class="num">${won(v.left / d)}</td>
         <td class="num">${pct(v.left, v.gross)}</td></tr>`;
     el('dtab').innerHTML = `
       <thead><tr><th>날짜</th><th>주문</th><th>총매출</th><th>수수료</th><th>원가</th><th>물류비</th><th>광고비</th>
-        <th>남는 돈</th><th>남는 비율</th></tr></thead>
+        <th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${shown.map(row).join('')}</tbody>
       <tfoot>${foot('하루 평균', T, n)}${foot(`합계 (${rows.length}일)`, T, 1)}</tfoot>`;
     const b = el('dmore');
