@@ -125,6 +125,17 @@
   .g2 { display: grid; grid-template-columns: minmax(0,7fr) minmax(0,5fr); gap: 20px; }
   @media (max-width: 940px) { .g2 { grid-template-columns: 1fr; } }
 
+  /* ── 접히는 카드 ── */
+  [data-fold] > .card-head { cursor: pointer; margin-bottom: 0; }
+  [data-fold][data-open="1"] > .card-head { margin-bottom: 16px; }
+  [data-fold] > .card-head h2 { display: flex; align-items: center; gap: 8px; }
+  .chev { width: 15px; height: 15px; flex: none; color: var(--ink-3); transition: transform .16s ease; }
+  [data-fold][data-open="0"] .chev { transform: rotate(-90deg); }
+  [data-fold][data-open="0"] > .card-body { display: none; }
+  [data-fold] > .card-head:hover h2 { color: var(--accent); }
+  [data-fold] > .card-head:hover .chev { color: var(--accent); }
+  .foldnote { color: var(--ink-3); font-size: 12px; font-weight: 400; }
+
   /* ── 셀러 지표 ── */
   .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); gap: 12px; }
   .met { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px;
@@ -244,7 +255,8 @@
       </div>
     </div>
     <div class="controls">
-      <div class="seg" id="scopeSeg" role="group" aria-label="계정 선택"></div>
+      <div class="seg" id="scopeSeg" role="group" aria-label="채널 선택"></div>
+      <div class="seg" id="subSeg" role="group" aria-label="쿠팡 계정 선택" hidden></div>
       <div class="seg" role="group" aria-label="매출 기준">
         <button data-basis="net" aria-pressed="true">정산금 기준</button>
         <button data-basis="gross" aria-pressed="false">총매출 기준</button>
@@ -280,7 +292,24 @@
     <p class="hint" id="chNote" style="margin:12px 0 0;line-height:1.7"></p>
   </section>
 
-  <section class="card" id="metricCard" hidden>
+  <section class="g2">
+    <div class="card">
+      <div class="card-head">
+        <h2>일별 매출 추이</h2>
+        <div class="seg" role="group" aria-label="표시 방식">
+          <button data-sm="7" aria-pressed="true">7일 평균</button>
+          <button data-sm="1" aria-pressed="false">일별</button>
+        </div>
+      </div>
+      <div class="chart" id="line"></div>
+    </div>
+    <div class="card" id="catCard">
+      <div class="card-head"><h2>부위별 매출 <span class="only">네이버</span></h2><span class="hint">정산예정금 기준</span></div>
+      <div class="cats" id="cats"></div>
+    </div>
+  </section>
+
+  <section class="card" id="metricCard" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>온라인 셀러 필수 지표</h2>
       <span class="hint" id="metHint">화살표는 지난달 대비 변화 · 초록이 좋아진 방향</span>
@@ -288,7 +317,7 @@
     <div class="metrics" id="metrics"></div>
   </section>
 
-  <section class="card" id="stockCard" hidden>
+  <section class="card" id="stockCard" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>옵션별 판매량과 다음 달 예상 <span class="only">네이버</span></h2>
       <div class="controls">
@@ -310,24 +339,9 @@
     </p>
   </section>
 
-  <section class="g2">
-    <div class="card">
-      <div class="card-head">
-        <h2>일별 매출 추이</h2>
-        <div class="seg" role="group" aria-label="표시 방식">
-          <button data-sm="7" aria-pressed="true">7일 평균</button>
-          <button data-sm="1" aria-pressed="false">일별</button>
-        </div>
-      </div>
-      <div class="chart" id="line"></div>
-    </div>
-    <div class="card" id="catCard">
-      <div class="card-head"><h2>부위별 매출 <span class="only">네이버</span></h2><span class="hint">정산예정금 기준</span></div>
-      <div class="cats" id="cats"></div>
-    </div>
-  </section>
 
-  <section class="card" id="dayCard" hidden>
+
+  <section class="card" id="dayCard" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>일별 손익</h2>
       <div class="controls">
@@ -348,7 +362,7 @@
     </p>
   </section>
 
-  <section class="card">
+  <section class="card" data-fold data-open="0">
     <div class="card-head">
       <h2>월별 손익</h2>
       <div class="seg" role="group" aria-label="표 보기 전환">
@@ -359,13 +373,13 @@
     <div class="tw"><table id="mtab"></table></div>
   </section>
 
-  <section class="card" id="prodCard">
+  <section class="card" id="prodCard" data-fold data-open="0">
     <div class="card-head"><h2>상품별 매출 <span class="only">네이버</span></h2><span class="hint" id="phint"></span></div>
     <div class="tw"><table id="ptab"></table></div>
     <button class="more" id="pmore" hidden></button>
   </section>
 
-  <section class="card">
+  <section class="card" data-fold data-open="0">
     <div class="card-head"><h2>매출을 이렇게 계산했습니다</h2><span class="hint">네이버 건별 정산내역의 '정산예정금액' 합계</span></div>
     <div class="rules">
       <div class="rule"><div class="h"><span class="sign plus">＋</span> 빠른정산 · 일반정산</div>
@@ -485,9 +499,10 @@
   })();
 
   const ACCT_LIST = [...new Set(DAYS.map(r => r.acct))];
-  let scope = 'all';     // 'all' 또는 계정 이름
+  let tab = 'all';       // 'all' | '네이버' | '쿠팡'
+  let scope = 'all';     // 'all' | '네이버' | '쿠팡' | 개별 계정 이름
   let basis = 'net';     // 'net' = 수수료 뺀 정산금 기준, 'gross' = 수수료 빼기 전 총매출 기준
-  const inScope = r => scope === 'all' || r.acct === scope;
+  const inScope = r => scope === 'all' || (scope === '쿠팡' ? r.ch === '쿠팡' : r.acct === scope);
   const el = id => document.getElementById(id);
   const won = n => (n < 0 ? '-₩' : '₩') + Math.abs(Math.round(n)).toLocaleString('ko-KR');
   const cnt = n => Math.round(n).toLocaleString('ko-KR');
@@ -742,6 +757,7 @@
       .sort((x, y) => y[bk] - x[bk]);
     if (list.length < 2) { el('chCard').hidden = true; return; }
     el('chCard').hidden = false;
+    el('chCard').querySelector('h2').textContent = scope === '쿠팡' ? '쿠팡 계정별 손익 비교' : '계정별 손익 비교';
     el('chHint').textContent = basis === 'gross'
       ? "총매출에서 수수료·원가·물류비·광고비·부가세를 뺀 '남는 돈' 기준"
       : "정산금에서 원가·물류비·광고비·부가세를 뺀 '남는 돈' 기준";
@@ -1100,17 +1116,18 @@
         `전부 N배송이면 택배비가 ${shortWon(diff)}원 더 늘어납니다. ` +
         `<code>data/settings.json</code>의 N배송비율을 고치면 반영됩니다.`);
     }
-    if (S0.unk > 0) {
-      const cov = ((S0.qty - S0.unk) / S0.qty * 100).toFixed(1);
-      items.push(`<b>원가를 못 찾은 옵션</b> — 지금 원가 반영률이 ${cov}%입니다. 나머지 ${cnt(S0.unk)}개는 원가를 0으로 잡아 이익이 실제보다 조금 높게 나옵니다. <code>data/원가_미매칭.csv</code>에 목록이 있으니 원가관리 엑셀의 '원가' 시트에 그 옵션들을 추가해 주세요.`);
+    if (S0.unk > 0 && S0.nvQty) {
+      const cov = ((S0.nvQty - S0.unk) / S0.nvQty * 100).toFixed(1);
+      items.push(`<b>네이버 원가를 못 찾은 옵션</b> — 지금 네이버 원가 반영률이 ${cov}%입니다. 나머지 ${cnt(S0.unk)}개는 원가를 0으로 잡아 이익이 실제보다 조금 높게 나옵니다. <code>data/원가_추가.csv</code>에 옵션과 원가를 적으면 반영됩니다. 목록은 <code>data/원가_미매칭.csv</code>에 있습니다.`);
     }
     const want = ['휴책', '유큐어', '올투게더나우', '로켓배송'].filter(a => !ACCT_LIST.includes(a));
     if (want.length) items.push(`<b>쿠팡 ${want.join(', ')} 계정</b> — 자료를 <code>data/원본/쿠팡/</code>에 넣어 주시면 같은 규칙으로 합산합니다. 지금 회사 영업이익에는 빠져 있습니다.`);
     items.push(`<b>현재 재고 수량</b> — 재고 회전율과 품절까지 남은 일수를 계산하려면 필요합니다. 발주 제안에서 재고를 빼야 실제 발주량이 나옵니다.`);
-    items.push(`<b>쿠팡 판매자배송 수수료율</b> — 올투게더나우 계정은 자료가 없어 ${(( (D['계정'].find(a => a['계정'] === '올투게더나우') || {})['수수료율'] || 0) * 100).toFixed(1)}%로 계산했습니다. 실제 값을 알려주시면 바꿉니다.`);
+    items.push(`<b>쿠팡 1~6월 상품별 판매 자료</b> — 그 기간은 쿠팡 시트에 상품 구분이 없어 7~8월 원가율로 추정했습니다. 날짜별 상품 실적 시트를 주시면 추정 없이 계산합니다.`);
+    items.push(`<b>기타 사이트 매출</b> — 지금 대시보드에 없습니다. 자료를 주시면 채널에 추가합니다.`);
     el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
     el('todo').querySelector('h2').textContent =
-      `숫자를 더 정확히 하려면 이 자료가 필요합니다 (현재 ${months.length}개월 반영)`;
+      `숫자를 더 정확히 하려면 이 자료가 필요합니다 (${first} ~ ${last} 반영)`;
     el('todo').hidden = false;
   }
 
@@ -1169,19 +1186,68 @@
     }));
   })();
 
-  // 계정 선택기
+  // 채널 탭 + 쿠팡 계정 하위 선택
   (function () {
-    const opts = [{ v: 'all', n: '전체' }, ...ACCT_LIST.map(a => ({ v: a, n: a }))];
-    el('scopeSeg').innerHTML = opts.map(o =>
-      `<button data-scope="${o.v}" aria-pressed="${o.v === 'all'}">${o.n}</button>`).join('');
+    const CH = [{ v: 'all', n: '전체' }, { v: '네이버', n: '네이버' }, { v: '쿠팡', n: '쿠팡' }];
+    const cpAccts = ACCT_LIST.filter(a => DAYS.some(r => r.acct === a && r.ch === '쿠팡'));
+    el('scopeSeg').innerHTML = CH.map(o =>
+      `<button data-tab="${o.v}" aria-pressed="${o.v === 'all'}">${o.n}</button>`).join('');
+    el('subSeg').innerHTML = [{ v: '쿠팡', n: '합계' }].concat(cpAccts.map(a => ({ v: a, n: a })))
+      .map(o => `<button data-sub="${o.v}" aria-pressed="${o.v === '쿠팡'}">${o.n}</button>`).join('');
+
+    function apply() {
+      const nv = scope === 'all' || scope === '네이버';
+      const multi = scope === 'all' || scope === '쿠팡';
+      ['catCard', 'prodCard', 'stockCard'].forEach(id => { const e = el(id); if (e) e.hidden = !nv; });
+      el('subSeg').hidden = tab !== '쿠팡';
+      const chc = el('chCard'); if (chc) chc.dataset.multi = multi ? '1' : '0';
+      dayAll = false; showAllProducts = false; stockAll = false;
+      setBasis(); renderMonths(); renderStock(); all();
+    }
     el('scopeSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
       el('scopeSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
-      scope = b.dataset.scope;
-      const nv = scope === 'all' || scope === '네이버';
-      ['catCard', 'prodCard', 'stockCard'].forEach(id => { const e = el(id); if (e) e.hidden = !nv; });
-      dayAll = false; showAllProducts = false;
-      renderMonths(); all();
+      tab = b.dataset.tab;
+      scope = tab;
+      if (tab === '쿠팡') {
+        el('subSeg').querySelectorAll('button').forEach(x =>
+          x.setAttribute('aria-pressed', x.dataset.sub === '쿠팡'));
+      }
+      apply();
     }));
+    el('subSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      el('subSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      scope = b.dataset.sub;
+      apply();
+    }));
+  })();
+
+  // 카드 접기·펼치기 (세부 내역은 눌러서 봅니다)
+  (function () {
+    const CHEV = '<svg class="chev" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    document.querySelectorAll('[data-fold]').forEach(card => {
+      const head = card.querySelector('.card-head');
+      const body = document.createElement('div');
+      body.className = 'card-body';
+      while (head.nextSibling) body.appendChild(head.nextSibling);
+      card.appendChild(body);
+      const h2 = head.querySelector('h2');
+      h2.insertAdjacentHTML('afterbegin', CHEV);
+      head.setAttribute('role', 'button');
+      head.setAttribute('tabindex', '0');
+      const sync = () => head.setAttribute('aria-expanded', card.dataset.open === '1');
+      const toggle = e => {
+        // 카드 머리에 있는 버튼·선택상자를 누른 경우는 접지 않습니다.
+        if (e && e.target.closest('button, select, .seg')) return;
+        card.dataset.open = card.dataset.open === '1' ? '0' : '1';
+        sync();
+      };
+      head.addEventListener('click', toggle);
+      head.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+      sync();
+    });
   })();
 
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
