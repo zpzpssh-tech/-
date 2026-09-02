@@ -95,6 +95,7 @@ def main():
             to_num(r["주문건수"], f"sales.csv {i}행 주문건수", 0),
             to_num(r["판매수량"], f"sales.csv {i}행 판매수량", 0),
             to_num(r["매출"], f"sales.csv {i}행 매출", 0),
+            to_num(r.get("총매출"), f"sales.csv {i}행 총매출", 0) or to_num(r["매출"], "", 0),
         ])
     if unknown_products:
         sys.exit(f"[오류] products.csv에 없는 상품코드가 sales.csv에 있습니다: {', '.join(sorted(unknown_products))}\n"
@@ -198,7 +199,41 @@ def main():
                 k = list(r.values())
                 cust[str(k[0]).strip()] = float(str(k[1]).replace(",", "") or 0)
 
-    dates = sorted({s[0] for s in sales})
+    # ── 쿠팡 데이터 ──
+    cp_daily, cp_cost, cp_opt = [], [], []
+    f1 = DATA / "쿠팡_일별.csv"
+    if f1.exists():
+        with open(f1, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                cp_daily.append({
+                    "날짜": k["날짜"].strip(), "계정": k["계정"].strip(),
+                    "주문": to_num(k["주문"], "쿠팡_일별.csv", 0),
+                    "판매량": to_num(k["판매량"], "쿠팡_일별.csv", 0),
+                    "총매출": to_num(k["총매출"], "쿠팡_일별.csv", 0),
+                    "원가": to_num(k["원가"], "쿠팡_일별.csv", 0),
+                    "원가추정": to_num(k["원가추정"], "쿠팡_일별.csv", 0),
+                    "방문자": to_num(k.get("방문자"), "쿠팡_일별.csv", 0),
+                })
+    f2 = DATA / "쿠팡_비용.csv"
+    if f2.exists():
+        with open(f2, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                cp_cost.append([k["기간"].strip(), k["단위"].strip(), k["계정"].strip(),
+                                k["항목"].strip(), to_num(k["금액"], "쿠팡_비용.csv", 0)])
+    f3 = DATA / "쿠팡_옵션.csv"
+    if f3.exists():
+        with open(f3, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                cp_opt.append([k["월"].strip(), k["계정"].strip(), k["상품명"].strip(),
+                               k["옵션명"].strip(), to_num(k["매출"], "쿠팡_옵션.csv", 0),
+                               to_num(k["주문"], "쿠팡_옵션.csv", 0),
+                               to_num(k["판매량"], "쿠팡_옵션.csv", 0),
+                               to_num(k["원가합계"], "쿠팡_옵션.csv", 0)])
+
+    dates = sorted({s[0] for s in sales} | {d["날짜"] for d in cp_daily})
     used_codes = {s[2] for s in sales}
     need_cost = sorted(c for c in used_codes if not product_map[c]["원가있음"] and c not in ("SHIP", "OPT"))
 
@@ -219,6 +254,9 @@ def main():
         "옵션판매": opt_sales,
         "광고지표": ad_stats,
         "일별광고비": ad_daily,
+        "쿠팡일별": cp_daily,
+        "쿠팡비용": cp_cost,
+        "쿠팡옵션": cp_opt,
         "고객지표": cust,
         "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
                  "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
@@ -245,16 +283,58 @@ def main():
             print(f"  매출에 없는 상품번호 {len(cogs_unmapped)}개는 원가에서 제외했습니다.")
     else:
         print("  원가일계.csv 가 없습니다. scripts/import_costs.py 를 먼저 실행해 주세요.")
+    if cp_daily:
+        print()
+        acct_cfg = {a["계정"]: a for a in accounts}
+        rng = (dates[0], dates[-1])
+        print(f"  {'계정':<12}{'총매출':>15}{'수수료':>13}{'원가':>13}{'물류비':>13}{'광고비':>13}{'남는 돈':>14}")
+        for a in accounts:
+            name = a["계정"]
+            if a.get("채널") != "쿠팡":
+                continue
+            rows = [d for d in cp_daily if d["계정"] == name and rng[0] <= d["날짜"] <= rng[1]]
+            gross = sum(d["총매출"] for d in rows)
+            cg = sum(d["원가"] for d in rows)
+            orders = sum(d["주문"] for d in rows)
+            def cost_of(item):
+                return sum(c[4] for c in cp_cost if c[2] == name and c[3] == item
+                           and rng[0][:7] <= c[0][:7] <= rng[1][:7])
+            fee = cost_of("수수료") or round(gross * float(a.get("수수료율", 0) or 0))
+            logi = cost_of("입출고비") or round(orders * float(a.get("건당배송비", 0) or 0))
+            coupon = cost_of("쿠폰")
+            ad = sum(c[4] for c in cp_cost if c[2] == name and c[3].startswith("광고비")
+                     and rng[0][:7] <= c[0][:7] <= rng[1][:7])
+            left = gross - fee - cg - logi - coupon - ad
+            print(f"  {name:<12}{gross:>15,}{fee:>13,}{cg:>13,}{logi:>13,}{ad:>13,}{left:>14,}")
+
     if not costs:
         print("  고정지출·마케팅비가 비어 있어 영업이익은 아직 계산하지 않습니다.")
     else:
-        months_in = sorted({d[:7] for d in dates})
+        from calendar import monthrange
+
+        def prorate(kind, has_acct):
+            """월 단위 비용을 기간에 걸친 날짜 수만큼 나눠 더합니다."""
+            total = 0.0
+            for ym, k, _, acct, amt in costs:
+                if k != kind or bool(acct) != has_acct:
+                    continue
+                y, m = int(ym[:4]), int(ym[5:7])
+                dim = monthrange(y, m)[1]
+                ms, me = f"{ym}-01", f"{ym}-{dim:02d}"
+                a = max(dates[0], ms)
+                b = min(dates[-1], me)
+                if a > b:
+                    continue
+                span = (int(b[8:]) - int(a[8:]) + 1)
+                total += amt * span / dim
+            return round(total)
+
         cg = sum(r[3] for r in cogs_rows if dates[0] <= r[0] <= dates[-1])
         orders = sum(v for k, v in daily_orders.items() if dates[0] <= k <= dates[-1])
         shipping = orders * ship_unit
-        ad = sum(c[4] for c in costs if c[0] in months_in and c[1] == "마케팅비" and c[3])
-        common_mkt = sum(c[4] for c in costs if c[0] in months_in and c[1] == "마케팅비" and not c[3])
-        fixed = sum(c[4] for c in costs if c[0] in months_in and c[1] == "고정지출")
+        ad = prorate("마케팅비", True)
+        common_mkt = prorate("마케팅비", False)
+        fixed = prorate("고정지출", False)
         contrib = total - cg - shipping - ad
         print(f"  택배비: ₩{shipping:,} (주문 {orders:,}건 × ₩{ship_unit:,})")
         print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")

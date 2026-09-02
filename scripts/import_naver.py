@@ -40,7 +40,7 @@ EXCLUDE_STATES = {"정산전 취소"}
 # 알고 있는 정산상태. 새로운 상태가 나오면 경고하고 멈춥니다.
 KNOWN_STATES = {"빠른정산", "일반정산", "빠른정산 회수", "정산후 취소", "정산전 취소"}
 
-REQUIRED_COLS = ["주문번호", "상품주문번호", "구분", "상품명", "결제일", "정산상태", "정산예정금액"]
+REQUIRED_COLS = ["주문번호", "상품주문번호", "구분", "상품명", "결제일", "정산상태", "정산예정금액", "정산기준금액"]
 
 # 상품명에서 부위를 찾아내는 규칙. 위에서부터 먼저 맞는 것으로 정합니다.
 CATEGORY_RULES = [
@@ -163,7 +163,7 @@ def main():
     for rec in registry.values():
         if rec.get("상품번호"):
             pid_code[rec["상품번호"]] = rec["상품코드"]
-    agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0})
+    agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0, "gross": 0})
     orders_by_date = defaultdict(set)     # 날짜별 주문번호 (상품이 여러 개인 주문을 1건으로)
     buyer_orders = defaultdict(set)       # 구매자명 → 주문번호 (재구매율 계산용)
     cancel_orders = set()                 # 정산전 취소가 있었던 주문번호
@@ -181,6 +181,7 @@ def main():
                 continue
             kind = str(r[idx["구분"]] or "").strip()
             amount = r[idx["정산예정금액"]] or 0
+            gross = r[idx["정산기준금액"]] or 0     # 수수료 차감 전 금액
             stats[path.name][state] += 1
             stats[path.name]["_금액_" + state] += amount
 
@@ -242,6 +243,7 @@ def main():
             name_hits[(code, full)] += 1
             a = agg[(date, code)]
             a["rev"] += amount
+            a["gross"] += gross
             a["orders"].add(str(r[idx["주문번호"]]))
             if kind != "배송비":
                 a["qty"] += 1 if amount >= 0 else -1
@@ -260,10 +262,10 @@ def main():
     # ── sales.csv 저장 ──
     out = []
     for (date, code), a in sorted(agg.items()):
-        out.append([date, CHANNEL, ACCOUNT, code, len(a["orders"]), a["qty"], round(a["rev"])])
+        out.append([date, CHANNEL, ACCOUNT, code, len(a["orders"]), a["qty"], round(a["rev"]), round(a["gross"])])
     with open(DATA / "sales.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["날짜", "채널", "계정", "상품코드", "주문건수", "판매수량", "매출"])
+        w.writerow(["날짜", "채널", "계정", "상품코드", "주문건수", "판매수량", "매출", "총매출"])
         w.writerows(out)
 
     with open(DATA / "일별주문.csv", "w", newline="", encoding="utf-8-sig") as f:
@@ -333,6 +335,7 @@ def main():
 
     # ── 결과 보고 ──
     total = sum(r[6] for r in out)
+    gross_total = sum(r[7] for r in out)
     dates = sorted({r[0] for r in out})
     print(f"파일 {len(files)}개 읽음: {', '.join(p.name for p in files)}")
     print(f"기간 {dates[0]} ~ {dates[-1]} · {len(dates)}일 · 상품 {len(prods)}개")
@@ -347,6 +350,8 @@ def main():
         minus = s.get("_금액_빠른정산 회수", 0) + s.get("_금액_정산후 취소", 0)
         print(f"{name:<14}{included:>18,}{excluded:>18,}{minus:>20,}")
     print(f"\n총 매출(정산예정금 기준): ₩{total:,}")
+    print(f"총매출(수수료 차감 전): ₩{gross_total:,} · 네이버 수수료 ₩{gross_total - total:,} "
+          f"({(gross_total - total) / gross_total * 100:.1f}%)")
     print(f"구매자 {buyers:,}명 · 재구매 고객 {repeat_buyers:,}명 "
           f"({repeat_buyers / buyers * 100:.1f}%) · 1인당 평균 {total_orders / buyers:.2f}회")
     if not (DATA / "원가일계.csv").exists():
