@@ -124,6 +124,8 @@ def main():
         sys.exit(f"[오류] 'YYYYMM월' 형태의 월별 시트가 없습니다. 현재 시트: {', '.join(wb.sheetnames)}")
 
     daily = defaultdict(lambda: {"qty": 0, "cogs": 0, "unknown": 0})   # (날짜, 상품번호)
+    opt_month = defaultdict(lambda: {"qty": 0, "cogs": 0})             # (월, 상품번호, 옵션) 재고 예측용
+    opt_name = {}
     names = defaultdict(Counter)          # 상품번호 → 상품명 빈도
     tiers = Counter()
     missing = Counter()
@@ -157,6 +159,10 @@ def main():
 
             unit, tier = find_cost(no, opt)
             tiers[tier] += qty
+            om = opt_month[(date[:7], no, opt)]
+            om["qty"] += qty
+            om["cogs"] += (unit or 0) * qty
+            opt_name[(no, opt)] = nm or opt_name.get((no, opt), "")
             d = daily[(date, no)]
             d["qty"] += qty
             if unit is None:
@@ -172,6 +178,12 @@ def main():
         w.writerow(["날짜", "상품번호", "수량", "원가합계", "원가미상수량"])
         for (date, no), d in sorted(daily.items()):
             w.writerow([date, no, d["qty"], d["cogs"], d["unknown"]])
+
+    with open(DATA / "옵션판매.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["월", "상품번호", "옵션정보", "수량", "원가합계"])
+        for (m, no, opt), v in sorted(opt_month.items()):
+            w.writerow([m, no, opt, v["qty"], v["cogs"]])
 
     with open(DATA / "상품매핑.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
@@ -199,6 +211,7 @@ def main():
     for k in ["정확히 일치", "옵션없는 원가", "색상 무시 일치", "그 번호 원가 1개", "못 찾음"]:
         if tiers[k]:
             print(f"  {k:<14}{tiers[k]:>9,}개  {tiers[k] / total_qty * 100:>5.1f}%")
+    print(f"옵션 조합 {len(opt_month)//max(1,len({k[0] for k in opt_month}))}종 내외 · 옵션판매.csv {len(opt_month)}줄")
     print(f"\n원가 반영률: {known / total_qty * 100:.1f}%  (원가 합계 ₩{sum(d['cogs'] for d in daily.values()):,})")
     if missing:
         print(f"\n※ 원가를 못 찾은 옵션 {len(missing)}종 / {tiers['못 찾음']:,}개")

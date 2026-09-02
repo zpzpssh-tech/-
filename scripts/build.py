@@ -154,6 +154,41 @@ def main():
                 key = r[list(r.keys())[0]].strip()
                 daily_orders[key] = to_num(r["주문건수"], "일별주문.csv", 0)
 
+    # ── 옵션별 월 판매량 (재고 예측용) ──
+    opt_sales = []
+    op = DATA / "옵션판매.csv"
+    if op.exists():
+        with open(op, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                code = pid2code.get(k["상품번호"].strip())
+                if not code:
+                    continue
+                opt_sales.append([k["월"].strip(), code, k["옵션정보"].strip(),
+                                  to_num(k["수량"], "옵션판매.csv 수량", 0),
+                                  to_num(k["원가합계"], "옵션판매.csv 원가합계", 0)])
+
+    # ── 광고 지표 (ROAS 계산용) ──
+    ad_stats = []
+    ap = DATA / "광고지표.csv"
+    if ap.exists():
+        with open(ap, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                ad_stats.append([k["월"].strip(), k["계정"].strip(),
+                                 to_num(k["광고비"], "광고지표.csv", 0),
+                                 to_num(k["광고전환수"], "광고지표.csv", 0),
+                                 to_num(k["광고전환매출"], "광고지표.csv", 0)])
+
+    # ── 고객 지표 ──
+    cust = {}
+    cp2 = DATA / "고객지표.csv"
+    if cp2.exists():
+        with open(cp2, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = list(r.values())
+                cust[str(k[0]).strip()] = float(str(k[1]).replace(",", "") or 0)
+
     dates = sorted({s[0] for s in sales})
     used_codes = {s[2] for s in sales}
     need_cost = sorted(c for c in used_codes if not product_map[c]["원가있음"] and c not in ("SHIP", "OPT"))
@@ -172,6 +207,9 @@ def main():
         "원가없는상품": need_cost,
         "일별주문": daily_orders,
         "원가": cogs_rows,
+        "옵션판매": opt_sales,
+        "광고지표": ad_stats,
+        "고객지표": cust,
         "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
                  "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
     }

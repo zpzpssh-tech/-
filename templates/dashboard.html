@@ -114,14 +114,29 @@
   .tip .r { display: flex; justify-content: space-between; gap: 14px; }
   .cross { stroke: var(--line-strong); stroke-dasharray: 3 3; }
 
+  /* 셀러 지표 */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 11px; }
+  .met { border: 1px solid var(--line); border-radius: 11px; padding: 13px 15px; display: grid; gap: 3px; align-content: start; }
+  .met .t { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+  .met .v { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+  .met .d { font-size: 11.5px; color: var(--ink-3); line-height: 1.55; }
+  .met.ok { border-left: 3px solid var(--good); }
+  .met.mid { border-left: 3px solid var(--warn); }
+  .met.low { border-left: 3px solid var(--bad); }
+  .trend { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; }
+  .trend.up { color: var(--good); background: var(--good-soft); }
+  .trend.down { color: var(--bad); background: var(--bad-soft); }
+  .trend.flat { color: var(--ink-2); background: var(--surface-3); }
+
   /* 손익 단계 */
   .pnl { display: grid; gap: 2px; }
-  .pl { display: grid; grid-template-columns: 168px minmax(0,1fr) 150px 74px; align-items: center;
+  .pl { display: grid; grid-template-columns: 232px minmax(0,1fr) 150px 74px; align-items: center;
     gap: 12px; padding: 8px 10px; border-radius: 8px; }
   .pl:hover { background: var(--surface-2); }
   .pl.sum { background: var(--surface-2); font-weight: 600; margin: 4px 0; }
   .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 4px; }
   .pl-n { font-size: 13px; display: flex; align-items: center; gap: 7px; }
+  .pl-n small { display: block; color: var(--ink-3); font-size: 11px; font-weight: 400; margin-top: 1px; }
   .pl-n .op { font-family: var(--mono); color: var(--ink-3); width: 12px; flex: none; text-align: center; }
   .pl-bar { height: 16px; background: var(--surface-2); border-radius: 3px; overflow: hidden; position: relative; }
   .pl.sum .pl-bar, .pl.final .pl-bar { background: var(--surface-3); }
@@ -146,6 +161,8 @@
   th { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); }
   th:first-child, td:first-child { text-align: left; }
   td.nm { font-weight: 500; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+  td.opt { max-width: 320px; white-space: normal; line-height: 1.4; }
+  td.opt small { display: block; color: var(--ink-3); font-size: 11px; margin-top: 2px; }
   td.nm small { display: block; color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 10.5px; }
   tbody tr:hover td { background: var(--surface-2); }
   tfoot td { font-weight: 600; border-top: 2px solid var(--line-strong); border-bottom: 0; }
@@ -214,6 +231,35 @@
     </div>
     <div class="pnl" id="pnl"></div>
     <p class="hint" id="pnlNote" style="margin:14px 0 0;line-height:1.7"></p>
+  </section>
+
+  <section class="card" id="metricCard" hidden>
+    <div class="card-head">
+      <h2>온라인 셀러 필수 지표</h2>
+      <span class="hint">화살표는 지난달 대비 변화 · 초록이 좋아진 방향</span>
+    </div>
+    <div class="metrics" id="metrics"></div>
+  </section>
+
+  <section class="card" id="stockCard" hidden>
+    <div class="card-head">
+      <h2>옵션별 판매량과 다음 달 예상</h2>
+      <div class="controls">
+        <select id="stockProd" aria-label="상품 선택"><option value="">전체 상품</option></select>
+        <div class="seg" role="group" aria-label="발주 기준">
+          <button data-lead="1" aria-pressed="true">1개월치</button>
+          <button data-lead="2" aria-pressed="false">2개월치</button>
+          <button data-lead="3" aria-pressed="false">3개월치</button>
+        </div>
+      </div>
+    </div>
+    <div class="tw"><table id="stab"></table></div>
+    <button class="more" id="smore" hidden></button>
+    <p class="hint" style="margin:12px 0 0;line-height:1.7">
+      <b>다음 달 예상</b>은 최근 3개월 판매량에 가중치를 줘서 계산합니다. 지난달 3, 그 전달 2, 그 전전달 1의 비율입니다.
+      최근 흐름을 더 크게 반영하려는 것입니다. <b>발주 제안</b>은 예상 판매량에 위에서 고른 개월 수를 곱한 값이라,
+      중국 생산·배송 기간이 두 달이면 2개월치를 보시면 됩니다. 현재 재고는 이 대시보드가 모르니 재고를 빼고 발주하세요.
+    </p>
   </section>
 
   <section class="g2">
@@ -296,6 +342,7 @@
   const D = JSON.parse(document.getElementById('data').textContent);
   const P = D['상품'], SALES = D['매출'], DAILY = D['일별주문'] || {}, COGS = D['원가'] || [];
   const EXP = D['비용'] || [], SHIP = D['택배비'] || {};
+  const OPTS = D['옵션판매'] || [], ADS = D['광고지표'] || [], CUST = D['고객지표'] || {};
   const el = id => document.getElementById(id);
   const won = n => (n < 0 ? '-₩' : '₩') + Math.abs(Math.round(n)).toLocaleString('ko-KR');
   const cnt = n => Math.round(n).toLocaleString('ko-KR');
@@ -382,11 +429,11 @@
       { hero: 1, lab: '총매출 (정산예정금)', val: won(S.rev), cap: `일평균 <b>${shortWon(S.rev / S.days)}원</b> · ${S.days}일` },
     ];
     if (S.hasExp) {
-      t.push({ hero: 2, lab: '네이버 기여이익', val: won(S.contrib),
-               cap: `매출 대비 <b>${pct(S.contrib, S.rev)}</b> · 회사 공통비 빼기 전` });
+      t.push({ hero: 2, lab: '네이버에서 남은 돈', val: won(S.contrib),
+               cap: `매출 대비 <b>${pct(S.contrib, S.rev)}</b> · 주문 1건당 <b>${won(S.orders ? S.contrib / S.orders : 0)}</b>` });
       t.push(
-        { lab: '매출총이익', val: won(S.gross), cap: `매출 대비 <b>${pct(S.gross, S.rev)}</b> · 원가만 뺀 값` },
-        { lab: '네이버 광고비', val: won(S.ad), cap: `매출 대비 <b>${pct(S.ad, S.rev)}</b>` },
+        { lab: '상품 마진 (매출 − 원가)', val: won(S.gross), cap: `매출 대비 <b>${pct(S.gross, S.rev)}</b>` },
+        { lab: '네이버 광고비', val: won(S.ad), cap: `매출 대비 <b>${pct(S.ad, S.rev)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
         { lab: '상품 원가', val: won(S.cogs), cap: `매출 대비 <b>${pct(S.cogs, S.rev)}</b> · 반영률 ${cover.toFixed(1)}%` },
         { lab: '택배비', val: won(S.shipping),
           cap: `주문 ${cnt(S.orders)}건 × <b>${won(SHIP['건당단가'])}</b>` +
@@ -460,32 +507,163 @@
     el('pnlCard').hidden = false;
     const base = Math.max(1, S.rev);
     const w = v => Math.min(100, Math.abs(v) / base * 100);
-    const step = (name, op, val, color, cls) => ({ name, op, val, color, cls });
+    const step = (name, op, val, color, cls, note) => ({ name, op, val, color, cls, note });
     const rows = [
-      step('매출 (정산예정금)', '', S.rev, 'var(--accent)', 'sum'),
-      step('상품 원가', '−', -S.cogs, 'var(--k2)'),
-      step('매출총이익', '=', S.gross, 'var(--accent)', 'sum'),
-      step('택배비', '−', -S.shipping, 'var(--k4)'),
-      step('네이버 광고비', '−', -S.ad, 'var(--k5)'),
-      step('네이버 기여이익', '=', S.contrib, 'var(--accent)', 'sum'),
-      step('회사 공통 마케팅비', '−', -S.mkt, 'var(--k7)'),
-      step('회사 고정지출', '−', -S.fixed, 'var(--k1)'),
-      step('영업이익', '=', S.op, S.op >= 0 ? 'var(--good)' : 'var(--bad)', 'final'),
+      step('매출', '', S.rev, 'var(--accent)', 'sum', '네이버가 정산해 주는 금액. 수수료는 이미 빠져 있음'),
+      step('상품 원가', '−', -S.cogs, 'var(--k2)', '', '만드는 데 든 돈'),
+      step('상품 마진', '=', S.gross, 'var(--accent)', 'sum', '팔아서 남은 1차 이익'),
+      step('택배비', '−', -S.shipping, 'var(--k4)', '', '보내는 데 든 돈'),
+      step('네이버 광고비', '−', -S.ad, 'var(--k5)', '', '검색광고에 쓴 돈'),
+      step('네이버에서 남은 돈', '=', S.contrib, 'var(--accent)', 'sum', '네이버 장사만 놓고 본 이익'),
+      step('회사 공통 마케팅비', '−', -S.mkt, 'var(--k7)', '', '전 채널이 함께 쓰는 비용'),
+      step('회사 고정지출', '−', -S.fixed, 'var(--k1)', '', '전 채널이 함께 쓰는 비용'),
+      step('회사 영업이익', '=', S.op, S.op >= 0 ? 'var(--good)' : 'var(--bad)', 'final', '쿠팡 자료가 없어 아직 반쪽짜리'),
     ];
     el('pnl').innerHTML = rows.map(r => `
       <div class="pl ${r.cls || ''}">
-        <div class="pl-n"><span class="op">${r.op}</span>${r.name}</div>
+        <div class="pl-n"><span class="op">${r.op}</span><span>${r.name}${r.note ? `<small>${r.note}</small>` : ''}</span></div>
         <div class="pl-bar"><div class="pl-fill" style="width:${w(r.val)}%;background:${r.color}"></div></div>
         <div class="pl-v num ${r.val < 0 && r.cls ? 'neg' : ''}">${won(r.val)}</div>
         <div class="pl-p num">${pct(Math.abs(r.val), S.rev)}</div>
       </div>`).join('');
     const monthly = S.op / (S.days / 30.4);
+    const mo = S.days / 30.4;
     el('pnlNote').innerHTML =
-      `<b>기여이익</b>은 네이버 채널이 벌어들인 돈에서 그 채널에 직접 드는 비용(원가·택배비·검색광고비)만 뺀 값입니다. ` +
-      `월 평균 <b>${shortWon(S.contrib / (S.days / 30.4))}원</b>을 남깁니다.<br>` +
-      `<b>회사 고정지출과 공통 마케팅비는 네이버·쿠팡 전 채널이 함께 쓰는 비용</b>인데, 지금은 네이버 매출에만 전부 물려 계산했습니다. ` +
-      `그래서 맨 아래 영업이익은 실제보다 낮게 나옵니다. 쿠팡 4개 계정 자료가 들어오면 제대로 나뉩니다. ` +
-      `현재 회사 고정지출과 공통 마케팅비는 합쳐서 월 <b>${shortWon((S.mkt + S.fixed) / (S.days / 30.4))}원</b>입니다.`;
+      `<b>'네이버에서 남은 돈'이 실질적인 네이버 영업이익입니다.</b> 네이버로 판 매출에서 그 장사에 직접 들어간 돈 ` +
+      `(상품 원가·택배비·검색광고비)만 뺀 값이라, 채널이 잘 되고 있는지 판단할 때 이 숫자를 보시면 됩니다. ` +
+      `월 평균 <b>${shortWon(S.contrib / mo)}원</b>입니다.<br>` +
+      `맨 아래 <b>회사 영업이익</b>이 마이너스로 보이는 건 계산 착오가 아닙니다. 회사 고정지출과 공통 마케팅비는 ` +
+      `네이버와 쿠팡 4개 계정이 <b>함께 쓰는 비용</b>인데, 쿠팡 자료가 아직 없어 네이버 혼자 다 떠안은 것처럼 계산했기 때문입니다. ` +
+      `공통비는 월 <b>${shortWon((S.mkt + S.fixed) / mo)}원</b>이고, 네이버가 그중 <b>${(S.contrib / (S.mkt + S.fixed) * 100).toFixed(0)}%</b>를 감당하고 있습니다. ` +
+      `쿠팡 정산 파일이 들어오면 제대로 나뉩니다.`;
+  }
+
+  // ── 온라인 셀러 필수 지표 ──
+  function renderMetrics(S) {
+    if (!S.hasExp) { el('metricCard').hidden = true; return; }
+    el('metricCard').hidden = false;
+    const mons = months.filter(m => m + '-01' <= range.e && m + '-31' >= range.s);
+    let adRev = 0, adCost = 0, adConv = 0;
+    for (const [m, , cost, conv, rev] of ADS) {
+      if (!mons.includes(m)) continue;
+      adCost += cost; adConv += conv; adRev += rev;
+    }
+    const aov = S.orders ? S.rev / S.orders : 0;               // 객단가
+    const cpa = S.orders ? S.ad / S.orders : 0;                // 주문당 광고비
+    const perOrder = S.orders ? S.contrib / S.orders : 0;      // 주문당 남는 돈
+    const roas = adCost ? adRev / adCost * 100 : 0;            // 광고 수익률
+    const adRatio = S.rev ? S.ad / S.rev * 100 : 0;
+    // 손익분기 ROAS: 광고를 뺀 이익률의 역수. 이보다 낮으면 팔수록 손해.
+    const preAdRate = S.rev ? (S.rev - S.cogs - S.shipping) / S.rev : 0;
+    const bepRoas = preAdRate > 0 ? 100 / preAdRate : 0;
+    const cancelRate = CUST['총주문수'] ? CUST['취소주문수'] / (CUST['총주문수'] + CUST['취소주문수']) * 100 : null;
+    const repeat = CUST['구매자수'] ? CUST['재구매자수'] / CUST['구매자수'] * 100 : null;
+
+    // 최근 두 달 비교로 방향 표시
+    const last2 = months.slice(-2);
+    const monthAgg = m => {
+      const a = m + '-01', b = m + '-' + String(dim(m)).padStart(2, '0');
+      let rev = 0, ord = 0, ad = 0, cg = 0;
+      for (const [d, , , , , v] of SALES) if (d >= a && d <= b) rev += v;
+      for (const [d, , , c] of COGS) if (d >= a && d <= b) cg += c;
+      for (let d = a; d <= b; d = addD(d, 1)) ord += DAILY[d] || 0;
+      for (const [ym, kind, , acct, amt] of EXP) if (ym === m && kind === '마케팅비' && acct) ad += amt;
+      return { rev, ord, ad, cg, ship: ord * (SHIP['건당단가'] || 0) };
+    };
+    let arrow = () => '';
+    if (last2.length === 2) {
+      const A = monthAgg(last2[0]), B = monthAgg(last2[1]);
+      // invert=true 이면 숫자가 올라가는 게 나쁜 지표(광고비 등)라 색을 뒤집습니다.
+      arrow = (key, invert) => {
+        const va = key(A), vb = key(B);
+        if (!va) return '';
+        const g = (vb - va) / Math.abs(va) * 100;
+        if (Math.abs(g) < 2) return `<span class="trend flat">보합</span>`;
+        const good = invert ? g < 0 : g > 0;
+        return `<span class="trend ${good ? 'up' : 'down'}">${g > 0 ? '▲' : '▼'} ${Math.abs(g).toFixed(0)}%</span>`;
+      };
+    }
+    const grade = (v, good, mid) => v >= good ? 'ok' : v >= mid ? 'mid' : 'low';
+    const items = [
+      { t: '객단가 (주문 1건당 매출)', v: won(aov), d: '높을수록 좋습니다. 세트 구성이나 추가구매 유도로 올립니다.',
+        k: 'ok', tr: arrow(x => x.ord ? x.rev / x.ord : 0) },
+      { t: '주문 1건당 남는 돈', v: won(perOrder),
+        d: `객단가 ${won(aov)}에서 원가·택배비·광고비를 뺀 금액입니다.`,
+        k: grade(perOrder / (aov || 1) * 100, 25, 15), tr: arrow(x => x.ord ? (x.rev - x.cg - x.ship - x.ad) / x.ord : 0) },
+      { t: '광고비 비율', v: adRatio.toFixed(1) + '%',
+        d: '매출에서 광고비가 차지하는 몫입니다. 보통 20% 아래를 목표로 잡습니다.',
+        k: adRatio <= 20 ? 'ok' : adRatio <= 30 ? 'mid' : 'low', tr: arrow(x => x.rev ? x.ad / x.rev : 0, true) },
+      { t: '주문당 광고비 (CPA)', v: won(cpa),
+        d: '주문 하나를 만드는 데 든 광고비입니다. 객단가의 절반을 넘으면 위험합니다.',
+        k: cpa <= aov * 0.25 ? 'ok' : cpa <= aov * 0.4 ? 'mid' : 'low', tr: arrow(x => x.ord ? x.ad / x.ord : 0, true) },
+      { t: 'ROAS (광고 수익률)', v: roas ? Math.round(roas) + '%' : '–',
+        d: `광고비 1원으로 만든 매출입니다. 손익분기는 <b>${Math.round(bepRoas)}%</b>이니 이보다 높아야 남습니다.`,
+        k: roas >= bepRoas * 1.3 ? 'ok' : roas >= bepRoas ? 'mid' : 'low' },
+      { t: '재구매 고객 비율', v: repeat === null ? '–' : repeat.toFixed(1) + '%',
+        d: `구매자 ${cnt(CUST['구매자수'] || 0)}명 중 2회 이상 산 사람 비율. 1인당 평균 ${(CUST['1인당평균주문'] || 0).toFixed(2)}회.`,
+        k: repeat >= 25 ? 'ok' : repeat >= 15 ? 'mid' : 'low' },
+      { t: '주문 취소율', v: cancelRate === null ? '–' : cancelRate.toFixed(1) + '%',
+        d: '결제 후 정산 전에 취소된 주문 비율입니다. 품절·배송지연이 잦으면 올라갑니다.',
+        k: cancelRate <= 5 ? 'ok' : cancelRate <= 10 ? 'mid' : 'low' },
+      { t: '남는 돈 비율', v: pct(S.contrib, S.rev),
+        d: '매출에서 네이버 장사에 직접 든 돈을 모두 빼고 남은 비율입니다.',
+        k: grade(S.rev ? S.contrib / S.rev * 100 : 0, 25, 15), tr: arrow(x => x.rev ? (x.rev - x.cg - x.ship - x.ad) / x.rev : 0) },
+    ];
+    el('metrics').innerHTML = items.map(i => `
+      <div class="met ${i.k}">
+        <div class="t">${i.t}${i.tr || ''}</div>
+        <div class="v num">${i.v}</div>
+        <div class="d">${i.d}</div>
+      </div>`).join('');
+  }
+
+  // ── 옵션별 판매량과 다음 달 예상 (재고 발주용) ──
+  let stockAll = false, leadMonths = 1, stockProd = '';
+  function renderStock() {
+    if (!OPTS.length) { el('stockCard').hidden = true; return; }
+    el('stockCard').hidden = false;
+    const byOpt = {};
+    for (const [m, code, opt, qty] of OPTS) {
+      const key = code + '||' + opt;
+      const o = byOpt[key] || (byOpt[key] = { code, opt, m: {}, total: 0 });
+      o.m[m] = (o.m[m] || 0) + qty;
+      o.total += qty;
+    }
+    // 최근 3개월: 가중치 3·2·1 로 다음 달 예상
+    const recent = months.slice(-3);
+    const wgt = { [recent[recent.length - 1]]: 3, [recent[recent.length - 2]]: 2, [recent[recent.length - 3]]: 1 };
+    const wsum = recent.reduce((a, m) => a + (wgt[m] || 0), 0) || 1;
+    let list = Object.values(byOpt).map(o => {
+      const f = recent.reduce((a, m) => a + (o.m[m] || 0) * (wgt[m] || 0), 0) / wsum;
+      const prev = o.m[recent[recent.length - 2]] || 0, cur = o.m[recent[recent.length - 1]] || 0;
+      return { ...o, forecast: Math.round(f), cur, prev,
+               growth: prev ? (cur - prev) / prev * 100 : (cur ? 100 : 0) };
+    }).filter(o => o.total > 0).sort((a, b) => b.forecast - a.forecast || b.total - a.total);
+    if (stockProd) list = list.filter(o => o.code === stockProd);
+    const shown = stockAll ? list : list.slice(0, 20);
+    const mx = Math.max(1, ...list.map(o => o.forecast));
+    const show = months.slice(-4);
+    el('stab').innerHTML = `
+      <thead><tr><th>상품 · 옵션</th>${show.map(m => `<th>${Number(m.slice(5))}월</th>`).join('')}
+        <th>다음 달 예상</th><th>추세</th><th>발주 제안 (${leadMonths}개월치)</th></tr></thead>
+      <tbody>${shown.map(o => {
+        const g = o.growth;
+        const tag = Math.abs(g) < 5 ? `<span class="trend flat">보합</span>`
+          : `<span class="trend ${g > 0 ? 'up' : 'down'}">${g > 0 ? '▲' : '▼'} ${Math.abs(Math.round(g))}%</span>`;
+        return `<tr>
+          <td class="opt"><b>${(P[o.code] || {})['상품명'] || o.code}</b><small>${o.opt || '옵션 없음'}</small></td>
+          ${show.map(m => `<td class="num">${o.m[m] ? cnt(o.m[m]) : '–'}</td>`).join('')}
+          <td class="num"><span class="mt"><span class="mf" style="width:${o.forecast / mx * 100}%"></span></span><b>${cnt(o.forecast)}</b></td>
+          <td>${tag}</td>
+          <td class="num"><b>${cnt(o.forecast * leadMonths)}개</b></td></tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td>합계 (${list.length}개 옵션)</td>
+        ${show.map(m => `<td class="num">${cnt(list.reduce((a, o) => a + (o.m[m] || 0), 0))}</td>`).join('')}
+        <td class="num">${cnt(list.reduce((a, o) => a + o.forecast, 0))}</td><td></td>
+        <td class="num">${cnt(list.reduce((a, o) => a + o.forecast * leadMonths, 0))}개</td></tr></tfoot>`;
+    const b = el('smore');
+    b.hidden = list.length <= 20;
+    b.textContent = stockAll ? '상위 20개만 보기' : `전체 ${list.length}개 옵션 보기`;
   }
 
   function renderCats(S) {
@@ -536,7 +714,7 @@
     const view = monthView;
     el('mtab').innerHTML = view === 'pnl' ? `
       <thead><tr><th>월</th><th>주문</th><th>매출</th>${hasC ? '<th>원가</th>' : ''}
-        ${hasE ? '<th>택배비</th><th>광고비</th><th>기여이익</th><th>기여이익률</th>' : ''}</tr></thead>
+        ${hasE ? '<th>택배비</th><th>광고비</th><th>남은 돈</th><th>남은 비율</th>' : ''}</tr></thead>
       <tbody>${rows.map(r => `<tr>
         <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
         <td class="num"><span class="mt"><span class="mf" style="width:${r.rev / mx * 100}%"></span></span>${won(r.rev)}</td>
@@ -620,7 +798,7 @@
   function all() {
     const S = compute();
     el('rnote').textContent = `${range.s} ~ ${range.e} · ${S.days}일`;
-    renderKpis(S); renderPnl(S); renderLine(S); renderCats(S); renderProducts(S);
+    renderKpis(S); renderMetrics(S); renderPnl(S); renderLine(S); renderCats(S); renderProducts(S);
   }
 
   document.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => {
@@ -648,7 +826,22 @@
     monthView = b.dataset.mv; renderMonths();
   }));
 
+  // 재고 표 컨트롤
+  (function () {
+    const codes = [...new Set(OPTS.map(o => o[1]))]
+      .map(c => ({ c, n: (P[c] || {})['상품명'] || c, q: OPTS.filter(o => o[1] === c).reduce((a, o) => a + o[3], 0) }))
+      .sort((a, b) => b.q - a.q);
+    codes.forEach(x => { const o = document.createElement('option'); o.value = x.c;
+      o.textContent = `${x.n} (${cnt(x.q)}개)`; el('stockProd').appendChild(o); });
+    el('stockProd').addEventListener('change', e => { stockProd = e.target.value; stockAll = false; renderStock(); });
+    document.querySelectorAll('[data-lead]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-lead]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      leadMonths = Number(b.dataset.lead); renderStock();
+    }));
+    el('smore').addEventListener('click', () => { stockAll = !stockAll; renderStock(); });
+  })();
+
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
-  renderMonths(); renderTodo(); all();
+  renderMonths(); renderStock(); renderTodo(); all();
 })();
 </script>

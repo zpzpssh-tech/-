@@ -165,6 +165,8 @@ def main():
             pid_code[rec["상품번호"]] = rec["상품코드"]
     agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0})
     orders_by_date = defaultdict(set)     # 날짜별 주문번호 (상품이 여러 개인 주문을 1건으로)
+    buyer_orders = defaultdict(set)       # 구매자명 → 주문번호 (재구매율 계산용)
+    cancel_orders = set()                 # 정산전 취소가 있었던 주문번호
     seen = set()
     name_hits = Counter()          # (상품코드, 정산상품명) → 등장 횟수
     stats = defaultdict(lambda: defaultdict(int))   # 파일별 정산상태 집계
@@ -183,6 +185,7 @@ def main():
             stats[path.name]["_금액_" + state] += amount
 
             if state in EXCLUDE_STATES:
+                cancel_orders.add(str(r[idx["주문번호"]]))
                 continue
 
             date = norm_date(r[idx["결제일"]])
@@ -233,6 +236,9 @@ def main():
                                           "상품번호": "", "원가": "", "포장비": ""}
 
             orders_by_date[date].add(str(r[idx["주문번호"]]))
+            buyer = str(r[idx["구매자명"]] or "").strip()
+            if buyer:
+                buyer_orders[buyer].add(str(r[idx["주문번호"]]))
             name_hits[(code, full)] += 1
             a = agg[(date, code)]
             a["rev"] += amount
@@ -295,6 +301,21 @@ def main():
                         p.get("원가", ""), p.get("포장비", ""), p["정산상품명"],
                         round(t["rev"]), t["qty"], len(set(aliases[p["상품코드"]]))])
 
+    # ── 고객지표.csv 저장 (구매자명 기준. 동명이인은 한 사람으로 세므로 대략치입니다) ──
+    total_orders = sum(len(v) for v in orders_by_date.values())
+    buyers = len(buyer_orders)
+    repeat_buyers = sum(1 for v in buyer_orders.values() if len(v) >= 2)
+    repeat_orders = sum(len(v) - 1 for v in buyer_orders.values() if len(v) >= 2)
+    with open(DATA / "고객지표.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["항목", "값"])
+        w.writerow(["구매자수", buyers])
+        w.writerow(["재구매자수", repeat_buyers])
+        w.writerow(["재구매주문수", repeat_orders])
+        w.writerow(["총주문수", total_orders])
+        w.writerow(["취소주문수", len(cancel_orders)])
+        w.writerow(["1인당평균주문", round(total_orders / buyers, 3) if buyers else 0])
+
     # ── 정산요약.csv 저장 (규칙이 제대로 적용됐는지 확인용) ──
     summary = []
     for name in sorted(stats):
@@ -326,10 +347,10 @@ def main():
         minus = s.get("_금액_빠른정산 회수", 0) + s.get("_금액_정산후 취소", 0)
         print(f"{name:<14}{included:>18,}{excluded:>18,}{minus:>20,}")
     print(f"\n총 매출(정산예정금 기준): ₩{total:,}")
-    blank = [p for p in prods if not str(p.get('원가', '')).strip() and p['상품코드'] not in ('SHIP', 'OPT')]
-    if blank:
-        print(f"\n※ 원가가 비어 있는 상품 {len(blank)}개 → data/products.csv 의 '원가'·'포장비' 칸을 채우면")
-        print(f"   상품별 마진이 계산됩니다. 지금은 매출만 표시됩니다.")
+    print(f"구매자 {buyers:,}명 · 재구매 고객 {repeat_buyers:,}명 "
+          f"({repeat_buyers / buyers * 100:.1f}%) · 1인당 평균 {total_orders / buyers:.2f}회")
+    if not (DATA / "원가일계.csv").exists():
+        print("\n※ 원가 데이터가 없습니다. scripts/import_costs.py 를 먼저 실행하면 마진까지 계산됩니다.")
 
 
 if __name__ == "__main__":
