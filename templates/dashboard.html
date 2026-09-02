@@ -8,58 +8,58 @@
      차트 색 7가지는 색약 구분 검사를 통과한 조합입니다. */
   :root {
     color-scheme: light;
-    --bg: #f5f3ef;            /* 따뜻한 종이색 바탕 */
-    --surface: #fdfcfa;       /* 카드 (순백색보다 부드럽게) */
-    --surface-2: #f2efe9;     /* 카드 안쪽 옅은 면 */
-    --surface-3: #e8e4dc;
-    --ink: #262b31;           /* 본문 (순검정보다 부드럽게) */
-    --ink-2: #5d6771;
-    --ink-3: #8b939b;
-    --line: #e5e1d9;
-    --line-strong: #cec9bf;
-    --accent: #2f6f62;        /* 차분한 청록 */
+    --bg: #f7f3ec;            /* 베이지 바탕 */
+    --surface: #fffdf9;       /* 따뜻한 화이트 카드 */
+    --surface-2: #f4efe5;
+    --surface-3: #eae2d4;
+    --ink: #2b2620;
+    --ink-2: #6b6155;
+    --ink-3: #9a9083;
+    --line: #ebe4d7;
+    --line-strong: #d5cbb8;
+    --accent: #b05a1f;        /* 주황 */
     --accent-ink: #ffffff;
-    --accent-soft: #e2ece9;
-    --good: #2f6f3f; --good-soft: #e4eee6;
-    --warn: #9a6212; --warn-soft: #f6ecdb;
-    --bad:  #a83c3c; --bad-soft:  #f6e3e1;
-    --k1: #3a6fb0; --k2: #d1663c; --k3: #1f9b78; --k4: #c98a1e;
-    --k5: #c26f92; --k6: #2f7a3f; --k7: #6257a8;
-    --cost: #b8836a;          /* 빠지는 금액 (차분한 테라코타) */
-    --shadow: 0 1px 2px rgba(38,43,49,.04);
-    --shadow-lift: 0 1px 3px rgba(38,43,49,.05), 0 8px 22px rgba(38,43,49,.04);
+    --accent-soft: #fbeee1;
+    --cost: #9a8570;          /* 빠지는 금액 (차분한 갈색) */
+    --good: #3f6b3a; --good-soft: #e8efe4;
+    --warn: #96601a; --warn-soft: #f9eeda;
+    --bad:  #a83f34; --bad-soft:  #f8e6e2;
+    --k1: #3a6fb0; --k2: #c85f2a; --k3: #1f9b78; --k4: #b5851f;
+    --k5: #b8688c; --k6: #3f7a46; --k7: #6257a8;
+    --shadow: 0 1px 2px rgba(43,38,32,.04);
+    --shadow-lift: 0 1px 3px rgba(43,38,32,.06), 0 8px 22px rgba(43,38,32,.05);
     --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
     --mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #14161a; --surface: #1c1f24; --surface-2: #23272d; --surface-3: #2c3138;
-      --ink: #e8e9ea; --ink-2: #a4acb4; --ink-3: #757d86;
-      --line: #2b3037; --line-strong: #3b424a;
-      --accent: #4f9c8a; --accent-ink: #0d1f1b; --accent-soft: #1c3b35;
-      --good: #6bb37f; --good-soft: #1b3324;
-      --warn: #d3a24e; --warn-soft: #34290f;
-      --bad:  #d97a76; --bad-soft:  #391f1e;
+      --bg: #16140f; --surface: #1e1b16; --surface-2: #262219; --surface-3: #322c21;
+      --ink: #efe9e0; --ink-2: #b3a999; --ink-3: #857c70;
+      --line: #2f2a20; --line-strong: #453e30;
+      --accent: #e08b4f; --accent-ink: #241205; --accent-soft: #38251440;
+      --cost: #a89078;
+      --good: #7cb87a; --good-soft: #1e2f1c;
+      --warn: #dba954; --warn-soft: #33270f;
+      --bad:  #e08078; --bad-soft:  #3a1f1b;
       --k1: #5488c8; --k2: #d06c3e; --k3: #17a37e; --k4: #b78a24;
       --k5: #c47394; --k6: #3d8a4e; --k7: #7c6fc0;
-      --cost: #b07c62;
       --shadow: 0 1px 2px rgba(0,0,0,.3);
       --shadow-lift: 0 1px 3px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.22);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #14161a; --surface: #1c1f24; --surface-2: #23272d; --surface-3: #2c3138;
-    --ink: #e8e9ea; --ink-2: #a4acb4; --ink-3: #757d86;
-    --line: #2b3037; --line-strong: #3b424a;
-    --accent: #4f9c8a; --accent-ink: #0d1f1b; --accent-soft: #1c3b35;
-    --good: #6bb37f; --good-soft: #1b3324;
-    --warn: #d3a24e; --warn-soft: #34290f;
-    --bad:  #d97a76; --bad-soft:  #391f1e;
+    --bg: #16140f; --surface: #1e1b16; --surface-2: #262219; --surface-3: #322c21;
+    --ink: #efe9e0; --ink-2: #b3a999; --ink-3: #857c70;
+    --line: #2f2a20; --line-strong: #453e30;
+    --accent: #e08b4f; --accent-ink: #241205; --accent-soft: #38251440;
+    --cost: #a89078;
+    --good: #7cb87a; --good-soft: #1e2f1c;
+    --warn: #dba954; --warn-soft: #33270f;
+    --bad:  #e08078; --bad-soft:  #3a1f1b;
     --k1: #5488c8; --k2: #d06c3e; --k3: #17a37e; --k4: #b78a24;
     --k5: #c47394; --k6: #3d8a4e; --k7: #7c6fc0;
-    --cost: #b07c62;
     --shadow: 0 1px 2px rgba(0,0,0,.3);
     --shadow-lift: 0 1px 3px rgba(0,0,0,.35), 0 8px 22px rgba(0,0,0,.22);
   }
@@ -198,6 +198,10 @@
   .pl:hover { background: var(--surface-2); }
   .pl.sum { background: var(--surface-2); font-weight: 600; margin: 3px 0; }
   .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 3px; }
+  .pl.ref { opacity: .78; }
+  .refbadge { margin-left: 7px; padding: 1px 6px; border-radius: 5px; background: var(--surface-2);
+    color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+  .pl.ref .pl-fill { opacity: .45; }
   .pl-n { font-size: 13px; display: flex; align-items: center; gap: 9px; }
   .pl-n .op { font-family: var(--mono); color: var(--ink-3); width: 10px; flex: none; text-align: center; font-size: 12px; }
   .pl-n small { display: block; color: var(--ink-3); font-size: 11px; font-weight: 400; margin-top: 1px; line-height: 1.45; }
@@ -232,6 +236,9 @@
 
   /* ── 표 ── */
   .tw { overflow-x: auto; margin: 0 -4px; padding: 0 4px; }
+  .tw.compact th, .tw.compact td { padding: 10px 7px; }
+  .tw.compact .mt { width: 44px; margin-right: 6px; }
+  .tw.compact td.nm { max-width: 118px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { padding: 10px 11px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
   th { font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--ink-3);
@@ -349,7 +356,7 @@
       <h2>계정별 손익 비교</h2>
       <span class="hint" id="chHint"></span>
     </div>
-    <div class="tw"><table id="chtab"></table></div>
+    <div class="tw compact"><table id="chtab"></table></div>
     <p class="hint" id="chNote" style="margin:12px 0 0;line-height:1.7"></p>
   </section>
 
@@ -671,7 +678,8 @@
         cap: gross ? `수수료 뺀 정산금 <b>${shortWon(S.rev)}원</b> · 일평균 ${shortWon(S.gross / S.days)}원`
                    : `수수료 빼기 전 총매출 <b>${shortWon(S.gross)}원</b> · 일평균 ${shortWon(S.rev / S.days)}원` },
       { hero: 2, lab: `${who}에서 남은 돈`, val: won(S.contrib),
-        cap: `${bl} <b>${pct(S.contrib, S.base)}</b> · 주문 1건당 <b>${won(S.orders ? S.contrib / S.orders : 0)}</b>` },
+        cap: `${bl} <b>${pct(S.contrib, S.base)}</b> · 주문 1건당 <b>${won(S.orders ? S.contrib / S.orders : 0)}</b>`
+             + (S.vat ? ` · 부가세 ${shortWon(S.vat)}원 뺀 뒤` : '') },
       { lab: '상품 원가', val: won(S.cogs),
         cap: `${bl} <b>${pct(S.cogs, S.base)}</b>` + (cover && cover < 100 ? ` · 네이버 반영률 ${cover.toFixed(1)}%` : '') },
       { lab: S.coupon ? '물류비 · 쿠폰' : '물류비', val: won(S.shipping),
@@ -679,9 +687,10 @@
       { lab: '광고비', val: won(S.ad),
         cap: `${bl} <b>${pct(S.ad, S.base)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
     ];
-    if (gross) t.splice(2, 0, { lab: '판매 수수료', val: won(S.fee), cap: `총매출 대비 <b>${pct(S.fee, S.gross)}</b>` });
-    if (S.vat) t.push({ lab: '부가세', val: won(S.vat),
-      cap: `${bl} <b>${pct(S.vat, S.base)}</b> · 매출세액 − 매입세액` });
+    t.splice(2, 0, { lab: '판매 수수료', val: won(S.fee),
+      cap: gross ? `총매출 대비 <b>${pct(S.fee, S.gross)}</b>`
+                 : `총매출 ${shortWon(S.gross)}원의 <b>${pct(S.fee, S.gross)}</b> · 정산금에서 이미 빠짐` });
+
     el('kpis').innerHTML = t.map(k => `<div class="kpi${k.hero === 1 ? ' hero' : k.hero === 2 ? ' hero2' : ''}">
       <div class="lab">${k.lab}</div><div class="val num${!k.hero && /^-/.test(k.val) ? ' neg' : ''}">${k.val}</div>
       <div class="cap num">${k.cap}</div></div>`).join('');
@@ -758,7 +767,9 @@
            nvOnly ? '정산예정금액. 이익은 여기서부터 계산' : '수수료 빼고 실제로 들어오는 돈'),
     ] : [
       step('정산금 (수수료 뺀 매출)', '', S.rev, 'var(--accent)', 'sum',
-           nvOnly ? '네이버 정산예정금액 그대로. 수수료는 이미 빠져 있음' : '수수료 빼고 실제로 들어오는 돈'),
+           nvOnly ? '네이버 정산예정금액 그대로' : '수수료 빼고 실제로 들어오는 돈'),
+      step('판매 수수료<span class="refbadge">참고</span>', '', -S.fee, C, 'ref',
+           `총매출 ${won(S.gross)}에서 이미 빠진 금액. 아래 계산에 다시 빼지 않습니다`),
     ];
     const rows = head.concat([
       step('상품 원가', '−', -S.cogs, C, '', '만드는 데 든 돈'),
@@ -829,7 +840,7 @@
     const assumed = a => (cfg[a] || {})['판매방식'] === '판매자배송';
     el('chtab').innerHTML = `
       <thead><tr><th>계정</th><th>주문</th><th>${basis === 'gross' ? '총매출' : '정산금'}</th>
-        ${basis === 'gross' ? '<th>수수료</th>' : ''}<th>원가</th>
+        <th>수수료</th><th>원가</th>
         <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${list.map(x => {
         const bv = x[bK], m = bv ? x.left / bv * 100 : 0;
@@ -837,7 +848,7 @@
           <td class="nm">${x.a}<small>${x.ch}${assumed(x.a) ? ' · 수수료 추정' : x.est ? ' · 일부 원가 추정' : ''}</small></td>
           <td class="num">${cnt(x.ord)}</td>
           <td class="num"><span class="mt"><span class="mf" style="width:${bv / mx * 100}%"></span></span>${won(bv)}</td>
-          ${basis === 'gross' ? `<td class="num">${won(x.fee)}</td>` : ''}<td class="num">${won(x.cogs)}</td>
+          <td class="num">${won(x.fee)}</td><td class="num">${won(x.cogs)}</td>
           <td class="num">${won(x.logi + x.coupon)}</td>
           <td class="num">${won(x.ad)}</td>
           <td class="num"><span class="pill ${x.ad / bv <= .2 ? 'good' : x.ad / bv <= .3 ? 'warn' : 'bad'}">${pct(x.ad, bv)}</span></td>
@@ -845,7 +856,7 @@
           <td class="num"><span class="pill ${badge(m)}">${m.toFixed(1)}%</span></td></tr>`;
       }).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}</td><td class="num">${won(T[bK])}</td>
-        ${basis === 'gross' ? `<td class="num">${won(T.fee)}</td>` : ''}<td class="num">${won(T.cogs)}</td>
+        <td class="num">${won(T.fee)}</td><td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
         <td class="num">${pct(T.ad, T[bK])}</td><td class="num">${won(T.left)}</td>
         <td class="num">${pct(T.left, T[bK])}</td></tr></tfoot>`;
@@ -1042,7 +1053,7 @@
         <td class="mono">${r.d.slice(5)} <span style="color:var(--ink-3)">${WD[r.wd]}</span></td>
         <td class="num">${cnt(r.ord)}</td>
         <td class="num"><span class="mt"><span class="mf" style="width:${Math.max(0, bv(r)) / mx * 100}%"></span></span>${won(bv(r))}</td>
-        ${G ? `<td class="num">${won(r.gross - r.net)}</td>` : ''}
+        <td class="num">${won(r.gross - r.net)}</td>
         <td class="num">${won(r.cogs)}</td><td class="num">${won(r.logi + r.coupon)}</td><td class="num">${won(r.ad)}</td>
         <td class="num">${won(r.vat)}</td>
         <td class="num ${r.left < 0 ? 'neg' : ''} ${r.left === best || r.left === worst ? 'best' : ''}">${won(r.left)}</td>
@@ -1050,12 +1061,12 @@
       </tr>`;
     const foot = (lab, v, d) => `<tr><td>${lab}</td><td class="num">${cnt(Math.round(v.ord / d))}</td>
         <td class="num">${won((G ? v.gross : v.net) / d)}</td>
-        ${G ? `<td class="num">${won((v.gross - v.net) / d)}</td>` : ''}
+        <td class="num">${won((v.gross - v.net) / d)}</td>
         <td class="num">${won(v.cogs / d)}</td><td class="num">${won((v.logi + v.coupon) / d)}</td>
         <td class="num">${won(v.ad / d)}</td><td class="num">${won(v.vat / d)}</td><td class="num">${won(v.left / d)}</td>
         <td class="num">${pct(v.left, G ? v.gross : v.net)}</td></tr>`;
     el('dtab').innerHTML = `
-      <thead><tr><th>날짜</th><th>주문</th><th>${G ? '총매출' : '정산금'}</th>${G ? '<th>수수료</th>' : ''}
+      <thead><tr><th>날짜</th><th>주문</th><th>${G ? '총매출' : '정산금'}</th><th>수수료</th>
         <th>원가</th><th>물류비</th><th>광고비</th><th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${shown.map(row).join('')}</tbody>
       <tfoot>${foot('하루 평균', T, n)}${foot(`합계 (${rows.length}일)`, T, 1)}</tfoot>`;
@@ -1115,17 +1126,17 @@
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.net)}</td>
         <td class="num neg">${won(T.minus)}</td><td class="num">${won(T.exc)} · ${cnt(T.excN)}건</td></tr></tfoot>` : `
       <thead><tr><th>월</th><th>주문</th><th>${basis === 'gross' ? '총매출' : '정산금'}</th>
-        ${basis === 'gross' ? '<th>수수료</th>' : ''}<th>원가</th><th>물류비</th><th>광고비</th>
+        <th>수수료</th><th>원가</th><th>물류비</th><th>광고비</th>
         <th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${rows.map(r => { const v = basis === 'gross' ? r.gross : r.net; return `<tr>
         <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
         <td class="num"><span class="mt"><span class="mf" style="width:${v / mx * 100}%"></span></span>${won(v)}</td>
-        ${basis === 'gross' ? `<td class="num">${won(r.gross - r.net)}</td>` : ''}<td class="num">${won(r.cogs)}</td>
+        <td class="num">${won(r.gross - r.net)}</td><td class="num">${won(r.cogs)}</td>
         <td class="num">${won(r.logi + r.coupon)}</td><td class="num">${won(r.ad)}</td>
         <td class="num ${r.left < 0 ? 'neg' : ''}">${won(r.left)}</td>
         <td class="num"><span class="pill ${r.left / v >= .2 ? 'good' : r.left / v >= .1 ? 'warn' : 'bad'}">${pct(r.left, v)}</span></td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(basis === 'gross' ? T.gross : T.net)}</td>
-        ${basis === 'gross' ? `<td class="num">${won(T.gross - T.net)}</td>` : ''}<td class="num">${won(T.cogs)}</td>
+        <td class="num">${won(T.gross - T.net)}</td><td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
         <td class="num">${won(T.left)}</td><td class="num">${pct(T.left, basis === 'gross' ? T.gross : T.net)}</td></tr></tfoot>`;
   }
