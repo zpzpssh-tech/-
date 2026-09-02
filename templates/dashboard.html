@@ -251,7 +251,7 @@
   <section class="card" id="metricCard" hidden>
     <div class="card-head">
       <h2>온라인 셀러 필수 지표</h2>
-      <span class="hint">화살표는 지난달 대비 변화 · 초록이 좋아진 방향</span>
+      <span class="hint" id="metHint">화살표는 지난달 대비 변화 · 초록이 좋아진 방향</span>
     </div>
     <div class="metrics" id="metrics"></div>
   </section>
@@ -271,7 +271,8 @@
     <div class="tw"><table id="stab"></table></div>
     <button class="more" id="smore" hidden></button>
     <p class="hint" style="margin:12px 0 0;line-height:1.7">
-      <b>다음 달 예상</b>은 최근 3개월 판매량에 가중치를 줘서 계산합니다. 지난달 3, 그 전달 2, 그 전전달 1의 비율입니다.
+      <b>다음 달 예상</b>은 자료가 온전한 최근 3개월 판매량에 가중치를 줘서 계산합니다. 지난달 3, 그 전달 2, 그 전전달 1의 비율입니다.
+      자료가 며칠뿐인 달은 계산에서 뺍니다.
       최근 흐름을 더 크게 반영하려는 것입니다. <b>발주 제안</b>은 예상 판매량에 위에서 고른 개월 수를 곱한 값이라,
       중국 생산·배송 기간이 두 달이면 2개월치를 보시면 됩니다. 현재 재고는 이 대시보드가 모르니 재고를 빼고 발주하세요.
     </p>
@@ -622,10 +623,14 @@
     const w = v => Math.min(100, Math.abs(v) / base * 100);
     const step = (name, op, val, color, cls, note) => ({ name, op, val, color, cls, note });
     const who = scope === 'all' ? '전 채널' : scope;
+    const nvOnly = scope === '네이버';
     const rows = [
-      step('총매출', '', S.gross, 'var(--accent)', 'sum', '고객이 결제한 금액'),
-      step('판매 수수료', '−', -S.fee, 'var(--k3)', '', '네이버·쿠팡이 떼 가는 몫'),
-      step('실수령 매출', '=', S.rev, 'var(--accent)', 'sum', '실제로 우리한테 들어오는 돈'),
+      step('총매출', '', S.gross, 'var(--accent)', 'sum',
+           nvOnly ? '정산기준금액. 수수료 떼기 전 판매 금액' : '고객이 결제한 금액'),
+      step('판매 수수료', '−', -S.fee, 'var(--k3)', '',
+           nvOnly ? '정산 파일에 이미 빠져 있는 금액을 보이게 적은 것' : '네이버·쿠팡이 떼 가는 몫'),
+      step('실수령 매출', '=', S.rev, 'var(--accent)', 'sum',
+           nvOnly ? '정산예정금액. 이익은 여기서부터 계산' : '실제로 우리한테 들어오는 돈'),
       step('상품 원가', '−', -S.cogs, 'var(--k2)', '', '만드는 데 든 돈'),
       step('상품 마진', '=', S.gross_profit, 'var(--accent)', 'sum', '팔아서 남은 1차 이익'),
       step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '', '보내고 보관하는 데 든 돈'),
@@ -651,6 +656,11 @@
         <div class="pl-p num">${pct(Math.abs(r.val), S.gross)}</div>
       </div>`).join('');
     const mo = S.days / 30.4;
+    const feeNote = (scope === 'all' || scope === '네이버')
+      ? `<b>네이버 수수료는 두 번 빠지지 않습니다.</b> 네이버 정산 파일의 '정산예정금액'은 수수료가 이미 빠진 금액입니다. ` +
+        `쿠팡은 수수료 빼기 전 총액으로 들어와서, 두 채널을 같은 잣대로 보려고 네이버도 '정산기준금액'으로 총매출을 되살린 뒤 ` +
+        `그 수수료를 도로 뺐습니다. 그래서 <b>실수령 매출은 정산예정금액과 정확히 같고</b>, 이익 계산은 거기서 시작합니다.<br>`
+      : '';
     const vatNote = S.vat
       ? `매출과 원가·물류비·광고비·수수료가 모두 부가세 포함 금액이라, 그 차액의 <b>11분의 1</b>을 부가세로 뺐습니다. ` +
         `회사 고정지출은 인건비 비중이 커서 매입세액을 반영하지 않았으니, 실제 납부액은 이보다 조금 적습니다.`
@@ -658,14 +668,14 @@
     if (scope === 'all') {
       el('pnlNote').innerHTML =
         `<b>회사 영업이익</b>이 전 채널을 합친 진짜 이익입니다. 월 평균 <b>${shortWon(S.op / mo)}원</b>입니다.<br>` +
-        vatNote + `<br>쿠팡 <b>로켓배송</b> 계정은 아직 자료가 없어 빠져 있습니다. 그만큼 실제보다 낮게 나옵니다.`;
+        feeNote + vatNote + `<br>쿠팡 <b>로켓배송</b> 계정은 아직 자료가 없어 빠져 있습니다. 그만큼 실제보다 낮게 나옵니다.`;
       return;
     }
     el('pnlNote').innerHTML =
       `<b>'${scope}에서 남은 돈'이 이 계정의 실질 영업이익입니다.</b> 이 계정으로 판 매출에서 ` +
       `수수료·원가·물류비·광고비와 부가세를 뺀 값입니다. 월 평균 <b>${shortWon(S.contrib / mo)}원</b>입니다.<br>` +
       `회사 고정지출과 공통 마케팅비는 전 채널이 함께 쓰는 비용이라 계정별 화면에서는 빼지 않았습니다. ` +
-      `회사 전체 영업이익은 위에서 <b>'전체'</b>를 고르시면 나옵니다.<br>` + vatNote;
+      `회사 전체 영업이익은 위에서 <b>'전체'</b>를 고르시면 나옵니다.<br>` + feeNote + vatNote;
   }
 
   // ── 계정별 손익 비교 ──
@@ -709,7 +719,9 @@
       `매출이 가장 큰 계정은 <b>${best.a}</b>(${won(best.gross)})이고, 남는 비율이 가장 좋은 계정은 ` +
       `<b>${top.a}</b>(${pct(top.left, top.gross)}), 가장 나쁜 계정은 <b>${worst.a}</b>(${pct(worst.left, worst.gross)})입니다. ` +
       `여기서 뺀 비용은 그 계정에 직접 드는 것뿐이고, 회사 고정지출과 공통 마케팅비는 아직 빠지지 않았습니다.<br>` +
-      `쿠팡은 총매출로, 네이버는 정산예정금으로 자료가 들어와 기준이 달랐습니다. 네이버는 수수료를 되살려 총매출로 맞췄습니다. ` +
+      `쿠팡은 총매출로, 네이버는 정산예정금(수수료가 이미 빠진 금액)으로 자료가 들어와 기준이 달랐습니다. ` +
+      `두 채널을 같은 잣대로 보려고 네이버도 총매출을 되살린 뒤 그 수수료를 도로 뺐습니다. ` +
+      `<b>네이버 수수료가 두 번 빠지는 것이 아닙니다.</b> ` +
       `<b>수수료 추정</b>이라고 적힌 계정은 자료가 없어 설정값(수수료 ${((cfg['올투게더나우'] || {})['수수료율'] * 100 || 0).toFixed(1)}%, ` +
       `택배 ${won((cfg['올투게더나우'] || {})['건당배송비'] || 0)})으로 계산한 것이라 실제와 다를 수 있습니다. ` +
       `쿠팡 <b>로켓배송</b> 계정은 아직 자료가 없어 빠져 있습니다.`;
@@ -735,8 +747,16 @@
     const cancelRate = CUST['총주문수'] ? CUST['취소주문수'] / (CUST['총주문수'] + CUST['취소주문수']) * 100 : null;
     const repeat = CUST['구매자수'] ? CUST['재구매자수'] / CUST['구매자수'] * 100 : null;
 
-    // 최근 두 달 비교로 방향 표시
-    const last2 = months.slice(-2);
+    // 최근 두 달 비교로 방향 표시.
+    // 자료가 며칠뿐인 달(예: 9월 1일치)이나 그 계정 자료가 없는 달은 빼고 비교합니다.
+    const monthDays = {};
+    for (const r of DAYS) {
+      if (!inScope(r) || !(r.gross || r.ord)) continue;
+      const m = r.d.slice(0, 7);
+      (monthDays[m] = monthDays[m] || new Set()).add(r.d);
+    }
+    const full = months.filter(m => (monthDays[m] || new Set()).size >= Math.min(20, dim(m)));
+    const last2 = full.slice(-2);
     const monthAgg = m => {
       const a = m + '-01', b = m + '-' + String(dim(m)).padStart(2, '0');
       const o = { rev: 0, ord: 0, ad: 0, cg: 0, ship: 0, left: 0 };
@@ -760,6 +780,9 @@
         return `<span class="trend ${good ? 'up' : 'down'}">${g > 0 ? '▲' : '▼'} ${Math.abs(g).toFixed(0)}%</span>`;
       };
     }
+    el('metHint').textContent = last2.length === 2
+      ? `화살표는 ${last2[0].slice(5)}월 대비 ${last2[1].slice(5)}월 변화 · 초록이 좋아진 방향`
+      : '비교할 달이 부족해 변화 표시는 생략했습니다';
     const grade = (v, good, mid) => v >= good ? 'ok' : v >= mid ? 'mid' : 'low';
     const items = [
       { t: '객단가 (주문 1건당 매출)', v: won(aov), d: '높을수록 좋습니다. 세트 구성이나 추가구매 유도로 올립니다.',
@@ -806,8 +829,15 @@
       o.m[m] = (o.m[m] || 0) + qty;
       o.total += qty;
     }
+    // 자료가 며칠뿐인 달(예: 9월 1일치)은 빼고, 온전한 달만 씁니다.
+    const dayCount = {};
+    for (const [d] of COGS) {
+      const m = d.slice(0, 7);
+      (dayCount[m] = dayCount[m] || new Set()).add(d);
+    }
+    const fullM = months.filter(m => (dayCount[m] || new Set()).size >= Math.min(20, dim(m)));
     // 최근 3개월: 가중치 3·2·1 로 다음 달 예상
-    const recent = months.slice(-3);
+    const recent = fullM.slice(-3);
     const wgt = { [recent[recent.length - 1]]: 3, [recent[recent.length - 2]]: 2, [recent[recent.length - 3]]: 1 };
     const wsum = recent.reduce((a, m) => a + (wgt[m] || 0), 0) || 1;
     let list = Object.values(byOpt).map(o => {
@@ -819,7 +849,7 @@
     if (stockProd) list = list.filter(o => o.code === stockProd);
     const shown = stockAll ? list : list.slice(0, 20);
     const mx = Math.max(1, ...list.map(o => o.forecast));
-    const show = months.slice(-4);
+    const show = fullM.slice(-4);
     el('stab').innerHTML = `
       <thead><tr><th>상품 · 옵션</th>${show.map(m => `<th>${Number(m.slice(5))}월</th>`).join('')}
         <th>다음 달 예상</th><th>추세</th><th>발주 제안 (${leadMonths}개월치)</th></tr></thead>
