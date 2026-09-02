@@ -1,0 +1,191 @@
+"""
+원가관리 엑셀 → 원가·수량 데이터 변환기
+---------------------------------------
+쓰는 법:
+  1) 원가관리 엑셀을 data/원본/원가/ 폴더에 넣습니다.
+  2) python3 scripts/import_costs.py
+  3) python3 scripts/import_naver.py
+  4) python3 scripts/build.py
+
+엑셀 구조 (이 형식을 그대로 씁니다):
+  [원가] 시트      상품번호 | 상품명 | 옵션정보 | 원가
+  [YYYYMM월] 시트  주문일시 | 주문상태 | 상품번호 | 상품명 | 옵션정보 | 수량
+
+원가 붙이는 순서 (위에서부터 먼저 맞는 것을 씁니다):
+  1. 상품번호 + 옵션정보가 정확히 같을 때
+  2. 그 상품번호에 옵션 없는 원가가 있을 때
+  3. 색상 표현만 다를 때 (블랙/블루 등을 지우고 비교)
+  4. 그 상품번호의 원가가 딱 하나뿐일 때
+  못 찾은 건은 data/원가_미매칭.csv 에 수량이 많은 순으로 적어 둡니다.
+
+주문상태 처리:
+  · 취소, 반품  → 원가에서 제외 (물건이 돌아온 건)
+  · 나머지(구매확정·배송완료·배송중·결제완료·교환) → 원가 발생
+"""
+import csv
+import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+
+try:
+    import openpyxl
+except ImportError:
+    sys.exit("[오류] openpyxl이 없습니다. 'pip install openpyxl' 을 먼저 실행해 주세요.")
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "data" / "원본" / "원가"
+DATA = ROOT / "data"
+
+EXCLUDE_STATES = {"취소", "반품"}          # 물건이 돌아와 원가가 발생하지 않는 상태
+COLOR = re.compile(r"(블랙|블루|레드|그레이|화이트|베이지|핑크|네이비|스킨|회색|검정|옐로우|퍼플|민트)")
+
+
+def pid(v) -> str:
+    """상품번호를 문자열로 통일합니다 (엑셀에서 5799070116.0 처럼 읽히는 것 정리)."""
+    return str(v).split(".")[0].strip() if v is not None else ""
+
+
+def norm_opt(o: str) -> str:
+    """색상 표현을 지우고 수량·사이즈만 남겨 비교용으로 만듭니다."""
+    return COLOR.sub("", (o or "").replace(" ", ""))
+
+
+def main():
+    files = sorted(p for p in SRC.glob("*.xlsx") if not p.name.startswith("~$"))
+    if not files:
+        sys.exit(f"[오류] 엑셀 파일이 없습니다. 원가관리 엑셀을 여기에 넣어 주세요:\n       {SRC}")
+    if len(files) > 1:
+        print(f"[안내] 파일이 여러 개라 가장 최근 것을 씁니다: {files[-1].name}")
+    path = files[-1]
+
+    wb = openpyxl.load_workbook(path, data_only=True)
+    if "원가" not in wb.sheetnames:
+        sys.exit(f"[오류] '원가' 시트가 없습니다. 현재 시트: {', '.join(wb.sheetnames)}")
+
+    # ── 원가 시트 ──
+    cost = {}                       # (상품번호, 옵션) → 원가
+    cost_by_no = defaultdict(dict)
+    for i, r in enumerate(wb["원가"].iter_rows(min_row=2, values_only=True), start=2):
+        if r[0] is None:
+            continue
+        no, opt = pid(r[0]), (str(r[2]).strip() if r[2] else "")
+        if r[3] is None or str(r[3]).strip() == "":
+            continue
+        try:
+            v = int(round(float(str(r[3]).replace(",", ""))))
+        except ValueError:
+            sys.exit(f"[오류] 원가 시트 {i}행의 원가가 숫자가 아닙니다: '{r[3]}'")
+        cost[(no, opt)] = v
+        cost_by_no[no][opt] = v
+    if not cost:
+        sys.exit("[오류] '원가' 시트에서 원가를 한 건도 읽지 못했습니다.")
+
+    norm_by_no = defaultdict(dict)
+    for no, opts in cost_by_no.items():
+        for o, v in opts.items():
+            norm_by_no[no].setdefault(norm_opt(o), v)
+
+    def find_cost(no, opt):
+        if (no, opt) in cost:
+            return cost[(no, opt)], "정확히 일치"
+        if (no, "") in cost:
+            return cost[(no, "")], "옵션없는 원가"
+        n = norm_by_no.get(no, {})
+        if norm_opt(opt) in n:
+            return n[norm_opt(opt)], "색상 무시 일치"
+        if len(cost_by_no.get(no, {})) == 1:
+            return next(iter(cost_by_no[no].values())), "그 번호 원가 1개"
+        return None, "못 찾음"
+
+    # ── 월별 주문 시트 ──
+    sheets = [s for s in wb.sheetnames if re.fullmatch(r"\d{6}월", s)]
+    if not sheets:
+        sys.exit(f"[오류] 'YYYYMM월' 형태의 월별 시트가 없습니다. 현재 시트: {', '.join(wb.sheetnames)}")
+
+    daily = defaultdict(lambda: {"qty": 0, "cogs": 0, "unknown": 0})   # (날짜, 상품번호)
+    names = defaultdict(Counter)          # 상품번호 → 상품명 빈도
+    tiers = Counter()
+    missing = Counter()
+    excluded_qty = 0
+
+    for sh in sheets:
+        ws = wb[sh]
+        head = [str(h).strip() if h else "" for h in next(ws.iter_rows(min_row=1, max_row=1, values_only=True))]
+        need = ["주문일시", "주문상태", "상품번호", "상품명", "옵션정보", "수량"]
+        miss = [c for c in need if c not in head]
+        if miss:
+            sys.exit(f"[오류] '{sh}' 시트에 열이 없습니다: {', '.join(miss)}\n       현재 열: {', '.join(head)}")
+        I = {c: head.index(c) for c in need}
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            if r[I["주문일시"]] is None:
+                continue
+            state = str(r[I["주문상태"]] or "").strip()
+            try:
+                qty = int(float(r[I["수량"]] or 0))
+            except (TypeError, ValueError):
+                continue
+            if state in EXCLUDE_STATES:
+                excluded_qty += qty
+                continue
+            date = str(r[I["주문일시"]])[:10].replace(".", "-").replace("/", "-")
+            no = pid(r[I["상품번호"]])
+            opt = str(r[I["옵션정보"]] or "").strip()
+            nm = str(r[I["상품명"]] or "").strip()
+            if nm:
+                names[no][nm] += 1
+
+            unit, tier = find_cost(no, opt)
+            tiers[tier] += qty
+            d = daily[(date, no)]
+            d["qty"] += qty
+            if unit is None:
+                d["unknown"] += qty
+                missing[(no, opt, nm)] += qty
+            else:
+                d["cogs"] += unit * qty
+    wb.close()
+
+    # ── 저장 ──
+    with open(DATA / "원가일계.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["날짜", "상품번호", "수량", "원가합계", "원가미상수량"])
+        for (date, no), d in sorted(daily.items()):
+            w.writerow([date, no, d["qty"], d["cogs"], d["unknown"]])
+
+    with open(DATA / "상품매핑.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["상품명", "상품번호"])
+        seen = set()
+        for no, c in names.items():
+            for nm in c:
+                if (nm, no) not in seen:
+                    seen.add((nm, no))
+                    w.writerow([nm, no])
+
+    with open(DATA / "원가_미매칭.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["수량", "상품번호", "옵션정보", "상품명", "원가"])
+        for (no, opt, nm), q in missing.most_common():
+            w.writerow([q, no, opt, nm, ""])
+
+    total_qty = sum(tiers.values())
+    known = total_qty - tiers["못 찾음"]
+    print(f"원가관리 엑셀 읽음: {path.name} · 월별 시트 {len(sheets)}개")
+    print(f"원가 항목 {len(cost)}개 · 상품번호 {len(cost_by_no)}개")
+    print(f"주문 수량 {total_qty:,}개 (취소·반품 {excluded_qty:,}개 제외)\n")
+    print("[원가를 어떻게 붙였는지]")
+    for k in ["정확히 일치", "옵션없는 원가", "색상 무시 일치", "그 번호 원가 1개", "못 찾음"]:
+        if tiers[k]:
+            print(f"  {k:<14}{tiers[k]:>9,}개  {tiers[k] / total_qty * 100:>5.1f}%")
+    print(f"\n원가 반영률: {known / total_qty * 100:.1f}%  (원가 합계 ₩{sum(d['cogs'] for d in daily.values()):,})")
+    if missing:
+        print(f"\n※ 원가를 못 찾은 옵션 {len(missing)}종 / {tiers['못 찾음']:,}개")
+        print(f"   data/원가_미매칭.csv 에 수량 많은 순으로 적어 뒀습니다.")
+        print(f"   원가관리 엑셀의 '원가' 시트에 아래 줄을 추가하시면 100%가 됩니다:")
+        for (no, opt, nm), q in missing.most_common(5):
+            print(f"     {q:>5}개  상품번호 {no}  옵션[{opt[:44]}]")
+
+
+if __name__ == "__main__":
+    main()

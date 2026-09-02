@@ -108,6 +108,30 @@ def main():
         costs.append([r["월"].strip(), kind, r["항목"].strip(), acct,
                       to_num(r["금액"], f"costs.csv {i}행 금액", 0)])
 
+    # ── 원가일계.csv (import_costs.py가 만든 날짜·상품번호별 원가) ──
+    pid2code = {}
+    for pr in products:
+        no = (pr.get("상품번호") or "").strip()
+        if no:
+            pid2code[no] = pr["상품코드"].strip()
+    cogs_rows, cogs_unmapped = [], set()
+    cp = DATA / "원가일계.csv"
+    if cp.exists():
+        with open(cp, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                keys = {k.lstrip("\ufeff"): v for k, v in r.items()}
+                no = keys["상품번호"].strip()
+                code = pid2code.get(no)
+                if not code:
+                    cogs_unmapped.add(no)
+                    continue
+                cogs_rows.append([
+                    keys["날짜"].strip(), code,
+                    to_num(keys["수량"], "원가일계.csv 수량", 0),
+                    to_num(keys["원가합계"], "원가일계.csv 원가합계", 0),
+                    to_num(keys["원가미상수량"], "원가일계.csv 원가미상수량", 0),
+                ])
+
     settle = []
     sp = DATA / "정산요약.csv"
     if sp.exists():
@@ -141,6 +165,7 @@ def main():
         "정산요약": settle,
         "원가없는상품": need_cost,
         "일별주문": daily_orders,
+        "원가": cogs_rows,
     }
 
     template = TEMPLATE.read_text(encoding="utf-8")
@@ -154,8 +179,16 @@ def main():
     print(f"  기간: {dates[0]} ~ {dates[-1]} ({len(dates)}일)")
     print(f"  매출 행 {len(sales):,} · 상품 {len(used_codes)}개 · 비용 {len(costs)}건")
     print(f"  총매출: ₩{total:,}")
-    if need_cost:
-        print(f"  원가 미입력 상품 {len(need_cost)}개 → 마진 계산은 원가를 채운 뒤에 표시됩니다.")
+    if cogs_rows:
+        in_range = [r for r in cogs_rows if dates[0] <= r[0] <= dates[-1]]
+        q = sum(r[2] for r in in_range); unk = sum(r[4] for r in in_range)
+        cg = sum(r[3] for r in in_range)
+        print(f"  원가: ₩{cg:,} · 수량 {q:,}개 · 원가 반영률 {(q - unk) / q * 100:.1f}%" if q else "  원가: 없음")
+        print(f"  매출총이익(매출 − 원가): ₩{total - cg:,}  ({(total - cg) / total * 100:.1f}%)")
+        if cogs_unmapped:
+            print(f"  매출에 없는 상품번호 {len(cogs_unmapped)}개는 원가에서 제외했습니다.")
+    else:
+        print("  원가일계.csv 가 없습니다. scripts/import_costs.py 를 먼저 실행해 주세요.")
     if not costs:
         print("  고정지출·마케팅비가 비어 있어 영업이익은 아직 계산하지 않습니다.")
 

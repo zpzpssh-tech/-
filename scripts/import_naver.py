@@ -21,7 +21,7 @@
 import csv
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 try:
@@ -71,6 +71,7 @@ def short_name(name: str) -> str:
     """긴 검색용 상품명을 화면에 쓸 짧은 이름으로 줄입니다."""
     s = name.replace("물리치료사가 판매하는", "").replace("물리치료사가 직접 판매하는", "")
     s = s.replace("올투게더나우", "").strip()
+    s = re.sub(r"^(변경|수정|이름변경)\s*[:：]\s*", "", s).strip()
     s = re.sub(r"\s+", " ", s)
     words = s.split()
     return " ".join(words[:6]) if words else name
@@ -110,6 +111,24 @@ def norm_date(v) -> str:
     return f"{y}-{int(m):02d}-{int(d):02d}" if y.isdigit() and m.isdigit() and d.isdigit() else ""
 
 
+def load_name_to_pid():
+    """import_costs.py가 만든 상품매핑.csv를 읽습니다.
+    같은 상품이 시기에 따라 이름이 바뀌어도 상품번호 하나로 묶기 위한 표입니다."""
+    path = DATA / "상품매핑.csv"
+    if not path.exists():
+        print("[안내] data/상품매핑.csv 가 없어 상품명 기준으로 묶습니다.")
+        print("       scripts/import_costs.py 를 먼저 돌리면 상품번호로 정확히 묶입니다.")
+        return {}
+    m = {}
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for r in csv.DictReader(f):
+            nm = (r.get("상품명") or "").strip()
+            no = (r.get("상품번호") or "").strip()
+            if nm and no:
+                m[nm] = no
+    return m
+
+
 def load_existing_products():
     """이미 만들어 둔 products.csv의 상품코드와 원가를 그대로 이어받습니다."""
     path = DATA / "products.csv"
@@ -123,6 +142,7 @@ def load_existing_products():
         if not full:
             continue
         r.setdefault("정산상품명", full)
+        r.setdefault("상품번호", "")
         r.setdefault("원가", "")
         r.setdefault("포장비", "")
         reg[full] = r
@@ -137,10 +157,16 @@ def main():
     if not files:
         sys.exit(f"[오류] 엑셀 파일이 없습니다. 다음 폴더에 정산 엑셀을 넣어 주세요:\n       {SRC}")
 
+    name2pid = load_name_to_pid()
     registry, maxno = load_existing_products()
+    pid_code = {}                      # 상품번호 → 이미 붙은 상품코드
+    for rec in registry.values():
+        if rec.get("상품번호"):
+            pid_code[rec["상품번호"]] = rec["상품코드"]
     agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0})
     orders_by_date = defaultdict(set)     # 날짜별 주문번호 (상품이 여러 개인 주문을 1건으로)
     seen = set()
+    name_hits = Counter()          # (상품코드, 정산상품명) → 등장 횟수
     stats = defaultdict(lambda: defaultdict(int))   # 파일별 정산상태 집계
     dupes = 0
     unknown_states = set()
@@ -175,7 +201,25 @@ def main():
             if kind == "배송비":
                 code, full = "SHIP", "배송비"
             else:
-                if not raw_name or OPTION_ONLY.match(raw_name):
+                no = name2pid.get(raw_name, "")
+                if no:
+                    # 상품번호로 묶습니다. 이름이 바뀌어도 같은 상품으로 취급합니다.
+                    code = pid_code.get(no)
+                    if not code:
+                        maxno += 1
+                        code = f"NV-{maxno:03d}"
+                        pid_code[no] = code
+                    full = raw_name
+                    rec = registry.get(full)
+                    if not rec or rec["상품코드"] != code:
+                        registry[full] = {"상품코드": code, "상품명": short_name(raw_name),
+                                          "카테고리": categorize(raw_name), "정산상품명": full,
+                                          "상품번호": no,
+                                          "원가": (rec or {}).get("원가", ""),
+                                          "포장비": (rec or {}).get("포장비", "")}
+                    else:
+                        rec["상품번호"] = no
+                elif not raw_name or OPTION_ONLY.match(raw_name):
                     code, full = "OPT", "옵션·추가구성"      # 상품명 칸에 옵션값만 들어온 줄
                 else:
                     full = raw_name
@@ -186,9 +230,10 @@ def main():
                         code = f"NV-{maxno:03d}"
                         registry[full] = {"상품코드": code, "상품명": short_name(full),
                                           "카테고리": categorize(full), "정산상품명": full,
-                                          "원가": "", "포장비": ""}
+                                          "상품번호": "", "원가": "", "포장비": ""}
 
             orders_by_date[date].add(str(r[idx["주문번호"]]))
+            name_hits[(code, full)] += 1
             a = agg[(date, code)]
             a["rev"] += amount
             a["orders"].add(str(r[idx["주문번호"]]))
@@ -204,7 +249,7 @@ def main():
         full = name
         if full not in registry:
             registry[full] = {"상품코드": code, "상품명": name, "카테고리": cat,
-                              "정산상품명": full, "원가": "", "포장비": ""}
+                              "정산상품명": full, "상품번호": "", "원가": "", "포장비": ""}
 
     # ── sales.csv 저장 ──
     out = []
@@ -229,17 +274,26 @@ def main():
     for (_, code), a in agg.items():
         totals[code]["rev"] += a["rev"]
         totals[code]["qty"] += a["qty"]
-    prods = sorted(registry.values(),
-                   key=lambda p: -totals[p["상품코드"]]["rev"])
+    # 상품코드 하나에 이름이 여러 개일 수 있으므로 대표 한 줄만 남깁니다.
+    by_code = {}
+    aliases = defaultdict(list)
+    for rec in registry.values():
+        code = rec["상품코드"]
+        aliases[code].append(rec["정산상품명"])
+        cur = by_code.get(code)
+        # 가장 자주 쓰인 이름을 대표로 씁니다 ("변경 : ..." 같은 임시 이름이 뽑히지 않게)
+        if cur is None or name_hits[(code, rec["정산상품명"])] > name_hits[(code, cur["정산상품명"])]:
+            by_code[code] = rec
+    prods = sorted(by_code.values(), key=lambda p: -totals[p["상품코드"]]["rev"])
     with open(DATA / "products.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["상품코드", "상품명", "카테고리", "원가", "포장비",
-                    "정산상품명", "참고_누적매출", "참고_판매수량"])
+        w.writerow(["상품코드", "상품명", "카테고리", "상품번호", "원가", "포장비",
+                    "정산상품명", "참고_누적매출", "참고_판매수량", "참고_이름수"])
         for p in prods:
             t = totals[p["상품코드"]]
-            w.writerow([p["상품코드"], p["상품명"], p["카테고리"],
+            w.writerow([p["상품코드"], p["상품명"], p["카테고리"], p.get("상품번호", ""),
                         p.get("원가", ""), p.get("포장비", ""), p["정산상품명"],
-                        round(t["rev"]), t["qty"]])
+                        round(t["rev"]), t["qty"], len(set(aliases[p["상품코드"]]))])
 
     # ── 정산요약.csv 저장 (규칙이 제대로 적용됐는지 확인용) ──
     summary = []
