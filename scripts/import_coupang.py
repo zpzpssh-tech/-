@@ -68,6 +68,20 @@ def tail(opt):
     return ",".join(parts[1:]) if len(parts) > 1 else ""
 
 
+# '2개', '1세트', '2p' 처럼 수량을 뜻하는 표현만 골라냅니다.
+# '30 x 20 cm' 같은 치수는 단위가 달라 걸리지 않습니다.
+QTY = re.compile(r"(\d+)\s*(개|세트|셋트|쌍|set|SET|p|P)(?![a-zA-Z])")
+
+
+def opt_qty(text: str) -> int:
+    """옵션 꼬리표에서 몇 개짜리인지 읽습니다. 못 읽으면 1로 봅니다."""
+    m = QTY.search(str(text or ""))
+    if not m:
+        return 1
+    n = int(m.group(1))
+    return n if 1 <= n <= 20 else 1
+
+
 def header_of(ws):
     first = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
     return [str(h).strip() if h is not None else "" for h in (first or [])]
@@ -94,16 +108,30 @@ def read_account(path):
             by_prod[prod][tail(opt)] = c
 
     def find_cost(opt, prod):
+        """원가를 찾고, 옵션 수량이 다르면 배수를 곱합니다.
+        예) 원가 시트에 '1개 = 2,600원'만 있고 '2개'가 팔렸으면 5,200원으로 봅니다."""
         if opt in by_opt:
             return by_opt[opt], "옵션명 일치"
         d = by_prod.get(prod)
-        if d:
-            if tail(opt) in d:
-                return d[tail(opt)], "상품명+꼬리표"
-            if len(d) == 1:
-                return next(iter(d.values())), "상품명 원가 1개"
-            return sum(d.values()) / len(d), "상품명 평균"
-        return None, "못 찾음"
+        if not d:
+            return None, "못 찾음"
+        t = tail(opt)
+        if t in d:
+            return d[t], "상품명+꼬리표"
+        want = opt_qty(t)
+        # 같은 상품 안에서 수량만 다른 항목이 있으면 그것을 기준으로 배수 계산
+        if len(d) == 1:
+            base_key, base_val = next(iter(d.items()))
+            have = opt_qty(base_key)
+            if want != have and have:
+                return base_val * want / have, "수량 배수 적용"
+            return base_val, "상품명 원가 1개"
+        # 여러 개면 수량이 같은 것 우선, 없으면 평균에 배수
+        same = [v for k, v in d.items() if opt_qty(k) == want]
+        if same:
+            return sum(same) / len(same), "수량 같은 항목"
+        avg_unit = sum(v / max(1, opt_qty(k)) for k, v in d.items()) / len(d)
+        return avg_unit * want, "평균 단가 × 수량"
 
     # ── 판매 시트 ──
     daily = defaultdict(lambda: {"ord": 0, "qty": 0, "rev": 0, "cogs": 0, "unk": 0,
@@ -294,6 +322,14 @@ def main():
 
     # ── 보고 ──
     print(f"쿠팡 계정 {len(accounts)}개 읽음: {', '.join(a['account'] for a in accounts)}\n")
+    print("[원가를 어떻게 붙였는지]")
+    allt = Counter()
+    for a in accounts:
+        allt.update(a["tiers"])
+    tt = sum(allt.values()) or 1
+    for k, v in allt.most_common():
+        print(f"  {k:<16}{v:>9,.0f}개 {v / tt * 100:>6.1f}%")
+    print()
     print(f"{'계정':<12}{'매출(총액)':>16}{'주문':>9}{'원가':>15}{'원가율':>8}{'반영률':>8}  판매방식")
     for a in accounts:
         rev = sum(d["rev"] for d in a["daily"].values())
