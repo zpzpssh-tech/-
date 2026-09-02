@@ -269,9 +269,17 @@ def main():
             for r in csv.DictReader(f):
                 k = {c.lstrip("\ufeff"): v for c, v in r.items()}
                 nm = name_by_pid.get(k["상품번호"].strip(), "")
-                g = group_of(nm)
-                seen_names[nm] = g
-                key = (g, CLS.variant(k["옵션정보"]))
+                # '아치업 깔창: L' 처럼 같이 산 다른 상품(추가구성)은 그 상품으로 셉니다
+                add = CLS.addon(k["옵션정보"])
+                if add:
+                    g = group_of(add[0])
+                    seen_names[add[0]] = g
+                    var = CLS.variant(add[0] + " " + add[1], g)
+                else:
+                    g = group_of(nm)
+                    seen_names[nm] = g
+                    var = CLS.variant(k["옵션정보"], g, nm)
+                key = (g, var)
                 it = items[key]
                 it["m"][k["월"].strip()] += to_num(k["수량"], "옵션판매.csv", 0)
                 it["ch"].add("네이버")
@@ -279,10 +287,29 @@ def main():
         m, acct, prod, opt, _rev, _ord, qty, _cg = row
         g = group_of(prod)
         seen_names[prod] = g
-        key = (g, CLS.variant(opt))
+        key = (g, CLS.variant(opt, g))
         it = items[key]
         it["m"][m] += int(qty)
         it["ch"].add(acct)
+
+    # 사이즈가 있는 상품은 거의 모든 판매가 사이즈를 답니다. 어쩌다 한두 건만 사이즈가
+    # 붙은 품목(슬개건처럼 원래 한쪽·양쪽만 있는 것)은 남의 옵션이 섞인 것이므로 사이즈를 뗍니다.
+    sized_ratio = defaultdict(lambda: [0, 0])
+    for (g, v), d in items.items():
+        q = sum(d["m"].values())
+        sized_ratio[g][0] += q
+        if " · " in v or CLS.SIZE.fullmatch(v):
+            sized_ratio[g][1] += q
+    merged = defaultdict(lambda: {"m": defaultdict(int), "ch": set()})
+    for (g, v), d in items.items():
+        tot, sized = sized_ratio[g]
+        if tot and sized / tot < 0.10:
+            v = v.split(" · ")[0] if " · " in v else ("구분 없음" if CLS.SIZE.fullmatch(v) else v)
+        t = merged[(g, v)]
+        for m_, q in d["m"].items():
+            t["m"][m_] += q
+        t["ch"] |= d["ch"]
+    items = merged
 
     item_rows = [{"품목": g, "변형": v, "채널": sorted(d["ch"]), "월": dict(d["m"])}
                  for (g, v), d in items.items() if sum(d["m"].values()) > 0]
