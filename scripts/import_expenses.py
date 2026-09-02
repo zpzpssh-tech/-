@@ -114,6 +114,7 @@ def read_ads(path):
     """네이버 검색광고 리포트를 읽어 {월: 광고비} 로 만듭니다."""
     wb = openpyxl.load_workbook(path, data_only=True)
     by_month = defaultdict(float)
+    by_day = defaultdict(float)        # 날짜별 광고비 (일별 손익용)
     conv_cnt = defaultdict(float)      # 광고 전환수
     conv_rev = defaultdict(float)      # 광고 전환매출 (ROAS 계산용)
     days = set()
@@ -139,6 +140,7 @@ def read_ads(path):
                 v = num(r[ci]) if ci < len(r) else None
                 if v:
                     by_month[d[:7]] += v
+                    by_day[d] += v
                     days.add(d)
                 if ni is not None and ni < len(r):
                     conv_cnt[d[:7]] += num(r[ni]) or 0
@@ -150,6 +152,7 @@ def read_ads(path):
                 v = num(r[ci]) if ci < len(r) else None
                 if v:
                     by_month[d[:7]] += v
+                    by_day[d] += v
                     days.add(d)
                 if ni is not None and ni < len(r):
                     conv_cnt[d[:7]] += num(r[ni]) or 0
@@ -157,7 +160,8 @@ def read_ads(path):
                     conv_rev[d[:7]] += num(r[vi]) or 0
     wb.close()
     stats = {m: {"전환수": int(conv_cnt[m]), "전환매출": int(conv_rev[m])} for m in by_month}
-    return {k: int(round(v)) for k, v in by_month.items()}, sorted(days), stats
+    daily = {k: int(round(v)) for k, v in by_day.items()}
+    return {k: int(round(v)) for k, v in by_month.items()}, sorted(days), stats, daily
 
 
 def main():
@@ -174,11 +178,11 @@ def main():
         if ds:
             year = int(min(ds)[:4])
 
-    rows, all_blocks, ad_months, ad_days, ad_stats = [], [], {}, [], {}
+    rows, all_blocks, ad_months, ad_days, ad_stats, ad_daily = [], [], {}, [], {}, {}
     for p in files:
         low = p.name
         if "광고" in low:
-            ad_months, ad_days, ad_stats = read_ads(p)
+            ad_months, ad_days, ad_stats, ad_daily = read_ads(p)
             print(f"광고 리포트 읽음: {p.name} · {len(ad_days)}일 · {min(ad_days)} ~ {max(ad_days)}")
         elif "고정" in low or "마케팅" in low or "비용" in low:
             got, blocks = read_fixed(p, year)
@@ -202,6 +206,13 @@ def main():
             month, kind, name, amt = r[0], r[1], r[2], r[3]
             acct = r[4] if len(r) > 4 else ""
             w.writerow([month, kind, name, acct, amt])
+
+    if ad_daily:
+        with open(DATA / "일별광고비.csv", "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["날짜", "계정", "광고비"])
+            for d in sorted(ad_daily):
+                w.writerow([d, AD_ACCOUNT, ad_daily[d]])
 
     if ad_stats:
         with open(DATA / "광고지표.csv", "w", newline="", encoding="utf-8-sig") as f:

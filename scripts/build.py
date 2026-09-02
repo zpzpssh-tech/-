@@ -180,6 +180,15 @@ def main():
                                  to_num(k["광고전환수"], "광고지표.csv", 0),
                                  to_num(k["광고전환매출"], "광고지표.csv", 0)])
 
+    # ── 일별 광고비 ──
+    ad_daily = {}
+    adp = DATA / "일별광고비.csv"
+    if adp.exists():
+        with open(adp, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                ad_daily[k["날짜"].strip()] = to_num(k["광고비"], "일별광고비.csv", 0)
+
     # ── 고객 지표 ──
     cust = {}
     cp2 = DATA / "고객지표.csv"
@@ -209,6 +218,7 @@ def main():
         "원가": cogs_rows,
         "옵션판매": opt_sales,
         "광고지표": ad_stats,
+        "일별광고비": ad_daily,
         "고객지표": cust,
         "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
                  "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
