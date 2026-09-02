@@ -199,6 +199,9 @@
   .pl.sum { background: var(--surface-2); font-weight: 600; margin: 3px 0; }
   .pl.final { background: var(--accent-soft); font-weight: 600; margin-top: 3px; }
   .pl.ref { opacity: .78; }
+  td.ch { white-space: normal; max-width: 130px; }
+  .chip { display: inline-block; margin: 1px 3px 1px 0; padding: 1px 6px; border-radius: 5px;
+    background: var(--surface-2); color: var(--ink-2); font-size: 10.5px; font-weight: 500; }
   .refbadge { margin-left: 7px; padding: 1px 6px; border-radius: 5px; background: var(--surface-2);
     color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
   .pl.ref .pl-fill { opacity: .45; }
@@ -387,7 +390,7 @@
 
   <section class="card" id="stockCard" data-fold data-open="0" hidden>
     <div class="card-head">
-      <h2>옵션별 판매량과 다음 달 예상 <span class="only">네이버</span></h2>
+      <h2>품목별 판매량과 다음 달 예상</h2>
       <div class="controls">
         <select id="stockProd" aria-label="상품 선택"><option value="">전체 상품</option></select>
         <div class="seg" role="group" aria-label="발주 기준">
@@ -400,6 +403,10 @@
     <div class="tw"><table id="stab"></table></div>
     <button class="more" id="smore" hidden></button>
     <p class="hint" style="margin:12px 0 0;line-height:1.7">
+      <b>채널마다 이름이 달라도 같은 상품이면 하나로 묶어</b> 셉니다. 예를 들어 네이버 '무릎보호대 슬개건 슬개골'과
+      휴책 '보호대연구소 무릎보호대 슬개건 슬개골'은 같은 '슬개건 무릎보호대'입니다.
+      묶는 규칙이 틀린 곳이 있으면 <code>data/품목_수정.csv</code>에 <b>상품명, 통합품목</b> 두 칸으로 적으면 바뀝니다.
+      지금 묶인 결과는 <code>data/품목분류.csv</code>에서 볼 수 있습니다.<br>
       <b>다음 달 예상</b>은 자료가 온전한 최근 3개월 판매량에 가중치를 줘서 계산합니다. 지난달 3, 그 전달 2, 그 전전달 1의 비율입니다.
       자료가 며칠뿐인 달은 계산에서 뺍니다.
       최근 흐름을 더 크게 반영하려는 것입니다. <b>발주 제안</b>은 예상 판매량에 위에서 고른 개월 수를 곱한 값이라,
@@ -494,6 +501,7 @@
   const D = JSON.parse(document.getElementById('data').textContent);
   const P = D['상품'], SALES = D['매출'], DAILY = D['일별주문'] || {}, COGS = D['원가'] || [];
   const EXP = D['비용'] || [], SHIP = D['택배비'] || {};
+  const ITEMS = D['품목예측'] || [];
   const OPTS = D['옵션판매'] || [], ADS = D['광고지표'] || [], CUST = D['고객지표'] || {};
   const ADD = D['일별광고비'] || {};
   const SHIPCNT = D['일별배송'] || {};   // 정산 파일의 배송비 행 수 = 실제 발송 건수
@@ -964,65 +972,63 @@
       </div>`).join('');
   }
 
-  // ── 옵션별 판매량과 다음 달 예상 (재고 발주용) ──
+  // ── 품목별 판매량과 다음 달 예상 (재고 발주용) ──
+  // 채널마다 이름이 달라도 같은 상품이면 하나로 묶어 셉니다.
   let stockAll = false, leadMonths = 1, stockProd = '';
   function renderStock() {
-    if (!OPTS.length) { el('stockCard').hidden = true; return; }
+    if (!ITEMS.length) { el('stockCard').hidden = true; return; }
     el('stockCard').hidden = false;
-    const byOpt = {};
-    for (const [m, code, opt, qty] of OPTS) {
-      const key = code + '||' + opt;
-      const o = byOpt[key] || (byOpt[key] = { code, opt, m: {}, total: 0 });
-      o.m[m] = (o.m[m] || 0) + qty;
-      o.total += qty;
-    }
-    // 자료가 며칠뿐인 달(예: 9월 1일치)은 빼고, 온전한 달만 씁니다.
+    // 자료가 며칠뿐인 달은 빼고, 온전한 달만 씁니다.
     const dayCount = {};
-    for (const [d] of COGS) {
-      const m = d.slice(0, 7);
-      (dayCount[m] = dayCount[m] || new Set()).add(d);
+    for (const r of DAYS) {
+      if (!(r.gross || r.ord)) continue;
+      (dayCount[r.d.slice(0, 7)] = dayCount[r.d.slice(0, 7)] || new Set()).add(r.d);
     }
     const fullM = months.filter(m => (dayCount[m] || new Set()).size >= Math.min(20, dim(m)));
-    // 최근 3개월: 가중치 3·2·1 로 다음 달 예상
     const recent = fullM.slice(-3);
-    const wgt = { [recent[recent.length - 1]]: 3, [recent[recent.length - 2]]: 2, [recent[recent.length - 3]]: 1 };
-    const wsum = recent.reduce((a, m) => a + (wgt[m] || 0), 0) || 1;
-    let list = Object.values(byOpt).map(o => {
-      const f = recent.reduce((a, m) => a + (o.m[m] || 0) * (wgt[m] || 0), 0) / wsum;
-      const prev = o.m[recent[recent.length - 2]] || 0, cur = o.m[recent[recent.length - 1]] || 0;
+    const wgt = {};
+    recent.forEach((m, i) => wgt[m] = i + 1);          // 오래된 달 1, 최근 달 3
+    const wsum = recent.reduce((a, m) => a + wgt[m], 0) || 1;
+
+    let list = ITEMS.map(o => {
+      const f = recent.reduce((a, m) => a + (o['월'][m] || 0) * wgt[m], 0) / wsum;
+      const cur = o['월'][recent[recent.length - 1]] || 0;
+      const prev = o['월'][recent[recent.length - 2]] || 0;
       return { ...o, forecast: Math.round(f), cur, prev,
+               total: Object.values(o['월']).reduce((a, b) => a + b, 0),
                growth: prev ? (cur - prev) / prev * 100 : (cur ? 100 : 0) };
     }).filter(o => o.total > 0).sort((a, b) => b.forecast - a.forecast || b.total - a.total);
-    if (stockProd) list = list.filter(o => o.code === stockProd);
+    if (stockProd) list = list.filter(o => o['품목'] === stockProd);
     const shown = stockAll ? list : list.slice(0, 12);
     const mx = Math.max(1, ...list.map(o => o.forecast));
     const show = fullM.slice(-4);
     el('stab').innerHTML = `
-      <thead><tr><th>상품 · 옵션</th>${show.map(m => `<th>${Number(m.slice(5))}월</th>`).join('')}
+      <thead><tr><th>품목 · 구분</th><th>채널</th>${show.map(m => `<th>${Number(m.slice(5))}월</th>`).join('')}
         <th>다음 달 예상</th><th>추세</th><th>발주 제안 (${leadMonths}개월치)</th></tr></thead>
       <tbody>${shown.map(o => {
         const g = o.growth;
         const tag = Math.abs(g) < 5 ? `<span class="trend flat">보합</span>`
           : `<span class="trend ${g > 0 ? 'up' : 'down'}">${g > 0 ? '▲' : '▼'} ${Math.abs(Math.round(g))}%</span>`;
         return `<tr>
-          <td class="opt"><b>${(P[o.code] || {})['상품명'] || o.code}</b><small>${o.opt || '옵션 없음'}</small></td>
-          ${show.map(m => `<td class="num">${o.m[m] ? cnt(o.m[m]) : '–'}</td>`).join('')}
+          <td class="opt"><b>${o['품목']}</b><small>${o['변형']}</small></td>
+          <td class="ch">${o['채널'].map(c => `<span class="chip">${c}</span>`).join('')}</td>
+          ${show.map(m => `<td class="num">${o['월'][m] ? cnt(o['월'][m]) : '–'}</td>`).join('')}
           <td class="num"><span class="mt"><span class="mf" style="width:${o.forecast / mx * 100}%"></span></span><b>${cnt(o.forecast)}</b></td>
           <td>${tag}</td>
           <td class="num"><b>${cnt(o.forecast * leadMonths)}개</b></td></tr>`;
       }).join('')}</tbody>
-      <tfoot><tr><td>합계 (${list.length}개 옵션)</td>
-        ${show.map(m => `<td class="num">${cnt(list.reduce((a, o) => a + (o.m[m] || 0), 0))}</td>`).join('')}
+      <tfoot><tr><td>합계 (${list.length}줄)</td><td></td>
+        ${show.map(m => `<td class="num">${cnt(list.reduce((a, o) => a + (o['월'][m] || 0), 0))}</td>`).join('')}
         <td class="num">${cnt(list.reduce((a, o) => a + o.forecast, 0))}</td><td></td>
         <td class="num">${cnt(list.reduce((a, o) => a + o.forecast * leadMonths, 0))}개</td></tr></tfoot>`;
     const b = el('smore');
     b.hidden = list.length <= 12;
-    b.textContent = stockAll ? '상위 12개만 보기' : `전체 ${list.length}개 옵션 보기`;
+    b.textContent = stockAll ? '상위 12줄만 보기' : `전체 ${list.length}줄 보기`;
   }
 
-  // ── 일별 손익 ──
   let dayAll = false, daySort = 'desc';
   const WD = ['일', '월', '화', '수', '목', '금', '토'];
+
   function renderDays(S) {
     el('dayCard').hidden = false;
     const agg = {};
@@ -1230,11 +1236,13 @@
 
   // 재고 표 컨트롤
   (function () {
-    const codes = [...new Set(OPTS.map(o => o[1]))]
-      .map(c => ({ c, n: (P[c] || {})['상품명'] || c, q: OPTS.filter(o => o[1] === c).reduce((a, o) => a + o[3], 0) }))
-      .sort((a, b) => b.q - a.q);
-    codes.forEach(x => { const o = document.createElement('option'); o.value = x.c;
-      o.textContent = `${x.n} (${cnt(x.q)}개)`; el('stockProd').appendChild(o); });
+    const byItem = {};
+    ITEMS.forEach(o => byItem[o['품목']] = (byItem[o['품목']] || 0)
+      + Object.values(o['월']).reduce((a, b) => a + b, 0));
+    Object.entries(byItem).sort((a, b) => b[1] - a[1]).forEach(([n, q]) => {
+      const o = document.createElement('option'); o.value = n;
+      o.textContent = `${n} (${cnt(q)}개)`; el('stockProd').appendChild(o);
+    });
     el('stockProd').addEventListener('change', e => { stockProd = e.target.value; stockAll = false; renderStock(); });
     document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('[data-basis]').forEach(x => x.setAttribute('aria-pressed', x === b));
@@ -1264,7 +1272,7 @@
     function apply() {
       const nv = scope === 'all' || scope === '네이버';
       const multi = scope === 'all' || scope === '쿠팡';
-      ['catCard', 'prodCard', 'stockCard'].forEach(id => { const e = el(id); if (e) e.hidden = !nv; });
+      ['catCard', 'prodCard'].forEach(id => { const e = el(id); if (e) e.hidden = !nv; });
       el('subSeg').hidden = tab !== '쿠팡';
       const chc = el('chCard'); if (chc) chc.dataset.multi = multi ? '1' : '0';
       dayAll = false; showAllProducts = false; stockAll = false;

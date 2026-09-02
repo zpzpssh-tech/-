@@ -14,8 +14,10 @@ data/ 폴더의 CSV·설정을 읽어서 dashboard/index.html 한 파일로 만�
   data/정산요약.csv   (있으면) 정산상태별 반영 내역
 """
 import csv
+import importlib.util
 import json
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -234,6 +236,64 @@ def main():
                                to_num(k["판매량"], "쿠팡_옵션.csv", 0),
                                to_num(k["원가합계"], "쿠팡_옵션.csv", 0)])
 
+    # ── 통합 품목별 월 판매량 (재고 발주용) ──
+    # 채널마다 상품 이름이 조금씩 달라서, 규칙으로 같은 품목끼리 묶습니다.
+    spec = importlib.util.spec_from_file_location("품목분류", ROOT / "scripts" / "품목분류.py")
+    CLS = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(CLS)
+
+    override = {}
+    ov = DATA / "품목_수정.csv"
+    if ov.exists():
+        with open(ov, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {(c or "").lstrip("\ufeff").strip(): (v if isinstance(v, str) else "")
+                     for c, v in r.items()}
+                if k.get("상품명") and k.get("통합품목"):
+                    override[k["상품명"].strip()] = k["통합품목"].strip()
+
+    def group_of(name):
+        return override.get((name or "").strip()) or CLS.classify(name)
+
+    name_by_pid = {}
+    for pr in products:
+        no = (pr.get("상품번호") or "").strip()
+        if no:
+            name_by_pid[no] = pr.get("정산상품명") or pr.get("상품명") or ""
+
+    items = defaultdict(lambda: {"m": defaultdict(int), "ch": set()})
+    seen_names = {}
+    op2 = DATA / "옵션판매.csv"
+    if op2.exists():
+        with open(op2, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                nm = name_by_pid.get(k["상품번호"].strip(), "")
+                g = group_of(nm)
+                seen_names[nm] = g
+                key = (g, CLS.variant(k["옵션정보"]))
+                it = items[key]
+                it["m"][k["월"].strip()] += to_num(k["수량"], "옵션판매.csv", 0)
+                it["ch"].add("네이버")
+    for row in cp_opt:
+        m, acct, prod, opt, _rev, _ord, qty, _cg = row
+        g = group_of(prod)
+        seen_names[prod] = g
+        key = (g, CLS.variant(opt))
+        it = items[key]
+        it["m"][m] += int(qty)
+        it["ch"].add(acct)
+
+    item_rows = [{"품목": g, "변형": v, "채널": sorted(d["ch"]), "월": dict(d["m"])}
+                 for (g, v), d in items.items() if sum(d["m"].values()) > 0]
+    item_rows.sort(key=lambda x: -sum(x["월"].values()))
+
+    with open(DATA / "품목분류.csv", "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(["상품명", "통합품목"])
+        for nm, g in sorted(seen_names.items(), key=lambda x: (x[1], x[0])):
+            w.writerow([nm, g])
+
     dates = sorted({s[0] for s in sales} | {d["날짜"] for d in cp_daily})
     used_codes = {s[2] for s in sales}
     need_cost = sorted(c for c in used_codes if not product_map[c]["원가있음"] and c not in ("SHIP", "OPT"))
@@ -254,6 +314,7 @@ def main():
         "일별배송": daily_ships,
         "원가": cogs_rows,
         "옵션판매": opt_sales,
+        "품목예측": item_rows,
         "광고지표": ad_stats,
         "일별광고비": ad_daily,
         "쿠팡일별": cp_daily,
@@ -274,6 +335,10 @@ def main():
     total = sum(s[5] for s in sales)
     print(f"대시보드 생성 완료 → {OUT.relative_to(ROOT)}")
     print(f"  기간: {dates[0]} ~ {dates[-1]} ({len(dates)}일)")
+    if item_rows:
+        multi = sum(1 for r in item_rows if len(r["채널"]) > 1)
+        print(f"  통합 품목 {len({r['품목'] for r in item_rows})}종 · 옵션 {len(item_rows)}줄 "
+              f"(채널 2개 이상 묶인 줄 {multi}개) → data/품목분류.csv")
     print(f"  매출 행 {len(sales):,} · 상품 {len(used_codes)}개 · 비용 {len(costs)}건")
     print(f"  총매출: ₩{total:,}")
     if cogs_rows:
