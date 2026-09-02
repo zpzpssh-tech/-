@@ -217,6 +217,10 @@
     </div>
     <div class="controls">
       <div class="seg" id="scopeSeg" role="group" aria-label="계정 선택"></div>
+      <div class="seg" role="group" aria-label="매출 기준">
+        <button data-basis="net" aria-pressed="true">정산금 기준</button>
+        <button data-basis="gross" aria-pressed="false">총매출 기준</button>
+      </div>
       <div class="seg" role="group" aria-label="기간 선택">
         <button data-range="all" aria-pressed="true">전체</button>
         <button data-range="90" aria-pressed="false">90일</button>
@@ -444,7 +448,8 @@
   })();
 
   const ACCT_LIST = [...new Set(DAYS.map(r => r.acct))];
-  let scope = 'all';   // 'all' 또는 계정 이름
+  let scope = 'all';     // 'all' 또는 계정 이름
+  let basis = 'net';     // 'net' = 수수료 뺀 정산금 기준, 'gross' = 수수료 빼기 전 총매출 기준
   const inScope = r => scope === 'all' || r.acct === scope;
   const el = id => document.getElementById(id);
   const won = n => (n < 0 ? '-₩' : '₩') + Math.abs(Math.round(n)).toLocaleString('ko-KR');
@@ -532,7 +537,8 @@
       a.preVat = a.left;
       a.left = a.left - a.vat;
     });
-    return { rev: t.net, gross: t.gross, fee: t.fee, cogs: t.cogs, shipping: t.logi + t.coupon,
+    const base = basis === 'gross' ? t.gross : t.net;
+    return { base, rev: t.net, gross: t.gross, fee: t.fee, cogs: t.cogs, shipping: t.logi + t.coupon,
              logi: t.logi, coupon: t.coupon, ad: t.ad, orders: t.ord, qty: t.qty,
              preVat, vat, contrib, gross_profit: t.net - t.cogs, unk, nvQty,
              mkt, fixed, op: contrib - mkt - fixed, hasExp: EXP.length > 0,
@@ -543,21 +549,24 @@
   function renderKpis(S) {
     const who = scope === 'all' ? '전 채널' : scope;
     const cover = S.nvQty ? (S.nvQty - S.unk) / S.nvQty * 100 : 0;
+    const gross = basis === 'gross';
+    const bl = gross ? '총매출 대비' : '정산금 대비';
     const t = [
-      { hero: 1, lab: `총매출 · ${who}`, val: won(S.gross),
-        cap: `수수료 뺀 실수령 <b>${shortWon(S.rev)}원</b> · 일평균 ${shortWon(S.gross / S.days)}원` },
+      { hero: 1, lab: (gross ? '총매출 · ' : '정산금 (수수료 뺀 매출) · ') + who, val: won(S.base),
+        cap: gross ? `수수료 뺀 정산금 <b>${shortWon(S.rev)}원</b> · 일평균 ${shortWon(S.gross / S.days)}원`
+                   : `수수료 빼기 전 총매출 <b>${shortWon(S.gross)}원</b> · 일평균 ${shortWon(S.rev / S.days)}원` },
       { hero: 2, lab: `${who}에서 남은 돈`, val: won(S.contrib),
-        cap: `총매출 대비 <b>${pct(S.contrib, S.gross)}</b> · 주문 1건당 <b>${won(S.orders ? S.contrib / S.orders : 0)}</b>` },
-      { lab: '판매 수수료', val: won(S.fee), cap: `총매출 대비 <b>${pct(S.fee, S.gross)}</b>` },
+        cap: `${bl} <b>${pct(S.contrib, S.base)}</b> · 주문 1건당 <b>${won(S.orders ? S.contrib / S.orders : 0)}</b>` },
       { lab: '상품 원가', val: won(S.cogs),
-        cap: `총매출 대비 <b>${pct(S.cogs, S.gross)}</b>` + (cover && cover < 100 ? ` · 네이버 반영률 ${cover.toFixed(1)}%` : '') },
+        cap: `${bl} <b>${pct(S.cogs, S.base)}</b>` + (cover && cover < 100 ? ` · 네이버 반영률 ${cover.toFixed(1)}%` : '') },
       { lab: S.coupon ? '물류비 · 쿠폰' : '물류비', val: won(S.shipping),
         cap: `주문 ${cnt(S.orders)}건 · 건당 <b>${won(S.orders ? S.shipping / S.orders : 0)}</b>` },
       { lab: '광고비', val: won(S.ad),
-        cap: `총매출 대비 <b>${pct(S.ad, S.gross)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
+        cap: `${bl} <b>${pct(S.ad, S.base)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
     ];
+    if (gross) t.splice(2, 0, { lab: '판매 수수료', val: won(S.fee), cap: `총매출 대비 <b>${pct(S.fee, S.gross)}</b>` });
     if (S.vat) t.push({ lab: '부가세', val: won(S.vat),
-      cap: `총매출 대비 <b>${pct(S.vat, S.gross)}</b> · 매출세액 − 매입세액` });
+      cap: `${bl} <b>${pct(S.vat, S.base)}</b> · 매출세액 − 매입세액` });
     el('kpis').innerHTML = t.map(k => `<div class="kpi${k.hero === 1 ? ' hero' : k.hero === 2 ? ' hero2' : ''}">
       <div class="lab">${k.lab}</div><div class="val num${!k.hero && /^-/.test(k.val) ? ' neg' : ''}">${k.val}</div>
       <div class="cap num">${k.cap}</div></div>`).join('');
@@ -619,22 +628,27 @@
 
   function renderPnl(S) {
     el('pnlCard').hidden = false;
-    const base = Math.max(1, S.gross);
+    const base = Math.max(1, S.base);
     const w = v => Math.min(100, Math.abs(v) / base * 100);
     const step = (name, op, val, color, cls, note) => ({ name, op, val, color, cls, note });
     const who = scope === 'all' ? '전 채널' : scope;
     const nvOnly = scope === '네이버';
-    const rows = [
+    const head = basis === 'gross' ? [
       step('총매출', '', S.gross, 'var(--accent)', 'sum',
            nvOnly ? '정산기준금액. 수수료 떼기 전 판매 금액' : '고객이 결제한 금액'),
       step('판매 수수료', '−', -S.fee, 'var(--k3)', '',
            nvOnly ? '정산 파일에 이미 빠져 있는 금액을 보이게 적은 것' : '네이버·쿠팡이 떼 가는 몫'),
-      step('실수령 매출', '=', S.rev, 'var(--accent)', 'sum',
-           nvOnly ? '정산예정금액. 이익은 여기서부터 계산' : '실제로 우리한테 들어오는 돈'),
+      step('정산금', '=', S.rev, 'var(--accent)', 'sum',
+           nvOnly ? '정산예정금액. 이익은 여기서부터 계산' : '수수료 빼고 실제로 들어오는 돈'),
+    ] : [
+      step('정산금 (수수료 뺀 매출)', '', S.rev, 'var(--accent)', 'sum',
+           nvOnly ? '네이버 정산예정금액 그대로. 수수료는 이미 빠져 있음' : '수수료 빼고 실제로 들어오는 돈'),
+    ];
+    const rows = head.concat([
       step('상품 원가', '−', -S.cogs, 'var(--k2)', '', '만드는 데 든 돈'),
       step('상품 마진', '=', S.gross_profit, 'var(--accent)', 'sum', '팔아서 남은 1차 이익'),
       step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '', '보내고 보관하는 데 든 돈'),
-    ];
+    ]);
     if (S.coupon) rows.push(step('판매자 할인쿠폰', '−', -S.coupon, 'var(--k6)', '', '우리가 부담한 쿠폰 할인'));
     rows.push(step('광고비', '−', -S.ad, 'var(--k5)', '', '검색광고·쿠팡광고에 쓴 돈'));
     if (S.vat) rows.push(
@@ -653,7 +667,7 @@
         <div class="pl-n"><span class="op">${r.op}</span><span>${r.name}${r.note ? `<small>${r.note}</small>` : ''}</span></div>
         <div class="pl-bar"><div class="pl-fill" style="width:${w(r.val)}%;background:${r.color}"></div></div>
         <div class="pl-v num ${r.val < 0 && r.cls ? 'neg' : ''}">${won(r.val)}</div>
-        <div class="pl-p num">${pct(Math.abs(r.val), S.gross)}</div>
+        <div class="pl-p num">${pct(Math.abs(r.val), S.base)}</div>
       </div>`).join('');
     const mo = S.days / 30.4;
     const feeNote = (scope === 'all' || scope === '네이버')
@@ -680,44 +694,47 @@
 
   // ── 계정별 손익 비교 ──
   function renderChannels(S) {
+    const bk = basis === 'gross' ? 'gross' : 'net';
     const list = ACCT_LIST.map(a => ({ a, ...(S.byAcct[a] || {}) })).filter(x => x.gross)
-      .sort((x, y) => y.gross - x.gross);
+      .sort((x, y) => y[bk] - x[bk]);
     if (list.length < 2) { el('chCard').hidden = true; return; }
     el('chCard').hidden = false;
-    const T = list.reduce((t, x) => { ['gross','fee','cogs','logi','coupon','ad','vat','left','ord'].forEach(k => t[k] += x[k] || 0); return t; },
-      { gross: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0, ord: 0 });
-    const mx = Math.max(1, ...list.map(x => x.gross));
+    const T = list.reduce((t, x) => { ['gross','net','fee','cogs','logi','coupon','ad','vat','left','ord'].forEach(k => t[k] += x[k] || 0); return t; },
+      { gross: 0, net: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, vat: 0, left: 0, ord: 0 });
+    const bK = basis === 'gross' ? 'gross' : 'net';
+    const mx = Math.max(1, ...list.map(x => x[bK]));
     const badge = m => m >= 20 ? 'good' : m >= 10 ? 'warn' : 'bad';
     const cfg = {}; ACCTS.forEach(a => cfg[a['계정']] = a);
     const assumed = a => (cfg[a] || {})['판매방식'] === '판매자배송';
     el('chtab').innerHTML = `
-      <thead><tr><th>계정</th><th>주문</th><th>총매출</th><th>수수료</th><th>원가</th>
+      <thead><tr><th>계정</th><th>주문</th><th>${basis === 'gross' ? '총매출' : '정산금'}</th>
+        ${basis === 'gross' ? '<th>수수료</th>' : ''}<th>원가</th>
         <th>물류비·쿠폰</th><th>광고비</th><th>광고비율</th><th>부가세</th><th>남는 돈</th><th>남는 비율</th></tr></thead>
       <tbody>${list.map(x => {
-        const m = x.gross ? x.left / x.gross * 100 : 0;
+        const bv = x[bK], m = bv ? x.left / bv * 100 : 0;
         return `<tr>
           <td class="nm">${x.a}<small>${x.ch}${assumed(x.a) ? ' · 수수료 추정' : x.est ? ' · 일부 원가 추정' : ''}</small></td>
           <td class="num">${cnt(x.ord)}</td>
-          <td class="num"><span class="mt"><span class="mf" style="width:${x.gross / mx * 100}%"></span></span>${won(x.gross)}</td>
-          <td class="num">${won(x.fee)}</td><td class="num">${won(x.cogs)}</td>
+          <td class="num"><span class="mt"><span class="mf" style="width:${bv / mx * 100}%"></span></span>${won(bv)}</td>
+          ${basis === 'gross' ? `<td class="num">${won(x.fee)}</td>` : ''}<td class="num">${won(x.cogs)}</td>
           <td class="num">${won(x.logi + x.coupon)}</td>
           <td class="num">${won(x.ad)}</td>
-          <td class="num"><span class="pill ${x.ad / x.gross <= .2 ? 'good' : x.ad / x.gross <= .3 ? 'warn' : 'bad'}">${pct(x.ad, x.gross)}</span></td>
+          <td class="num"><span class="pill ${x.ad / bv <= .2 ? 'good' : x.ad / bv <= .3 ? 'warn' : 'bad'}">${pct(x.ad, bv)}</span></td>
           <td class="num">${won(x.vat || 0)}</td>
           <td class="num ${x.left < 0 ? 'neg' : ''}"><b>${won(x.left)}</b></td>
           <td class="num"><span class="pill ${badge(m)}">${m.toFixed(1)}%</span></td></tr>`;
       }).join('')}</tbody>
-      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}</td><td class="num">${won(T.gross)}</td>
-        <td class="num">${won(T.fee)}</td><td class="num">${won(T.cogs)}</td>
+      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}</td><td class="num">${won(T[bK])}</td>
+        ${basis === 'gross' ? `<td class="num">${won(T.fee)}</td>` : ''}<td class="num">${won(T.cogs)}</td>
         <td class="num">${won(T.logi + T.coupon)}</td><td class="num">${won(T.ad)}</td>
-        <td class="num">${pct(T.ad, T.gross)}</td><td class="num">${won(T.vat)}</td>
+        <td class="num">${pct(T.ad, T[bK])}</td><td class="num">${won(T.vat)}</td>
         <td class="num">${won(T.left)}</td>
-        <td class="num">${pct(T.left, T.gross)}</td></tr></tfoot>`;
-    const best = list[0], top = [...list].sort((a, b) => (b.left / b.gross) - (a.left / a.gross))[0];
-    const worst = [...list].sort((a, b) => (a.left / a.gross) - (b.left / b.gross))[0];
+        <td class="num">${pct(T.left, T[bK])}</td></tr></tfoot>`;
+    const best = list[0], top = [...list].sort((a, b) => (b.left / b[bK]) - (a.left / a[bK]))[0];
+    const worst = [...list].sort((a, b) => (a.left / a[bK]) - (b.left / b[bK]))[0];
     el('chNote').innerHTML =
-      `매출이 가장 큰 계정은 <b>${best.a}</b>(${won(best.gross)})이고, 남는 비율이 가장 좋은 계정은 ` +
-      `<b>${top.a}</b>(${pct(top.left, top.gross)}), 가장 나쁜 계정은 <b>${worst.a}</b>(${pct(worst.left, worst.gross)})입니다. ` +
+      `매출이 가장 큰 계정은 <b>${best.a}</b>(${won(best[bK])})이고, 남는 비율이 가장 좋은 계정은 ` +
+      `<b>${top.a}</b>(${pct(top.left, top[bK])}), 가장 나쁜 계정은 <b>${worst.a}</b>(${pct(worst.left, worst[bK])})입니다. ` +
       `여기서 뺀 비용은 그 계정에 직접 드는 것뿐이고, 회사 고정지출과 공통 마케팅비는 아직 빠지지 않았습니다.<br>` +
       `쿠팡은 총매출로, 네이버는 정산예정금(수수료가 이미 빠진 금액)으로 자료가 들어와 기준이 달랐습니다. ` +
       `두 채널을 같은 잣대로 보려고 네이버도 총매출을 되살린 뒤 그 수수료를 도로 뺐습니다. ` +
@@ -1088,6 +1105,10 @@
     codes.forEach(x => { const o = document.createElement('option'); o.value = x.c;
       o.textContent = `${x.n} (${cnt(x.q)}개)`; el('stockProd').appendChild(o); });
     el('stockProd').addEventListener('change', e => { stockProd = e.target.value; stockAll = false; renderStock(); });
+    document.querySelectorAll('[data-basis]').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('[data-basis]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      basis = b.dataset.basis; renderMonths(); all();
+    }));
     document.querySelectorAll('[data-lead]').forEach(b => b.addEventListener('click', () => {
       document.querySelectorAll('[data-lead]').forEach(x => x.setAttribute('aria-pressed', x === b));
       leadMonths = Number(b.dataset.lead); renderStock();
