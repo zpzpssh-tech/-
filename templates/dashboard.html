@@ -1123,7 +1123,6 @@
     const want = ['휴책', '유큐어', '올투게더나우', '로켓배송'].filter(a => !ACCT_LIST.includes(a));
     if (want.length) items.push(`<b>쿠팡 ${want.join(', ')} 계정</b> — 자료를 <code>data/원본/쿠팡/</code>에 넣어 주시면 같은 규칙으로 합산합니다. 지금 회사 영업이익에는 빠져 있습니다.`);
     items.push(`<b>현재 재고 수량</b> — 재고 회전율과 품절까지 남은 일수를 계산하려면 필요합니다. 발주 제안에서 재고를 빼야 실제 발주량이 나옵니다.`);
-    items.push(`<b>쿠팡 1~6월 상품별 판매 자료</b> — 그 기간은 쿠팡 시트에 상품 구분이 없어 7~8월 원가율로 추정했습니다. 날짜별 상품 실적 시트를 주시면 추정 없이 계산합니다.`);
     items.push(`<b>기타 사이트 매출</b> — 지금 대시보드에 없습니다. 자료를 주시면 채널에 추가합니다.`);
     el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
     el('todo').querySelector('h2').textContent =

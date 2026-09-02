@@ -139,6 +139,7 @@ def read_account(path):
     options = defaultdict(lambda: {"rev": 0, "ord": 0, "qty": 0, "cogs": 0})
     prod_days = set()          # 상품별 실적이 있는 날짜
     tiers, missing = Counter(), Counter()
+    month_cogs, month_unk, month_ok = Counter(), Counter(), set()
 
     for sh in wb.sheetnames:
         is_month = bool(re.fullmatch(r"\d{6}월", sh))
@@ -151,7 +152,8 @@ def read_account(path):
             continue
         I = {c: hdr.index(c) for c in hdr if c}
         width = len(hdr)
-        it = ws.iter_rows(min_row=2, values_only=True)
+        rows_all = list(ws.iter_rows(min_row=2, values_only=True))
+        it = iter(rows_all)
         if is_day:
             date = as_date(sh)
             prod_days.add(date)
@@ -180,7 +182,14 @@ def read_account(path):
                 o["rev"] += rev; o["ord"] += orders; o["qty"] += qty
                 o["cogs"] += (unit or 0) * qty
         else:
-            for r in it:
+            # 월별 시트는 위쪽에 '하루 합계' 표, 아래쪽에 '옵션별 합계' 표가 있습니다.
+            month = f"{sh[:4]}-{sh[4:6]}"
+            opt_start = None
+            for i, r in enumerate(rows_all):
+                if r and r[0] is not None and str(r[0]).strip() == "옵션명":
+                    opt_start = i
+                    break
+            for r in rows_all[:opt_start] if opt_start is not None else rows_all:
                 r = list(r) + [None] * width
                 date = as_date(r[0]) if r[0] is not None else ""
                 if not date:
@@ -190,13 +199,56 @@ def read_account(path):
                 for k, col in (("visit", "방문자"), ("view", "조회"), ("cart", "장바구니")):
                     if col in I:
                         d[k] += num(r[I[col]])
+            if opt_start is None:
+                continue
+            oh = [str(x).strip() if x is not None else "" for x in rows_all[opt_start]]
+            OI = {c: oh.index(c) for c in oh if c}
+            if "옵션명" not in OI or "판매량" not in OI:
+                continue
+            month_ok.add(month)
+            ow = len(oh)
+            for r in rows_all[opt_start + 1:]:
+                r = list(r) + [None] * ow
+                if r[OI["옵션명"]] is None or not str(r[OI["옵션명"]]).strip():
+                    continue
+                qty = num(r[OI["판매량"]])
+                if qty <= 0:
+                    continue
+                opt = str(r[OI["옵션명"]]).strip()
+                prod = str(r[OI.get("상품명", OI["옵션명"])] or "").strip()
+                unit, tier = find_cost(opt, prod)
+                tiers[tier] += qty
+                o = options[(month, prod, opt)]
+                o["rev"] += num(r[OI.get("매출(원)", OI["옵션명"])] if "매출(원)" in OI else 0)
+                o["ord"] += num(r[OI["주문"]]) if "주문" in OI else 0
+                o["qty"] += qty
+                if unit is None:
+                    month_unk[month] += qty
+                    missing[(prod[:60], tail(opt)[:40])] += qty
+                else:
+                    o["cogs"] += unit * qty
+                    month_cogs[month] += unit * qty
 
-    # 상품별 실적이 없는 날은 있는 날의 원가율로 추정합니다.
+    # 월별 시트의 옵션표에서 구한 그 달 원가를, 날짜별 매출 비중대로 나눠 붙입니다.
+    # 달 합계는 실제 값이고 날짜 배분만 비례로 하는 것이라 'est'로 표시하지 않습니다.
+    rev_in_month = Counter()
+    for date, d in daily.items():
+        if date not in prod_days:
+            rev_in_month[date[:7]] += d["rev"]
+    for date, d in daily.items():
+        m = date[:7]
+        if date in prod_days or m not in month_ok or not rev_in_month[m]:
+            continue
+        share = d["rev"] / rev_in_month[m]
+        d["cogs"] = month_cogs[m] * share
+        d["unknown"] = month_unk[m] * share
+
+    # 옵션표조차 없는 달만 원가율로 추정합니다.
     known_rev = sum(daily[d]["rev"] for d in prod_days)
     known_cogs = sum(daily[d]["cogs"] for d in prod_days)
     rate = known_cogs / known_rev if known_rev else 0
     for date, d in daily.items():
-        if date not in prod_days and d["rev"]:
+        if date not in prod_days and date[:7] not in month_ok and d["rev"]:
             d["cogs"] = d["rev"] * rate
             d["est"] = 1
 
