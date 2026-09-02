@@ -360,7 +360,8 @@
       같은 상품이 시기에 따라 이름이 달라도 상품번호로 하나로 묶습니다.
     </p>
     <p class="hint" style="margin:8px 0 0;line-height:1.7">
-      <b>택배비</b>는 주문 건수 × 건당 단가입니다. 1~8월은 전량 N배송(₩3,280) 기준입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
+      <b>택배비</b>는 정산 파일의 '배송비' 행 수(실제 발송 건수) × 건당 단가입니다.
+      한 주문에 배송비 행이 없으면 발송으로 세지 않습니다. 1~8월은 전량 N배송(₩3,280) 기준입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
       <b>고정지출과 공통 마케팅비</b>는 월 단위 금액을 선택한 기간의 날짜 수만큼 나눠서 반영합니다.
       기간을 짧게 잡으면 그만큼만 반영되니, 월 전체를 보시려면 위에서 월을 선택해 주세요.
     </p>
@@ -385,6 +386,7 @@
   const EXP = D['비용'] || [], SHIP = D['택배비'] || {};
   const OPTS = D['옵션판매'] || [], ADS = D['광고지표'] || [], CUST = D['고객지표'] || {};
   const ADD = D['일별광고비'] || {};
+  const SHIPCNT = D['일별배송'] || {};   // 정산 파일의 배송비 행 수 = 실제 발송 건수
   const VAT = D['부가세'] || {};
   const CPD = D['쿠팡일별'] || [], CPC = D['쿠팡비용'] || [], CPO = D['쿠팡옵션'] || [];
   const ACCTS = D['계정'] || [];
@@ -404,7 +406,14 @@
       r.gross += (gross || net); r.fee += (gross || net) - net; r.qty += q;
     }
     for (const [d, , q, cg] of COGS) { const r = rec[key(d, '네이버')]; if (r) { r.cogs += cg; } }
-    for (const d in DAILY) { const r = rec[key(d, '네이버')]; if (r) { r.ord = DAILY[d]; r.logi = DAILY[d] * shipUnit; } }
+    // 택배비는 주문 수가 아니라 '배송비' 행 수(실제 발송 건수)로 계산합니다.
+    for (const d in DAILY) {
+      const r = rec[key(d, '네이버')];
+      if (!r) continue;
+      r.ord = DAILY[d];
+      r.ships = (d in SHIPCNT) ? SHIPCNT[d] : DAILY[d];
+      r.logi = r.ships * shipUnit;
+    }
     for (const d in ADD) { const r = rec[key(d, '네이버')]; if (r) r.ad += ADD[d]; }
 
     // 쿠팡: 하루 실적
@@ -484,14 +493,16 @@
 
   function compute() {
     const rows = DAYS.filter(r => r.d >= range.s && r.d <= range.e && inScope(r));
-    const t = { gross: 0, net: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, ord: 0, qty: 0, left: 0 };
+    const t = { gross: 0, net: 0, fee: 0, cogs: 0, logi: 0, coupon: 0, ad: 0, ord: 0, qty: 0, left: 0, ships: 0 };
     const byDay = {}, byAcct = {};
     for (const r of rows) {
       ['gross', 'net', 'fee', 'cogs', 'logi', 'coupon', 'ad', 'ord', 'qty', 'left'].forEach(k => t[k] += r[k]);
+      t.ships += (r.ships || r.ord);
       byDay[r.d] = (byDay[r.d] || 0) + r.net;
       const a = byAcct[r.acct] || (byAcct[r.acct] = { ch: r.ch, gross: 0, net: 0, fee: 0, cogs: 0,
-        logi: 0, coupon: 0, ad: 0, ord: 0, qty: 0, left: 0, est: 0 });
+        logi: 0, coupon: 0, ad: 0, ord: 0, qty: 0, left: 0, ships: 0, est: 0 });
       ['gross', 'net', 'fee', 'cogs', 'logi', 'coupon', 'ad', 'ord', 'qty', 'left'].forEach(k => a[k] += r[k]);
+      a.ships += (r.ships || r.ord);
       if (r.est) a.est = 1;
     }
     // 상품·부위별은 네이버 정산 데이터에만 있습니다.
@@ -539,7 +550,7 @@
     });
     const base = basis === 'gross' ? t.gross : t.net;
     return { base, rev: t.net, gross: t.gross, fee: t.fee, cogs: t.cogs, shipping: t.logi + t.coupon,
-             logi: t.logi, coupon: t.coupon, ad: t.ad, orders: t.ord, qty: t.qty,
+             logi: t.logi, coupon: t.coupon, ad: t.ad, orders: t.ord, ships: t.ships, qty: t.qty,
              preVat, vat, contrib, gross_profit: t.net - t.cogs, unk, nvQty,
              mkt, fixed, op: contrib - mkt - fixed, hasExp: EXP.length > 0,
              byDay, byAcct, byCode, byCat, hasCogs: t.cogs > 0,
@@ -560,7 +571,7 @@
       { lab: '상품 원가', val: won(S.cogs),
         cap: `${bl} <b>${pct(S.cogs, S.base)}</b>` + (cover && cover < 100 ? ` · 네이버 반영률 ${cover.toFixed(1)}%` : '') },
       { lab: S.coupon ? '물류비 · 쿠폰' : '물류비', val: won(S.shipping),
-        cap: `주문 ${cnt(S.orders)}건 · 건당 <b>${won(S.orders ? S.shipping / S.orders : 0)}</b>` },
+        cap: `발송 ${cnt(S.ships)}건 · 건당 <b>${won(S.ships ? S.shipping / S.ships : 0)}</b>` },
       { lab: '광고비', val: won(S.ad),
         cap: `${bl} <b>${pct(S.ad, S.base)}</b> · 주문당 ${won(S.orders ? S.ad / S.orders : 0)}` },
     ];
@@ -647,7 +658,8 @@
     const rows = head.concat([
       step('상품 원가', '−', -S.cogs, 'var(--k2)', '', '만드는 데 든 돈'),
       step('상품 마진', '=', S.gross_profit, 'var(--accent)', 'sum', '팔아서 남은 1차 이익'),
-      step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '', '보내고 보관하는 데 든 돈'),
+      step('물류비 (택배·입출고)', '−', -S.logi, 'var(--k4)', '',
+           `보내고 보관하는 데 든 돈 · 발송 ${cnt(S.ships)}건`),
     ]);
     if (S.coupon) rows.push(step('판매자 할인쿠폰', '−', -S.coupon, 'var(--k6)', '', '우리가 부담한 쿠폰 할인'));
     rows.push(step('광고비', '−', -S.ad, 'var(--k5)', '', '검색광고·쿠팡광고에 쓴 돈'));

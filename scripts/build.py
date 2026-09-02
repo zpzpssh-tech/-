@@ -147,13 +147,14 @@ def main():
                 settle.append({k.lstrip("﻿"): (to_num(v, "정산요약.csv", 0) if k != "파일" else v)
                                for k, v in r.items()})
 
-    daily_orders = {}
+    daily_orders, daily_ships = {}, {}
     dop = DATA / "일별주문.csv"
     if dop.exists():
         with open(dop, newline="", encoding="utf-8-sig") as f:
             for r in csv.DictReader(f):
                 key = r[list(r.keys())[0]].strip()
                 daily_orders[key] = to_num(r["주문건수"], "일별주문.csv", 0)
+                daily_ships[key] = to_num(r.get("배송건수"), "일별주문.csv", 0)
 
     # ── 옵션별 월 판매량 (재고 예측용) ──
     opt_sales = []
@@ -250,6 +251,7 @@ def main():
         "정산요약": settle,
         "원가없는상품": need_cost,
         "일별주문": daily_orders,
+        "일별배송": daily_ships,
         "원가": cogs_rows,
         "옵션판매": opt_sales,
         "광고지표": ad_stats,
@@ -332,12 +334,13 @@ def main():
 
         cg = sum(r[3] for r in cogs_rows if dates[0] <= r[0] <= dates[-1])
         orders = sum(v for k, v in daily_orders.items() if dates[0] <= k <= dates[-1])
-        shipping = orders * ship_unit
+        ships = sum(v for k, v in daily_ships.items() if dates[0] <= k <= dates[-1]) or orders
+        shipping = ships * ship_unit
         ad = prorate("마케팅비", True)
         common_mkt = prorate("마케팅비", False)
         fixed = prorate("고정지출", False)
         contrib = total - cg - shipping - ad
-        print(f"  택배비: ₩{shipping:,} (주문 {orders:,}건 × ₩{ship_unit:,})")
+        print(f"  택배비: ₩{shipping:,} (배송 {ships:,}건 × ₩{ship_unit:,}) · 주문은 {orders:,}건")
         print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")
         print(f"  네이버 기여이익: ₩{contrib:,} ({contrib / total * 100:.1f}%)")
         print(f"  영업이익(회사 공통비 전액 반영): ₩{contrib - common_mkt - fixed:,}")

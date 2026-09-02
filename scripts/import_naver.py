@@ -166,6 +166,7 @@ def main():
     agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0, "gross": 0})
     orders_by_date = defaultdict(set)     # 날짜별 주문번호 (상품이 여러 개인 주문을 1건으로)
     buyer_orders = defaultdict(set)       # 구매자명 → 주문번호 (재구매율 계산용)
+    ship_by_date = defaultdict(int)       # 날짜별 배송 건수 (정산 파일의 '배송비' 행 = 발송 1건)
     cancel_orders = set()                 # 정산전 취소가 있었던 주문번호
     seen = set()
     name_hits = Counter()          # (상품코드, 정산상품명) → 등장 횟수
@@ -237,6 +238,9 @@ def main():
                                           "상품번호": "", "원가": "", "포장비": ""}
 
             orders_by_date[date].add(str(r[idx["주문번호"]]))
+            if kind == "배송비":
+                # 회수·정산후 취소 행은 마이너스로 잡혀 있어 발송 건수에서 뺍니다.
+                ship_by_date[date] += 1 if amount >= 0 else -1
             buyer = str(r[idx["구매자명"]] or "").strip()
             if buyer:
                 buyer_orders[buyer].add(str(r[idx["주문번호"]]))
@@ -270,9 +274,9 @@ def main():
 
     with open(DATA / "일별주문.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["날짜", "계정", "주문건수"])
+        w.writerow(["날짜", "계정", "주문건수", "배송건수"])
         for d in sorted(orders_by_date):
-            w.writerow([d, ACCOUNT, len(orders_by_date[d])])
+            w.writerow([d, ACCOUNT, len(orders_by_date[d]), ship_by_date.get(d, 0)])
 
     # ── products.csv 저장 ──
     # 원가·포장비는 대표님이 채우는 칸입니다. 맨 뒤 '참고_' 칸은 자동으로 다시 채워지니
@@ -352,6 +356,9 @@ def main():
     print(f"\n총 매출(정산예정금 기준): ₩{total:,}")
     print(f"총매출(수수료 차감 전): ₩{gross_total:,} · 네이버 수수료 ₩{gross_total - total:,} "
           f"({(gross_total - total) / gross_total * 100:.1f}%)")
+    ships = sum(ship_by_date.values())
+    print(f"배송 건수(정산 파일의 배송비 행) {ships:,}건 · 주문 {total_orders:,}건 "
+          f"→ 주문 대비 {ships / total_orders * 100:.1f}%")
     print(f"구매자 {buyers:,}명 · 재구매 고객 {repeat_buyers:,}명 "
           f"({repeat_buyers / buyers * 100:.1f}%) · 1인당 평균 {total_orders / buyers:.2f}회")
     if not (DATA / "원가일계.csv").exists():
