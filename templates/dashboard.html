@@ -431,8 +431,12 @@
     if (need.length) items.push(`<b>상품별 원가</b> — 제조단가 + 국제운송 + 관세를 개당으로 계산한 값과 포장비. <code>data/products.csv</code>의 원가·포장비 칸을 채우면 상품별 마진이 바로 계산됩니다. (지금 ${need.length}개 비어 있음)`);
     if (noCost) items.push(`<b>월별 고정비와 광고비</b> — 인건비, 창고·사무실, 물류 솔루션, 채널별 광고비. <code>data/costs.csv</code>에 월별로 적으면 영업이익이 나옵니다.`);
     items.push(`<b>택배비</b> — 건당 실제 지급하는 택배 단가. <code>data/settings.json</code>의 건당배송비에 넣습니다.`);
-    items.push(`<b>쿠팡 3개 계정과 6~8월 네이버</b> — 정산 파일을 <code>data/원본/</code>에 넣어 주시면 같은 규칙으로 합산합니다.`);
+    const have = new Set(D['계정'].map(a => a['계정']));
+    const want = ['올투게더나우', '휴책', '유큐어', '로켓배송'].filter(a => !have.has(a));
+    if (want.length) items.push(`<b>쿠팡 계정 (${want.join(', ')})</b> — 정산 파일을 <code>data/원본/</code>에 넣어 주시면 같은 규칙으로 합산합니다.`);
     el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
+    el('todo').querySelector('h2').textContent =
+      `영업이익까지 보려면 이 자료가 더 필요합니다 (현재 ${months.length}개월 반영)`;
     el('todo').hidden = false;
   }
 

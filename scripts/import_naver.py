@@ -221,13 +221,25 @@ def main():
         for d in sorted(orders_by_date):
             w.writerow([d, ACCOUNT, len(orders_by_date[d])])
 
-    # ── products.csv 저장 (원가는 비워 두고 대표님이 채우는 칸) ──
-    prods = sorted(registry.values(), key=lambda p: (p["카테고리"], p["상품코드"]))
+    # ── products.csv 저장 ──
+    # 원가·포장비는 대표님이 채우는 칸입니다. 맨 뒤 '참고_' 칸은 자동으로 다시 채워지니
+    # 고쳐도 소용없고, 어느 상품부터 원가를 넣어야 할지 고르는 용도로만 보시면 됩니다.
+    # 매출이 큰 상품이 위로 오게 정렬합니다.
+    totals = defaultdict(lambda: {"rev": 0, "qty": 0})
+    for (_, code), a in agg.items():
+        totals[code]["rev"] += a["rev"]
+        totals[code]["qty"] += a["qty"]
+    prods = sorted(registry.values(),
+                   key=lambda p: -totals[p["상품코드"]]["rev"])
     with open(DATA / "products.csv", "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
-        w.writerow(["상품코드", "상품명", "카테고리", "원가", "포장비", "정산상품명"])
+        w.writerow(["상품코드", "상품명", "카테고리", "원가", "포장비",
+                    "정산상품명", "참고_누적매출", "참고_판매수량"])
         for p in prods:
-            w.writerow([p["상품코드"], p["상품명"], p["카테고리"], p.get("원가", ""), p.get("포장비", ""), p["정산상품명"]])
+            t = totals[p["상품코드"]]
+            w.writerow([p["상품코드"], p["상품명"], p["카테고리"],
+                        p.get("원가", ""), p.get("포장비", ""), p["정산상품명"],
+                        round(t["rev"]), t["qty"]])
 
     # ── 정산요약.csv 저장 (규칙이 제대로 적용됐는지 확인용) ──
     summary = []
