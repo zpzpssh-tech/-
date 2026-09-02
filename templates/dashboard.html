@@ -1,246 +1,238 @@
-<title>올투게더나우 이익 장부</title>
+<title>올투게더나우 정산 매출</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
   :root {
     color-scheme: light;
-    --bg: #f2f4f6;
-    --surface: #ffffff;
-    --surface-2: #f7f9fa;
-    --ink: #141a21;
-    --ink-2: #5c6873;
-    --ink-3: #8a95a0;
-    --line: #e1e6ea;
-    --line-strong: #c9d1d8;
-    --accent: #0f766e;
-    --accent-ink: #ffffff;
-    --accent-soft: #d9f0ec;
-    --good: #1a7f37; --good-soft: #dcf5e3;
+    --bg: #f1f3f5; --surface: #ffffff; --surface-2: #f6f8f9; --surface-3: #eceff1;
+    --ink: #131a20; --ink-2: #59656f; --ink-3: #8994a0;
+    --line: #e0e5e9; --line-strong: #c6cfd6;
+    --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #d7efeb;
+    --good: #1a7f37; --good-soft: #ddf5e4;
     --warn: #b45309; --warn-soft: #fdecd2;
-    --bad:  #c2262e; --bad-soft:  #fbdcdd;
-    --c-naver: #008300;
-    --c-atn:   #2a78d6;
-    --c-hck:   #eb6834;
-    --c-ycu:   #4a3aa7;
-    --c-etc:   #eda100;
-    --shadow: 0 1px 2px rgba(20,26,33,.05), 0 6px 20px rgba(20,26,33,.05);
+    --bad: #c2262e;  --bad-soft: #fbdcdd;
+    --k1: #2a78d6; --k2: #eb6834; --k3: #1baf7a; --k4: #eda100;
+    --k5: #e87ba4; --k6: #008300; --k7: #4a3aa7;
+    --shadow: 0 1px 2px rgba(19,26,32,.05), 0 8px 24px rgba(19,26,32,.05);
     --sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
     --mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --bg: #101418; --surface: #181d23; --surface-2: #1f252c;
-      --ink: #eef1f4; --ink-2: #aab4bd; --ink-3: #7a858f;
-      --line: #2a323a; --line-strong: #3a444e;
-      --accent: #34b3a4; --accent-ink: #0b1f1c; --accent-soft: #163c37;
+      --bg: #0f1317; --surface: #171c22; --surface-2: #1e242b; --surface-3: #262d35;
+      --ink: #eef1f4; --ink-2: #a8b2bb; --ink-3: #78838d;
+      --line: #29313a; --line-strong: #3a444e;
+      --accent: #34b3a4; --accent-ink: #08211e; --accent-soft: #143b36;
       --good: #4ade80; --good-soft: #14351f;
       --warn: #fbbf24; --warn-soft: #3d2a09;
-      --bad:  #f87171; --bad-soft:  #3f1416;
-      --c-naver: #008300; --c-atn: #3987e5; --c-hck: #d95926; --c-ycu: #9085e9; --c-etc: #c98500;
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.25);
+      --bad: #f87171;  --bad-soft: #3f1416;
+      --k1: #3987e5; --k2: #d95926; --k3: #199e70; --k4: #c98500;
+      --k5: #d55181; --k6: #008300; --k7: #9085e9;
+      --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.3);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg: #101418; --surface: #181d23; --surface-2: #1f252c;
-    --ink: #eef1f4; --ink-2: #aab4bd; --ink-3: #7a858f;
-    --line: #2a323a; --line-strong: #3a444e;
-    --accent: #34b3a4; --accent-ink: #0b1f1c; --accent-soft: #163c37;
+    --bg: #0f1317; --surface: #171c22; --surface-2: #1e242b; --surface-3: #262d35;
+    --ink: #eef1f4; --ink-2: #a8b2bb; --ink-3: #78838d;
+    --line: #29313a; --line-strong: #3a444e;
+    --accent: #34b3a4; --accent-ink: #08211e; --accent-soft: #143b36;
     --good: #4ade80; --good-soft: #14351f;
     --warn: #fbbf24; --warn-soft: #3d2a09;
-    --bad:  #f87171; --bad-soft:  #3f1416;
-    --c-naver: #008300; --c-atn: #3987e5; --c-hck: #d95926; --c-ycu: #9085e9; --c-etc: #c98500;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.25);
+    --bad: #f87171;  --bad-soft: #3f1416;
+    --k1: #3987e5; --k2: #d95926; --k3: #199e70; --k4: #c98500;
+    --k5: #d55181; --k6: #008300; --k7: #9085e9;
+    --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.3);
   }
 
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: var(--sans); font-size: 14px; line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
   .num { font-variant-numeric: tabular-nums; }
   .mono { font-family: var(--mono); }
-  button { font: inherit; color: inherit; }
-  button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .page { max-width: 1280px; margin: 0 auto; padding: 26px 22px 60px; display: grid; gap: 18px; }
 
-  .page { max-width: 1320px; margin: 0 auto; padding: 24px 24px 56px; display: grid; gap: 20px; }
-
-  /* ── 헤더 ── */
-  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  /* 헤더 */
+  .top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px; }
   .brand { display: flex; align-items: center; gap: 12px; }
-  .brand-mark {
-    width: 40px; height: 40px; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
-    display: grid; place-items: center; font-weight: 700; font-size: 15px; letter-spacing: .02em;
-  }
-  .brand h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
-  .brand .sub { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
-  .sample-tag {
-    display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; padding: 2px 8px; border-radius: 999px;
-    background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 600; letter-spacing: .04em; vertical-align: middle;
-  }
+  .mark { width: 42px; height: 42px; border-radius: 11px; background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: none; }
+  h1 { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+  .sub { margin: 3px 0 0; color: var(--ink-2); font-size: 12.5px; }
+  .tag { display: inline-flex; align-items: center; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+    background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 600; vertical-align: middle; }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg button {
-    border: 0; background: transparent; padding: 6px 12px; border-radius: 7px; cursor: pointer; color: var(--ink-2); font-weight: 500;
-  }
+  .seg button { border: 0; background: transparent; padding: 6px 11px; border-radius: 7px; cursor: pointer;
+    color: var(--ink-2); font-weight: 500; font-size: 13px; }
   .seg button:hover { color: var(--ink); }
   .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
-  select {
-    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer;
-  }
-  .range-note { color: var(--ink-3); font-size: 12px; }
+  select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 7px 11px; cursor: pointer; font-size: 13px; }
+  .note { color: var(--ink-3); font-size: 12px; }
 
-  /* ── KPI ── */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 4px; }
+  /* KPI */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 11px; }
+  .kpi.hero { grid-column: span 2; }
+  @media (max-width: 700px) { .kpi.hero { grid-column: span 1; } }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 15px 17px; display: grid; gap: 3px; align-content: start; }
   .kpi.hero { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-  .kpi .label { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
-  .kpi.hero .label, .kpi.hero .sub { color: var(--accent-ink); opacity: .85; }
-  .kpi .value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-  .kpi .sub { font-size: 12px; color: var(--ink-3); }
-  .kpi .sub b { color: var(--ink-2); font-weight: 600; }
-  .kpi.hero .sub b { color: var(--accent-ink); }
+  .kpi .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; color: var(--ink-2); }
+  .kpi.hero .lab, .kpi.hero .cap { color: var(--accent-ink); opacity: .88; }
+  .kpi .val { font-size: 25px; font-weight: 700; letter-spacing: -.02em; line-height: 1.18; }
+  .kpi.hero .val { font-size: 30px; letter-spacing: -.03em; }
+  .kpi .cap { font-size: 12px; color: var(--ink-3); }
+  .kpi .cap b { color: var(--ink-2); font-weight: 600; }
+  .kpi.hero .cap b { color: var(--accent-ink); }
 
-  /* ── 카드 ── */
-  .grid-2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; }
-  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
-  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-  .card h2 { margin: 0; font-size: 15px; font-weight: 600; }
-  .card .hint { color: var(--ink-3); font-size: 12px; }
+  /* 카드 */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 17px 19px; min-width: 0; }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 13px; flex-wrap: wrap; }
+  .card h2 { margin: 0; font-size: 14.5px; font-weight: 600; }
+  .hint { color: var(--ink-3); font-size: 12px; }
+  .g2 { display: grid; grid-template-columns: minmax(0,7fr) minmax(0,5fr); gap: 18px; }
+  @media (max-width: 940px) { .g2 { grid-template-columns: 1fr; } }
 
-  /* 계정별 막대 */
-  .acct-rows { display: grid; gap: 10px; }
-  .acct-row { display: grid; grid-template-columns: 110px minmax(0, 1fr) 150px 120px; align-items: center; gap: 12px; }
-  @media (max-width: 560px) { .acct-row { grid-template-columns: 90px 1fr 110px; } .acct-row .bar-val { display: none; } }
-  .acct-name { display: flex; align-items: center; gap: 8px; font-weight: 500; }
-  .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-  .bar-track { position: relative; height: 22px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
-  .bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 4px; min-width: 2px; }
-  .bar-val { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
-  .acct-profit { text-align: right; font-size: 12px; color: var(--ink-2); line-height: 1.3; }
-  .acct-profit b { display: block; color: var(--ink); font-size: 13px; }
-  .acct-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 10px; display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; font-size: 12px; color: var(--ink-2); }
-  .acct-total b { color: var(--ink); font-weight: 600; }
-
-  /* 라인 차트 */
-  .chart-wrap { position: relative; }
-  .chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
-  .legend button {
-    display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 2px 4px; cursor: pointer; color: var(--ink-2); font-size: 12px; border-radius: 6px;
-  }
-  .legend button[aria-pressed="false"] { opacity: .4; text-decoration: line-through; }
-  .legend .sw { width: 14px; height: 3px; border-radius: 2px; }
-  .tip {
-    position: absolute; pointer-events: none; z-index: 2; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 10px;
-    box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; min-width: 150px; display: none;
-  }
-  .tip .d { font-family: var(--mono); color: var(--ink-3); margin-bottom: 4px; }
-  .tip .r { display: flex; justify-content: space-between; gap: 12px; }
-  .tip .r span:first-child { display: flex; align-items: center; gap: 6px; }
-  .axis text { fill: var(--ink-3); font-size: 11px; font-family: var(--mono); }
+  /* 차트 */
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
   .grid line { stroke: var(--line); }
   .axis line { stroke: var(--line-strong); }
-  .series path { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .axis text { fill: var(--ink-3); font-size: 11px; font-family: var(--mono); }
+  .tip { position: absolute; pointer-events: none; z-index: 3; background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 9px; box-shadow: var(--shadow); padding: 8px 10px; font-size: 12px; min-width: 132px; display: none; }
+  .tip .d { font-family: var(--mono); color: var(--ink-3); margin-bottom: 3px; }
+  .tip .r { display: flex; justify-content: space-between; gap: 14px; }
   .cross { stroke: var(--line-strong); stroke-dasharray: 3 3; }
 
+  /* 부위별 막대 */
+  .cats { display: grid; gap: 9px; }
+  .cat { display: grid; grid-template-columns: 72px minmax(0,1fr) auto; align-items: center; gap: 10px; }
+  .cat-n { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+  .sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+  .track { height: 20px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 3px; min-width: 2px; }
+  .cat-v { font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+
   /* 표 */
-  .table-wrap { overflow-x: auto; }
+  .tw { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { padding: 9px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { font-size: 11px; font-weight: 600; letter-spacing: .05em; color: var(--ink-3); text-transform: uppercase; }
+  th, td { padding: 8px 9px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--ink-3); }
   th:first-child, td:first-child { text-align: left; }
-  td.name { font-weight: 500; }
-  td.name small { display: block; color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 11px; }
+  td.nm { font-weight: 500; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+  td.nm small { display: block; color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 10.5px; }
   tbody tr:hover td { background: var(--surface-2); }
   tfoot td { font-weight: 600; border-top: 2px solid var(--line-strong); border-bottom: 0; }
   .neg { color: var(--bad); }
-  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .pill.good { color: var(--good); background: var(--good-soft); }
-  .pill.warn { color: var(--warn); background: var(--warn-soft); }
-  .pill.bad  { color: var(--bad);  background: var(--bad-soft); }
-  .mini-track { display: inline-block; width: 80px; height: 6px; background: var(--surface-2); border-radius: 3px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
-  .mini-fill { display: block; height: 100%; border-radius: 3px; }
+  .pos { color: var(--good); }
+  .more { margin-top: 10px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px;
+    padding: 7px 14px; cursor: pointer; color: var(--ink-2); font-size: 12.5px; }
+  .more:hover { color: var(--ink); border-color: var(--line-strong); }
+  .mt { display: inline-block; width: 62px; height: 5px; background: var(--surface-3); border-radius: 3px;
+    vertical-align: middle; margin-right: 7px; overflow: hidden; }
+  .mf { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
 
-  /* 계산식 */
-  .formula { color: var(--ink-2); font-size: 12px; line-height: 1.7; }
-  .formula dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0 0; }
-  .formula dt { font-weight: 600; color: var(--ink); }
-  .formula dd { margin: 0; }
-  .formula code { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
-  footer { color: var(--ink-3); font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-  @media (prefers-reduced-motion: no-preference) { .bar-fill, .mini-fill { transition: width .35s ease; } }
+  /* 규칙 설명 */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .rule { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--surface-2); display: grid; gap: 3px; }
+  .rule .h { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .rule .b { font-size: 12px; color: var(--ink-2); line-height: 1.55; }
+  .sign { font-family: var(--mono); font-weight: 600; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+  .sign.plus { background: var(--good-soft); color: var(--good); }
+  .sign.minus { background: var(--bad-soft); color: var(--bad); }
+  .sign.zero { background: var(--surface-3); color: var(--ink-2); }
+
+  /* 안내 */
+  .todo { border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 11px 11px 0; padding: 14px 17px; }
+  .todo h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--ink); }
+  .todo ol { margin: 6px 0 0; padding-left: 19px; color: var(--ink-2); font-size: 12.5px; line-height: 1.75; }
+  .todo code { font-family: var(--mono); font-size: 11.5px; background: var(--surface); padding: 1px 5px; border-radius: 4px; }
+  footer { color: var(--ink-3); font-size: 11.5px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  @media (prefers-reduced-motion: no-preference) { .fill, .mf { transition: width .3s ease; } }
 </style>
 
 <div class="page">
   <header class="top">
     <div class="brand">
-      <div class="brand-mark" id="brandMark">AT</div>
+      <div class="mark" id="mark">올투</div>
       <div>
-        <h1><span id="brandName">올투게더나우</span> 이익 장부<span class="sample-tag" id="sampleTag" hidden>예시 데이터</span></h1>
-        <p class="sub">네이버 + 쿠팡 3개 계정 + 기타 사이트 · 매출에서 수수료·원가·배송·광고·고정비를 뺀 진짜 이익</p>
+        <h1><span id="bname"></span> 정산 매출<span class="tag" id="tag" hidden>예시 데이터</span></h1>
+        <p class="sub" id="basis"></p>
       </div>
     </div>
     <div class="controls">
-      <div class="seg" role="group" aria-label="기간">
+      <div class="seg" role="group" aria-label="기간 선택">
         <button data-range="all" aria-pressed="true">전체</button>
-        <button data-range="90" aria-pressed="false">최근 90일</button>
-        <button data-range="30" aria-pressed="false">최근 30일</button>
-        <button data-range="7" aria-pressed="false">최근 7일</button>
+        <button data-range="90" aria-pressed="false">90일</button>
+        <button data-range="30" aria-pressed="false">30일</button>
+        <button data-range="7" aria-pressed="false">7일</button>
       </div>
-      <select id="monthSel" aria-label="월 선택"><option value="">월 선택</option></select>
-      <span class="range-note mono" id="rangeNote"></span>
+      <select id="msel" aria-label="월 선택"><option value="">월별로 보기</option></select>
+      <span class="note mono" id="rnote"></span>
     </div>
   </header>
 
   <section class="kpis" id="kpis"></section>
 
-  <section class="grid-2">
-    <div class="card">
-      <div class="card-head"><h2>계정별 매출과 영업이익</h2><span class="hint">막대 = 매출 · 오른쪽 = 계정 영업이익</span></div>
-      <div class="acct-rows" id="acctRows"></div>
-      <div class="acct-total" id="acctTotal"></div>
-    </div>
+  <section class="g2">
     <div class="card">
       <div class="card-head">
         <h2>일별 매출 추이</h2>
         <div class="seg" role="group" aria-label="표시 방식">
-          <button data-smooth="7" aria-pressed="true">7일 평균</button>
-          <button data-smooth="1" aria-pressed="false">일별</button>
+          <button data-sm="7" aria-pressed="true">7일 평균</button>
+          <button data-sm="1" aria-pressed="false">일별</button>
         </div>
       </div>
-      <div class="chart-wrap" id="lineWrap"><div class="tip" id="tip"></div></div>
-      <div class="legend" id="legend"></div>
+      <div class="chart" id="line"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>부위별 매출</h2><span class="hint">정산예정금 기준</span></div>
+      <div class="cats" id="cats"></div>
     </div>
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>상품별 마진</h2><span class="hint">이익률 낮은 순 · 광고비는 상품에 배분하지 않음</span></div>
-    <div class="table-wrap"><table id="productTable"></table></div>
+    <div class="card-head"><h2>월별 매출과 정산 상태 반영 내역</h2><span class="hint">규칙이 제대로 적용됐는지 확인하는 표</span></div>
+    <div class="tw"><table id="mtab"></table></div>
   </section>
 
   <section class="card">
-    <div class="card-head"><h2>월별 요약</h2><span class="hint">선택한 기간과 상관없이 전체 월 기준</span></div>
-    <div class="table-wrap"><table id="monthTable"></table></div>
+    <div class="card-head"><h2>상품별 매출</h2><span class="hint" id="phint"></span></div>
+    <div class="tw"><table id="ptab"></table></div>
+    <button class="more" id="pmore" hidden></button>
   </section>
 
-  <section class="card formula">
-    <h2 style="font-size:15px;margin:0 0 4px;color:var(--ink)">이 숫자는 이렇게 계산했습니다</h2>
-    <dl>
-      <dt>계정 영업이익</dt><dd><code>매출 − 수수료(매출×계정 수수료율) − 원가(수량×(원가+포장비)) − 배송비(주문건수×건당배송비) − 그 계정의 마케팅비</code></dd>
-      <dt>최종 영업이익</dt><dd><code>계정 영업이익 합계 − 공통 마케팅비 − 고정지출</code></dd>
-      <dt>기간 비용</dt><dd>월 단위로 적힌 고정지출·마케팅비는 선택한 기간에 들어가는 날짜 수만큼 비례 배분합니다.</dd>
-      <dt>수수료율·배송비</dt><dd id="feeNote"></dd>
-    </dl>
+  <section class="card">
+    <div class="card-head"><h2>매출을 이렇게 계산했습니다</h2><span class="hint">네이버 건별 정산내역의 '정산예정금액' 합계</span></div>
+    <div class="rules">
+      <div class="rule"><div class="h"><span class="sign plus">＋</span> 빠른정산 · 일반정산</div>
+        <div class="b">실제로 돈이 들어온 건입니다. 그대로 매출에 더합니다.</div></div>
+      <div class="rule"><div class="h"><span class="sign minus">－</span> 빠른정산 회수</div>
+        <div class="b">먼저 받은 돈을 네이버가 도로 가져간 건입니다. 마이너스로 뺍니다.</div></div>
+      <div class="rule"><div class="h"><span class="sign minus">－</span> 정산후 취소</div>
+        <div class="b">정산을 받은 뒤 고객에게 환불해 준 건입니다. 마이너스로 뺍니다.</div></div>
+      <div class="rule"><div class="h"><span class="sign zero">제외</span> 정산전 취소</div>
+        <div class="b">돈을 받은 적이 없는 건입니다. 매출에 아예 넣지 않습니다.</div></div>
+    </div>
+    <p class="hint" style="margin:12px 0 0;line-height:1.7">
+      정산예정금액은 네이버 결제·판매 수수료가 이미 빠진 금액입니다. 그래서 대시보드에서 수수료를 한 번 더 빼지 않습니다.
+      날짜는 <b>결제일</b> 기준입니다. 정산 파일에는 판매 수량 칸이 없어, 상품주문 한 줄을 1개로 셉니다.
+    </p>
+  </section>
+
+  <section class="todo" id="todo" hidden>
+    <h2>영업이익까지 보려면 이 자료가 더 필요합니다</h2>
+    <ol id="todoList"></ol>
   </section>
 
   <footer>
-    <span>데이터 파일: data/sales.csv · products.csv · costs.csv · settings.json</span>
-    <span class="mono">생성 <span id="builtAt"></span></span>
+    <span id="files"></span>
+    <span class="mono">생성 <span id="built"></span></span>
   </footer>
 </div>
 
@@ -248,230 +240,230 @@
 <script>
 (function () {
   const D = JSON.parse(document.getElementById('data').textContent);
-  // 계정 색: 이름이 아는 계정이면 고정색, 모르는 계정은 남은 색을 순서대로 배정
-  const COLORS = { '네이버': 'var(--c-naver)', '올투게더나우': 'var(--c-atn)', '휴책': 'var(--c-hck)', '유큐어': 'var(--c-ycu)', '기타사이트': 'var(--c-etc)' };
-  const POOL = ['var(--c-etc)', 'var(--c-atn)', 'var(--c-hck)', 'var(--c-ycu)', 'var(--c-naver)'].filter(c => !D['계정'].some(a => COLORS[a['계정']] === c));
-  const accounts = D['계정'].map(a => ({ ...a, color: COLORS[a['계정']] || POOL.shift() || 'var(--ink-3)' }));
-  const acctMap = Object.fromEntries(accounts.map(a => [a['계정'], a]));
-  const products = D['상품'];
-  const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
-  const wonShort = n => {
-    const a = Math.abs(n);
-    if (a >= 1e8) return (n / 1e8).toFixed(a >= 1e9 ? 0 : 1) + '억';
-    if (a >= 1e4) return Math.round(n / 1e4).toLocaleString('ko-KR') + '만';
-    return Math.round(n).toLocaleString('ko-KR');
-  };
-  const pct = (n, d) => d ? (n / d * 100).toFixed(1) + '%' : '–';
-  const cnt = n => n.toLocaleString('ko-KR');
+  const P = D['상품'], SALES = D['매출'], DAILY = D['일별주문'] || {};
   const el = id => document.getElementById(id);
+  const won = n => (n < 0 ? '-₩' : '₩') + Math.abs(Math.round(n)).toLocaleString('ko-KR');
+  const cnt = n => Math.round(n).toLocaleString('ko-KR');
+  const pct = (n, d) => d ? (n / d * 100).toFixed(1) + '%' : '–';
+  const shortWon = n => {
+    const a = Math.abs(n), s = n < 0 ? '-' : '';
+    if (a >= 1e8) return s + (a / 1e8).toFixed(a >= 1e9 ? 0 : 1) + '억';
+    if (a >= 1e4) return s + Math.round(a / 1e4).toLocaleString('ko-KR') + '만';
+    return s + Math.round(a).toLocaleString('ko-KR');
+  };
+  const CATC = ['var(--k1)','var(--k2)','var(--k3)','var(--k4)','var(--k5)','var(--k6)','var(--k7)'];
 
-  document.title = D['브랜드'] + ' 이익 장부';
-  el('brandName').textContent = D['브랜드'];
-  el('brandMark').textContent = D['브랜드'].slice(0, 2);
-  el('builtAt').textContent = D['생성시각'];
-  if (D['예시데이터']) el('sampleTag').hidden = false;
-  el('feeNote').textContent = accounts.map(a => `${a['계정']} ${(a['수수료율'] * 100).toFixed(1)}% · 배송 ${won(a['건당배송비'])}`).join('  /  ');
+  document.title = D['브랜드'] + ' 정산 매출';
+  el('bname').textContent = D['브랜드'];
+  el('mark').textContent = D['브랜드'].slice(0, 2);
+  el('built').textContent = D['생성시각'];
+  el('tag').hidden = !D['예시데이터'];
+  el('basis').textContent = D['계정'].map(a => a['계정']).join(' · ')
+    + ' · 정산예정금 기준(네이버 수수료 차감 후) · ' + D['기간']['시작'] + ' ~ ' + D['기간']['끝'];
 
-  // ── 날짜 유틸 ──
-  const allDates = [...new Set(D['매출'].map(r => r[0]))].sort();
-  const firstDate = allDates[0], lastDate = allDates[allDates.length - 1];
-  const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
-  const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5) + 1;
-  const daysInMonth = ym => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
-
-  // 월 선택 옵션
+  // ── 날짜 도구 ──
+  const allDates = [...new Set(SALES.map(r => r[0]))].sort();
+  const first = allDates[0], last = allDates[allDates.length - 1];
+  const addD = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const span = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 864e5) + 1;
+  const dim = ym => { const [y, m] = ym.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
   const months = [...new Set(allDates.map(d => d.slice(0, 7)))];
-  months.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m.replace('-', '년 ') + '월'; el('monthSel').appendChild(o); });
+  months.forEach(m => { const o = document.createElement('option'); o.value = m;
+    o.textContent = m.slice(0, 4) + '년 ' + Number(m.slice(5)) + '월'; el('msel').appendChild(o); });
 
-  // ── 상태 ──
-  let range = { start: firstDate, end: lastDate };
-  let smooth = 7;
-  const hidden = new Set();
+  let range = { s: first, e: last }, smooth = 7, showAllProducts = false;
 
-  // ── 계산 ──
-  function periodCost(kind, acct) {
-    // 월 비용을 선택 기간 일수만큼 비례 배분
-    let sum = 0;
-    for (const [ym, k, , a, amt] of D['비용']) {
-      if (k !== kind || a !== acct) continue;
-      const mStart = ym + '-01', mEnd = ym + '-' + String(daysInMonth(ym)).padStart(2, '0');
-      const s = range.start > mStart ? range.start : mStart, e = range.end < mEnd ? range.end : mEnd;
-      if (s > e) continue;
-      sum += amt * daysBetween(s, e) / daysInMonth(ym);
-    }
-    return sum;
-  }
-  function rowCosts(acctName, code, orders, qty, rev) {
-    const a = acctMap[acctName], p = products[code];
-    return { fee: rev * a['수수료율'], cogs: qty * (p['원가'] + p['포장비']), ship: orders * a['건당배송비'] };
-  }
   function compute() {
-    const rows = D['매출'].filter(r => r[0] >= range.start && r[0] <= range.end);
-    const byAcct = {}, byProd = {}, byDay = {};
-    accounts.forEach(a => byAcct[a['계정']] = { rev: 0, orders: 0, qty: 0, fee: 0, cogs: 0, ship: 0, mkt: 0, profit: 0 });
-    for (const [date, acct, code, orders, qty, rev] of rows) {
-      const c = rowCosts(acct, code, orders, qty, rev);
-      const A = byAcct[acct]; A.rev += rev; A.orders += orders; A.qty += qty; A.fee += c.fee; A.cogs += c.cogs; A.ship += c.ship;
-      const P = byProd[code] || (byProd[code] = { rev: 0, orders: 0, qty: 0, fee: 0, cogs: 0, ship: 0 });
-      P.rev += rev; P.orders += orders; P.qty += qty; P.fee += c.fee; P.cogs += c.cogs; P.ship += c.ship;
-      (byDay[date] || (byDay[date] = {}))[acct] = (byDay[date][acct] || 0) + rev;
+    const rows = SALES.filter(r => r[0] >= range.s && r[0] <= range.e);
+    const byDay = {}, byCode = {}, byCat = {};
+    let rev = 0, qty = 0;
+    for (const [d, , code, , q, v] of rows) {
+      rev += v; qty += q;
+      byDay[d] = (byDay[d] || 0) + v;
+      const c = byCode[code] || (byCode[code] = { rev: 0, qty: 0 });
+      c.rev += v; c.qty += q;
+      const cat = P[code]['카테고리'];
+      byCat[cat] = (byCat[cat] || 0) + v;
     }
-    let acctProfitSum = 0, mktAcct = 0;
-    for (const a of accounts) {
-      const A = byAcct[a['계정']]; A.mkt = periodCost('마케팅비', a['계정']); mktAcct += A.mkt;
-      A.profit = A.rev - A.fee - A.cogs - A.ship - A.mkt; acctProfitSum += A.profit;
-    }
-    const mktCommon = periodCost('마케팅비', ''), fixed = periodCost('고정지출', '');
-    const t = { rev: 0, orders: 0, qty: 0 };
-    Object.values(byAcct).forEach(A => { t.rev += A.rev; t.orders += A.orders; t.qty += A.qty; });
-    return { byAcct, byProd, byDay, total: t, acctProfitSum, mkt: mktAcct + mktCommon, mktCommon, fixed, finalProfit: acctProfitSum - mktCommon - fixed, days: daysBetween(range.start, range.end) };
+    let orders = 0;
+    for (let d = range.s; d <= range.e; d = addD(d, 1)) orders += DAILY[d] || 0;
+    return { rev, qty, orders, byDay, byCode, byCat, days: span(range.s, range.e) };
   }
 
-  // ── 렌더: KPI ──
   function renderKpis(S) {
-    const margin = S.total.rev ? S.finalProfit / S.total.rev * 100 : 0;
-    const tiles = [
-      { hero: true, label: '최종 영업이익', value: won(S.finalProfit), sub: `이익률 <b>${margin.toFixed(1)}%</b> · 일평균 <b>${wonShort(S.finalProfit / S.days)}원</b>` },
-      { label: '총매출', value: won(S.total.rev), sub: `일평균 <b>${wonShort(S.total.rev / S.days)}원</b>` },
-      { label: '주문 건수', value: cnt(S.total.orders) + '건', sub: `판매 <b>${cnt(S.total.qty)}개</b> · 건당 <b>${won(S.total.orders ? S.total.rev / S.total.orders : 0)}</b>` },
-      { label: '마케팅비', value: won(S.mkt), sub: `매출 대비 <b>${pct(S.mkt, S.total.rev)}</b>` },
-      { label: '고정지출', value: won(S.fixed), sub: `일평균 <b>${wonShort(S.fixed / S.days)}원</b>` },
+    const t = [
+      { hero: 1, lab: '총매출 (정산예정금)', val: won(S.rev), cap: `일평균 <b>${shortWon(S.rev / S.days)}원</b> · ${S.days}일` },
+      { lab: '주문 건수', val: cnt(S.orders) + '건', cap: `일평균 <b>${cnt(Math.round(S.orders / S.days))}건</b>` },
+      { lab: '주문당 평균 매출', val: won(S.orders ? S.rev / S.orders : 0), cap: '수수료 빠진 실수령 기준' },
+      { lab: '판매 수량', val: cnt(S.qty) + '개', cap: `상품주문 줄 수 기준` },
+      { lab: '취급 상품 수', val: cnt(Object.keys(S.byCode).filter(c => c !== 'SHIP' && c !== 'OPT').length) + '개', cap: `부위 <b>${Object.keys(S.byCat).length}종</b>` },
     ];
-    el('kpis').innerHTML = tiles.map(t => `
-      <div class="kpi${t.hero ? ' hero' : ''}">
-        <div class="label">${t.label}</div>
-        <div class="value num${!t.hero && /^₩-/.test(t.value) ? ' neg' : ''}">${t.value}</div>
-        <div class="sub num">${t.sub}</div>
+    el('kpis').innerHTML = t.map(k => `<div class="kpi${k.hero ? ' hero' : ''}">
+      <div class="lab">${k.lab}</div><div class="val num">${k.val}</div><div class="cap num">${k.cap}</div></div>`).join('');
+  }
+
+  function renderLine(S) {
+    const ds = []; for (let d = range.s; d <= range.e; d = addD(d, 1)) ds.push(d);
+    const raw = ds.map(d => S.byDay[d] || 0);
+    const val = raw.map((_, i) => { const f = Math.max(0, i - smooth + 1); let s = 0;
+      for (let j = f; j <= i; j++) s += raw[j]; return s / (i - f + 1); });
+    const W = 720, H = 268, L = 54, R = 12, T = 12, B = 28;
+    const hi = Math.max(1, ...val) * 1.1;
+    const x = i => L + (ds.length > 1 ? i / (ds.length - 1) : .5) * (W - L - R);
+    const y = v => T + (1 - v / hi) * (H - T - B);
+    const st = (m => { const p = Math.pow(10, Math.floor(Math.log10(m / 4))); const c = m / 4 / p;
+      return (c >= 5 ? 5 : c >= 2 ? 2 : 1) * p; })(hi);
+    const yt = []; for (let v = 0; v <= hi; v += st) yt.push(v);
+    const n = Math.min(6, ds.length);
+    const xt = [...new Set(Array.from({ length: n }, (_, k) => Math.round(k * (ds.length - 1) / Math.max(1, n - 1))))];
+    const line = val.map((v, k) => (k ? 'L' : 'M') + x(k).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
+    el('line').innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="일별 매출 추이">
+        <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity=".22"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
+        <g class="grid">${yt.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`).join('')}</g>
+        <path d="${line}L${x(ds.length - 1)} ${y(0)}L${x(0)} ${y(0)}Z" fill="url(#ag)"/>
+        <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <g class="axis">
+          ${yt.map(v => `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${shortWon(v)}</text>`).join('')}
+          <line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>
+          ${xt.map(k => `<text x="${x(k)}" y="${H - 7}" text-anchor="${k === 0 ? 'start' : k === ds.length - 1 ? 'end' : 'middle'}">${ds[k].slice(5).replace('-', '/')}</text>`).join('')}
+        </g>
+        <g id="hv" style="display:none"><line class="cross" y1="${T}" y2="${y(0)}"/>
+          <circle r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/></g>
+        <rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/>
+      </svg><div class="tip" id="tip"></div>`;
+    const svg = el('line').querySelector('svg'), tip = el('tip'), hv = svg.querySelector('#hv');
+    const cl = hv.querySelector('line'), cc = hv.querySelector('circle');
+    svg.querySelector('#hit').addEventListener('mousemove', ev => {
+      const b = svg.getBoundingClientRect(), px = (ev.clientX - b.left) / b.width * W;
+      const k = Math.max(0, Math.min(ds.length - 1, Math.round((px - L) / (W - L - R) * (ds.length - 1))));
+      hv.style.display = ''; cl.setAttribute('x1', x(k)); cl.setAttribute('x2', x(k));
+      cc.setAttribute('cx', x(k)); cc.setAttribute('cy', y(val[k]));
+      tip.style.display = 'block';
+      tip.innerHTML = `<div class="d">${ds[k]}${smooth > 1 ? ' · 7일 평균' : ''}</div>
+        <div class="r num"><span>매출</span><b>${won(val[k])}</b></div>` +
+        (smooth > 1 ? `<div class="r num"><span>그날 실제</span><span>${won(raw[k])}</span></div>` : '') +
+        `<div class="r num"><span>주문</span><span>${cnt(DAILY[ds[k]] || 0)}건</span></div>`;
+      const w = el('line').getBoundingClientRect(), lx = ev.clientX - w.left, ly = ev.clientY - w.top;
+      tip.style.left = (lx > w.width - 165 ? lx - 155 : lx + 14) + 'px';
+      tip.style.top = Math.max(0, ly - 18) + 'px';
+    });
+    svg.querySelector('#hit').addEventListener('mouseleave', () => { tip.style.display = 'none'; hv.style.display = 'none'; });
+  }
+
+  function renderCats(S) {
+    const list = Object.entries(S.byCat).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(1, ...list.map(c => c[1]));
+    el('cats').innerHTML = list.map(([name, v], i) => `
+      <div class="cat">
+        <div class="cat-n"><span class="sw" style="background:${CATC[i % CATC.length]}"></span>${name}</div>
+        <div class="track"><div class="fill" style="width:${Math.max(0, v) / max * 100}%;background:${CATC[i % CATC.length]}"></div></div>
+        <div class="cat-v num">${shortWon(v)}원 · ${pct(v, S.rev)}</div>
       </div>`).join('');
   }
 
-  // ── 렌더: 계정별 막대 ──
-  function renderAccounts(S) {
-    const max = Math.max(...accounts.map(a => S.byAcct[a['계정']].rev), 1);
-    el('acctRows').innerHTML = accounts.map(a => {
-      const A = S.byAcct[a['계정']];
-      const m = A.rev ? A.profit / A.rev * 100 : 0;
-      return `<div class="acct-row">
-        <div class="acct-name"><span class="dot" style="background:${a.color}"></span>${a['계정']}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(A.rev / max * 100).toFixed(1)}%;background:${a.color}"></div></div>
-        <span class="bar-val num">${won(A.rev)} · ${pct(A.rev, S.total.rev)}</span>
-        <div class="acct-profit num"><b class="${A.profit < 0 ? 'neg' : ''}">${won(A.profit)}</b>이익률 ${m.toFixed(1)}%</div>
-      </div>`;
-    }).join('');
-    el('acctTotal').innerHTML = `
-      <span>계정 영업이익 합계</span><b class="num">${won(S.acctProfitSum)}</b>
-      <span>− 공통 마케팅비</span><b class="num">${won(S.mktCommon)}</b>
-      <span>− 고정지출</span><b class="num">${won(S.fixed)}</b>
-      <span>= 최종 영업이익</span><b class="num" style="color:var(--accent)">${won(S.finalProfit)}</b>`;
-  }
-
-  // ── 렌더: 라인 차트 ──
-  function renderLine(S) {
-    const dates = []; for (let d = range.start; d <= range.end; d = addDays(d, 1)) dates.push(d);
-    const raw = accounts.map(a => dates.map(d => (S.byDay[d] && S.byDay[d][a['계정']]) || 0));
-    const series = raw.map(arr => arr.map((_, i) => {
-      const from = Math.max(0, i - smooth + 1); let s = 0; for (let j = from; j <= i; j++) s += arr[j]; return s / (i - from + 1);
-    }));
-    const visible = accounts.map((a, i) => !hidden.has(a['계정']));
-    const W = 760, H = 300, L = 52, R = 16, T = 12, B = 30;
-    const yMax = Math.max(1, ...series.flatMap((s, i) => visible[i] ? s : [0])) * 1.08;
-    const x = i => L + (dates.length > 1 ? i / (dates.length - 1) : .5) * (W - L - R);
-    const y = v => T + (1 - v / yMax) * (H - T - B);
-    const niceStep = m => { const p = Math.pow(10, Math.floor(Math.log10(m / 4))); const c = m / 4 / p; return (c >= 5 ? 5 : c >= 2 ? 2 : 1) * p; };
-    const step = niceStep(yMax); const ticks = []; for (let v = 0; v <= yMax; v += step) ticks.push(v);
-    const nX = Math.min(6, dates.length); const xTicks = [...new Set(Array.from({ length: nX }, (_, k) => Math.round(k * (dates.length - 1) / Math.max(1, nX - 1))))];
-    const paths = accounts.map((a, i) => visible[i] ? `<path d="${series[i].map((v, k) => (k ? 'L' : 'M') + x(k).toFixed(1) + ' ' + y(v).toFixed(1)).join('')}" stroke="${a.color}"/>` : '').join('');
-    el('lineWrap').innerHTML = `
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="일별 매출 추이">
-        <g class="grid">${ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>`).join('')}</g>
-        <g class="axis">
-          ${ticks.map(v => `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${wonShort(v)}</text>`).join('')}
-          <line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}"/>
-          ${xTicks.map(k => `<text x="${x(k)}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === dates.length - 1 ? 'end' : 'middle'}">${dates[k].slice(5).replace('-', '/')}</text>`).join('')}
-        </g>
-        <g class="series">${paths}</g>
-        <g id="hover"><line class="cross" y1="${T}" y2="${y(0)}" x1="0" x2="0" style="display:none"/>${accounts.map((a, i) => `<circle r="4" fill="${a.color}" stroke="var(--surface)" stroke-width="2" style="display:none"/>`).join('')}</g>
-        <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent" id="hit"/>
-      </svg><div class="tip" id="tip"></div>`;
-    el('legend').innerHTML = accounts.map(a => `<button data-acct="${a['계정']}" aria-pressed="${!hidden.has(a['계정'])}"><span class="sw" style="background:${a.color}"></span>${a['계정']}</button>`).join('');
-    el('legend').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const k = b.dataset.acct; hidden.has(k) ? hidden.delete(k) : hidden.add(k); renderLine(S); }));
-
-    const svg = el('lineWrap').querySelector('svg'), tip = el('tip'), hover = svg.querySelector('#hover');
-    const cross = hover.querySelector('line'), dots = [...hover.querySelectorAll('circle')];
-    const hit = svg.querySelector('#hit');
-    hit.addEventListener('mousemove', ev => {
-      const box = svg.getBoundingClientRect(); const px = (ev.clientX - box.left) / box.width * W;
-      const k = Math.max(0, Math.min(dates.length - 1, Math.round((px - L) / (W - L - R) * (dates.length - 1))));
-      cross.style.display = ''; cross.setAttribute('x1', x(k)); cross.setAttribute('x2', x(k));
-      dots.forEach((c, i) => { c.style.display = visible[i] ? '' : 'none'; c.setAttribute('cx', x(k)); c.setAttribute('cy', y(series[i][k])); });
-      tip.style.display = 'block';
-      tip.innerHTML = `<div class="d">${dates[k]}${smooth > 1 ? ' · 7일 평균' : ''}</div>` + accounts.map((a, i) => visible[i] ? `<div class="r num"><span><span class="sw" style="display:inline-block;width:10px;height:3px;border-radius:2px;background:${a.color}"></span>${a['계정']}</span><span>${won(series[i][k])}</span></div>` : '').join('');
-      const wrap = el('lineWrap').getBoundingClientRect(); const lx = ev.clientX - wrap.left, ly = ev.clientY - wrap.top;
-      tip.style.left = (lx > wrap.width - 180 ? lx - 170 : lx + 14) + 'px'; tip.style.top = Math.max(0, ly - 20) + 'px';
-    });
-    hit.addEventListener('mouseleave', () => { tip.style.display = 'none'; cross.style.display = 'none'; dots.forEach(c => c.style.display = 'none'); });
-  }
-
-  // ── 렌더: 상품별 마진 ──
-  function renderProducts(S) {
-    const rows = Object.entries(S.byProd).map(([code, P]) => {
-      const profit = P.rev - P.fee - P.cogs - P.ship; return { code, ...products[code], ...P, profit, margin: P.rev ? profit / P.rev * 100 : 0, unit: P.qty ? profit / P.qty : 0 };
-    }).sort((a, b) => a.margin - b.margin);
-    const status = m => m < 10 ? ['bad', m < 0 ? '손실' : '위험'] : m < 25 ? ['warn', '주의'] : ['good', '양호'];
-    const maxM = Math.max(1, ...rows.map(r => Math.abs(r.margin)));
-    const tot = rows.reduce((t, r) => ({ rev: t.rev + r.rev, qty: t.qty + r.qty, profit: t.profit + r.profit }), { rev: 0, qty: 0, profit: 0 });
-    el('productTable').innerHTML = `
-      <thead><tr><th>상품</th><th>카테고리</th><th>판매 수량</th><th>매출</th><th>수수료+원가+배송</th><th>이익</th><th>개당 이익</th><th>이익률</th><th>상태</th></tr></thead>
-      <tbody>${rows.map(r => { const [cls, txt] = status(r.margin); return `<tr>
-        <td class="name">${r['상품명']}<small>${r.code}</small></td><td>${r['카테고리']}</td>
-        <td class="num">${cnt(r.qty)}</td><td class="num">${won(r.rev)}</td><td class="num">${won(r.fee + r.cogs + r.ship)}</td>
-        <td class="num${r.profit < 0 ? ' neg' : ''}">${won(r.profit)}</td><td class="num${r.unit < 0 ? ' neg' : ''}">${won(r.unit)}</td>
-        <td class="num"><span class="mini-track"><span class="mini-fill" style="width:${Math.max(0, r.margin) / maxM * 100}%;background:var(--${cls})"></span></span>${r.margin.toFixed(1)}%</td>
-        <td><span class="pill ${cls}">${txt}</span></td></tr>`; }).join('')}</tbody>
-      <tfoot><tr><td>합계</td><td></td><td class="num">${cnt(tot.qty)}</td><td class="num">${won(tot.rev)}</td><td class="num">${won(tot.rev - tot.profit)}</td><td class="num">${won(tot.profit)}</td><td class="num">${won(tot.qty ? tot.profit / tot.qty : 0)}</td><td class="num">${pct(tot.profit, tot.rev)}</td><td></td></tr></tfoot>`;
-  }
-
-  // ── 렌더: 월별 요약 (전체 기간 고정) ──
   function renderMonths() {
-    const saved = range; const out = [];
-    for (const m of months) {
-      range = { start: m + '-01', end: m + '-' + String(daysInMonth(m)).padStart(2, '0') };
-      if (range.end > lastDate) range.end = lastDate; if (range.start < firstDate) range.start = firstDate;
-      const S = compute(); out.push({ m, S });
-    }
-    range = saved;
-    el('monthTable').innerHTML = `
-      <thead><tr><th>월</th><th>일수</th><th>매출</th><th>주문</th><th>마케팅비</th><th>고정지출</th><th>최종 영업이익</th><th>이익률</th></tr></thead>
-      <tbody>${out.map(({ m, S }) => `<tr><td class="mono">${m}</td><td class="num">${S.days}</td><td class="num">${won(S.total.rev)}</td><td class="num">${cnt(S.total.orders)}</td><td class="num">${won(S.mkt)}</td><td class="num">${won(S.fixed)}</td><td class="num${S.finalProfit < 0 ? ' neg' : ''}">${won(S.finalProfit)}</td><td class="num">${pct(S.finalProfit, S.total.rev)}</td></tr>`).join('')}</tbody>`;
+    const sm = {};
+    (D['정산요약'] || []).forEach(r => {
+      const m = (r['파일'].match(/(\d{4})[-.]?(\d{2})/) || []).slice(1).join('-');
+      if (m) sm[m] = r;
+    });
+    const rows = months.map(m => {
+      const s = m + '-01', e = m + '-' + String(dim(m)).padStart(2, '0');
+      let rev = 0, qty = 0, ord = 0;
+      for (const [d, , , , q, v] of SALES) if (d >= s && d <= e) { rev += v; qty += q; }
+      for (let d = s; d <= e; d = addD(d, 1)) ord += DAILY[d] || 0;
+      return { m, rev, qty, ord, x: sm[m] };
+    });
+    const has = rows.some(r => r.x);
+    const T = rows.reduce((t, r) => ({ rev: t.rev + r.rev, ord: t.ord + r.ord,
+      minus: t.minus + (r.x ? r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액'] : 0),
+      exc: t.exc + (r.x ? r.x['정산전 취소_금액'] : 0),
+      excN: t.excN + (r.x ? r.x['정산전 취소_건수'] : 0) }), { rev: 0, ord: 0, minus: 0, exc: 0, excN: 0 });
+    el('mtab').innerHTML = `
+      <thead><tr><th>월</th><th>주문</th><th>매출 (정산예정금)</th>
+        ${has ? '<th>회수·정산후취소 (－)</th><th>정산전 취소 (제외)</th><th>제외 건수</th>' : ''}</tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td class="mono">${r.m}</td><td class="num">${cnt(r.ord)}건</td>
+        <td class="num"><span class="mt"><span class="mf" style="width:${Math.max(...rows.map(x => x.rev)) ? r.rev / Math.max(...rows.map(x => x.rev)) * 100 : 0}%"></span></span>${won(r.rev)}</td>
+        ${has ? `<td class="num neg">${r.x ? won(r.x['빠른정산 회수_금액'] + r.x['정산후 취소_금액']) : '–'}</td>
+        <td class="num">${r.x ? won(r.x['정산전 취소_금액']) : '–'}</td>
+        <td class="num">${r.x ? cnt(r.x['정산전 취소_건수']) + '건' : '–'}</td>` : ''}</tr>`).join('')}</tbody>
+      <tfoot><tr><td>합계</td><td class="num">${cnt(T.ord)}건</td><td class="num">${won(T.rev)}</td>
+        ${has ? `<td class="num neg">${won(T.minus)}</td><td class="num">${won(T.exc)}</td><td class="num">${cnt(T.excN)}건</td>` : ''}</tr></tfoot>`;
   }
 
-  function renderAll() {
+  function renderProducts(S) {
+    const all = Object.entries(S.byCode).map(([code, c]) => ({ code, ...P[code], ...c }))
+      .sort((a, b) => b.rev - a.rev);
+    const anyCost = all.some(r => r['원가있음']);
+    el('phint').textContent = anyCost ? '원가가 입력된 상품은 마진까지 표시됩니다'
+      : '원가를 넣으면 여기에 상품별 마진이 함께 나옵니다';
+    const rows = showAllProducts ? all : all.slice(0, 15);
+    const max = Math.max(1, ...all.map(r => r.rev));
+    el('ptab').innerHTML = `
+      <thead><tr><th>상품</th><th>부위</th><th>수량</th><th>매출</th><th>비중</th>
+        ${anyCost ? '<th>이익</th><th>이익률</th>' : ''}</tr></thead>
+      <tbody>${rows.map(r => {
+        const cost = r['원가있음'] ? r.qty * (r['원가'] + r['포장비']) : null;
+        const profit = cost === null ? null : r.rev - cost;
+        return `<tr>
+          <td class="nm">${r['상품명']}<small>${r.code}</small></td>
+          <td>${r['카테고리']}</td>
+          <td class="num">${r.qty ? cnt(r.qty) : '–'}</td>
+          <td class="num ${r.rev < 0 ? 'neg' : ''}"><span class="mt"><span class="mf" style="width:${Math.max(0, r.rev) / max * 100}%"></span></span>${won(r.rev)}</td>
+          <td class="num">${pct(r.rev, S.rev)}</td>
+          ${anyCost ? `<td class="num ${profit !== null && profit < 0 ? 'neg' : ''}">${profit === null ? '원가 미입력' : won(profit)}</td>
+          <td class="num">${profit === null ? '–' : pct(profit, r.rev)}</td>` : ''}</tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td>합계 (${all.length}개)</td><td></td><td class="num">${cnt(S.qty)}</td>
+        <td class="num">${won(S.rev)}</td><td class="num">100%</td>${anyCost ? '<td></td><td></td>' : ''}</tr></tfoot>`;
+    const more = el('pmore');
+    more.hidden = all.length <= 15;
+    more.textContent = showAllProducts ? '상위 15개만 보기' : `전체 ${all.length}개 보기`;
+  }
+
+  function renderTodo() {
+    const need = D['원가없는상품'] || [], noCost = !(D['비용'] || []).length;
+    const items = [];
+    if (need.length) items.push(`<b>상품별 원가</b> — 제조단가 + 국제운송 + 관세를 개당으로 계산한 값과 포장비. <code>data/products.csv</code>의 원가·포장비 칸을 채우면 상품별 마진이 바로 계산됩니다. (지금 ${need.length}개 비어 있음)`);
+    if (noCost) items.push(`<b>월별 고정비와 광고비</b> — 인건비, 창고·사무실, 물류 솔루션, 채널별 광고비. <code>data/costs.csv</code>에 월별로 적으면 영업이익이 나옵니다.`);
+    items.push(`<b>택배비</b> — 건당 실제 지급하는 택배 단가. <code>data/settings.json</code>의 건당배송비에 넣습니다.`);
+    items.push(`<b>쿠팡 3개 계정과 6~8월 네이버</b> — 정산 파일을 <code>data/원본/</code>에 넣어 주시면 같은 규칙으로 합산합니다.`);
+    el('todoList').innerHTML = items.map(i => `<li>${i}</li>`).join('');
+    el('todo').hidden = false;
+  }
+
+  function all() {
     const S = compute();
-    el('rangeNote').textContent = `${range.start} ~ ${range.end} · ${S.days}일`;
-    renderKpis(S); renderAccounts(S); renderLine(S); renderProducts(S);
+    el('rnote').textContent = `${range.s} ~ ${range.e} · ${S.days}일`;
+    renderKpis(S); renderLine(S); renderCats(S); renderProducts(S);
   }
 
-  // ── 컨트롤 ──
   document.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => {
     document.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    el('monthSel').value = '';
-    const r = b.dataset.range; range = r === 'all' ? { start: firstDate, end: lastDate } : { start: addDays(lastDate, -(Number(r) - 1)), end: lastDate };
-    if (range.start < firstDate) range.start = firstDate;
-    renderAll();
+    el('msel').value = '';
+    const r = b.dataset.range;
+    range = r === 'all' ? { s: first, e: last } : { s: addD(last, -(Number(r) - 1)), e: last };
+    if (range.s < first) range.s = first;
+    all();
   }));
-  el('monthSel').addEventListener('change', e => {
+  el('msel').addEventListener('change', e => {
     const m = e.target.value; if (!m) return;
     document.querySelectorAll('[data-range]').forEach(x => x.setAttribute('aria-pressed', 'false'));
-    range = { start: m + '-01', end: m + '-' + String(daysInMonth(m)).padStart(2, '0') };
-    if (range.end > lastDate) range.end = lastDate; if (range.start < firstDate) range.start = firstDate;
-    renderAll();
+    range = { s: m + '-01', e: m + '-' + String(dim(m)).padStart(2, '0') };
+    if (range.e > last) range.e = last; if (range.s < first) range.s = first;
+    all();
   });
-  document.querySelectorAll('[data-smooth]').forEach(b => b.addEventListener('click', () => {
-    document.querySelectorAll('[data-smooth]').forEach(x => x.setAttribute('aria-pressed', x === b));
-    smooth = Number(b.dataset.smooth); renderLine(compute());
+  document.querySelectorAll('[data-sm]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-sm]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    smooth = Number(b.dataset.sm); renderLine(compute());
   }));
+  el('pmore').addEventListener('click', () => { showAllProducts = !showAllProducts; renderProducts(compute()); });
 
-  renderMonths();
-  renderAll();
+  el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
+  renderMonths(); renderTodo(); all();
 })();
 </script>
