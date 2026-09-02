@@ -225,6 +225,29 @@ def main():
                 k = {c.lstrip("\ufeff"): v for c, v in r.items()}
                 cp_cost.append([k["기간"].strip(), k["단위"].strip(), k["계정"].strip(),
                                 k["항목"].strip(), to_num(k["금액"], "쿠팡_비용.csv", 0)])
+    # 쿠팡 광고 리포트가 있는 달은 워크북에 손으로 적은 광고비 대신 리포트를 씁니다.
+    # 리포트가 하루 단위 실제 집행 내역이라 더 정확합니다.
+    f_ad = DATA / "쿠팡광고.csv"
+    ad_rows, ad_cover = [], set()
+    if f_ad.exists():
+        with open(f_ad, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                d, acct = k["날짜"].strip(), k["계정"].strip()
+                item = "광고비(로켓)" if k["구분"].strip() == "로켓" else "광고비(SELLER)"
+                ad_rows.append([d, "일", acct, item, to_num(k["광고비"], "쿠팡광고.csv", 0)])
+                ad_cover.add((acct, d[:7]))
+    if ad_rows:
+        before = sum(c[4] for c in cp_cost
+                     if c[3].startswith("광고비") and (c[2], c[0][:7]) in ad_cover)
+        cp_cost = [c for c in cp_cost
+                   if not (c[3].startswith("광고비") and (c[2], c[0][:7]) in ad_cover)]
+        cp_cost += ad_rows
+        after = sum(c[4] for c in ad_rows)
+        months = ", ".join(sorted({f"{a} {m}" for a, m in ad_cover})[:1])
+        print(f"  쿠팡 광고 리포트 반영: {len(ad_cover)}개월 · "
+              f"워크북 {before:,.0f} → 리포트 {after:,.0f} (차이 {after - before:+,.0f})")
+
     f3 = DATA / "쿠팡_옵션.csv"
     if f3.exists():
         with open(f3, newline="", encoding="utf-8-sig") as f:
