@@ -1,0 +1,13 @@
+{
+  "메모": "구글 시트를 '웹에 게시(CSV)' 한 주소 목록입니다. python3 scripts/fetch_sheets.py 로 내려받습니다. '사용'을 false로 두면 건너뜁니다.",
+  "만드는법": "구글 시트 → 파일 → 공유 → 웹에 게시 → 링크 탭 → 내려받을 시트 선택 → 형식 '쉼표로 구분된 값(.csv)' → 게시 → 나온 주소를 '주소'에 붙여넣기",
+  "시트": [
+    {
+      "이름": "확인필요",
+      "주소": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRdCWN4sNU1G3TfuReh-jvY5AyMLt4UWEYqTzuoH8FDswyj3FuaUG1LVsU-2eM7Kr4aPTLzNSMkCBK-/pub?output=csv",
+      "저장": "확인필요.csv",
+      "사용": true,
+      "메모": "대표님이 2026-09-03에 테스트용으로 주신 주소입니다. 어느 시트인지 확인되면 '이름'과 '저장' 파일명을 알맞게 바꿔 주세요."
+    }
+  ]
+}
