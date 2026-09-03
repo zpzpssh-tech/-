@@ -1,0 +1,6 @@
+# Cloudflare Pages 가 이 파일을 읽어서 응답 헤더를 붙입니다.
+# 검색엔진이 이 사이트를 절대 수집하지 못하게 막습니다. (회사 재무 자료라서)
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
