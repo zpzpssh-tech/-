@@ -90,20 +90,33 @@
 
   /* ── 전체를 감싸는 하얀 카드 + 왼쪽 메뉴 ── */
   .shell { background: var(--shell); border-radius: 28px; box-shadow: var(--shell-shadow);
-    display: grid; grid-template-columns: 218px minmax(0, 1fr); overflow: hidden; }
+    display: grid; grid-template-columns: 218px minmax(0, 1fr); overflow: hidden;
+    /* 내용이 짧은 화면에서도 카드가 중간에 끊기지 않게 화면 높이만큼 채웁니다.
+       26px(위 여백) + 40px(아래 여백) = 66px */
+    min-height: calc(100vh - 66px); }
   @media (max-width: 900px) { .shell { grid-template-columns: 1fr; border-radius: 22px; } }
 
   .side { border-right: 1px solid var(--line); padding: 24px 16px 20px;
     display: flex; flex-direction: column; gap: 26px; }
-  @media (max-width: 900px) { .side { border-right: 0; border-bottom: 1px solid var(--line); } }
+  @media (max-width: 900px) {
+    .side { border-right: 0; border-bottom: 1px solid var(--line);
+      flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; overflow-x: auto; }
+    .side .brand { flex: none; }
+    .nav { grid-auto-flow: column; grid-auto-columns: max-content; gap: 4px; }
+    .nav button { white-space: nowrap; padding: 8px 12px; }
+    .nav .ic { display: none; }
+    .side-foot { display: none; }
+  }
   .side .brand { padding: 0 8px; }
   .nav { display: grid; gap: 3px; }
-  .nav a { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: var(--r-pill);
-    color: var(--ink-2); text-decoration: none; font-size: 13.5px; font-weight: 500;
-    transition: background .14s, color .14s; }
-  .nav a:hover { background: var(--surface-2); color: var(--ink); }
-  .nav a.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .nav button { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+    padding: 10px 12px; border: 0; border-radius: var(--r-pill); background: transparent; cursor: pointer;
+    color: var(--ink-2); font-size: 13.5px; font-weight: 500; transition: background .14s, color .14s; }
+  .nav button:hover { background: var(--surface-2); color: var(--ink); }
+  .nav button[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   .nav .ic { width: 17px; height: 17px; flex: none; }
+  /* 지금 화면에 속하지 않는 섹션은 감춥니다. */
+  .pg-off { display: none !important; }
   .side-foot { margin-top: auto; padding: 0 12px; color: var(--ink-3); font-size: 11px; line-height: 1.7; }
 
   .main { padding: 26px 26px 40px; display: grid; gap: 20px; align-content: start; min-width: 0; }
@@ -361,13 +374,13 @@
         <b>올투게더나우</b>
       </div>
       <nav class="nav">
-        <a href="#kpis" data-nav="kpis"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>요약</span></a>
-        <a href="#pnlCard" data-nav="pnlCard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 16V9"/><path d="M12 16V5"/><path d="M17 16v-4"/></svg><span>손익 단계</span></a>
-        <a href="#chCard" data-nav="chCard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="3"/><path d="M2 11h20"/></svg><span>계정별 비교</span></a>
-        <a href="#trendSec" data-nav="trendSec"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-7 4 4"/></svg><span>매출 추이</span></a>
-        <a href="#metricCard" data-nav="metricCard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg><span>셀러 지표</span></a>
-        <a href="#stockCard" data-nav="stockCard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4"/><path d="M12 11v10"/></svg><span>품목·발주</span></a>
-        <a href="#dayCard" data-nav="dayCard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>일별·월별</span></a>
+        <button type="button" data-page-btn="summary" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>요약</span></button>
+        <button type="button" data-page-btn="channel" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="3"/><path d="M2 11h20"/></svg><span>계정별 비교</span></button>
+        <button type="button" data-page-btn="trend" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-6 4 4 5-7 4 4"/></svg><span>매출 추이</span></button>
+        <button type="button" data-page-btn="metric" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg><span>셀러 지표</span></button>
+        <button type="button" data-page-btn="item" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4"/><path d="M12 11v10"/></svg><span>품목·발주</span></button>
+        <button type="button" data-page-btn="period" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>일별·월별</span></button>
+        <button type="button" data-page-btn="basis" aria-current="false"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5"/><path d="M12 8h.01"/></svg><span>계산 근거</span></button>
       </nav>
       <div class="side-foot">
         올투게더나우 손익 대시보드<br>
@@ -423,9 +436,9 @@
     </div>
   </header>
 
-  <section class="kpis" id="kpis"></section>
+  <section class="kpis" id="kpis" data-page="summary"></section>
 
-  <section class="card" id="pnlCard" hidden>
+  <section class="card" id="pnlCard" data-page="summary" hidden>
     <div class="card-head">
       <h2>손익 단계</h2>
       <span class="hint">매출에서 무엇이 얼마씩 빠지는지</span>
@@ -434,7 +447,7 @@
     <p class="hint" id="pnlNote" style="margin:14px 0 0;line-height:1.7"></p>
   </section>
 
-  <section class="card" id="chCard" hidden>
+  <section class="card" id="chCard" data-page="channel" hidden>
     <div class="card-head">
       <h2>계정별 손익 비교</h2>
       <span class="hint" id="chHint"></span>
@@ -443,7 +456,7 @@
     <p class="hint" id="chNote" style="margin:12px 0 0;line-height:1.7"></p>
   </section>
 
-  <section class="g2" id="trendSec">
+  <section class="g2" id="trendSec" data-page="trend">
     <div class="card">
       <div class="card-head">
         <h2>일별 매출 추이</h2>
@@ -460,7 +473,7 @@
     </div>
   </section>
 
-  <section class="card" id="metricCard" data-fold data-open="0" hidden>
+  <section class="card" id="metricCard" data-page="metric" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>온라인 셀러 필수 지표</h2>
       <span class="hint" id="metHint">화살표는 지난달 대비 변화 · 초록이 좋아진 방향</span>
@@ -468,7 +481,7 @@
     <div class="metrics" id="metrics"></div>
   </section>
 
-  <section class="card" id="stockCard" data-fold data-open="0" hidden>
+  <section class="card" id="stockCard" data-page="item" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>품목별 판매량과 다음 달 예상</h2>
       <div class="controls">
@@ -499,7 +512,7 @@
 
 
 
-  <section class="card" id="dayCard" data-fold data-open="0" hidden>
+  <section class="card" id="dayCard" data-page="period" data-fold data-open="0" hidden>
     <div class="card-head">
       <h2>일별 손익</h2>
       <div class="controls">
@@ -520,7 +533,7 @@
     </p>
   </section>
 
-  <section class="card" data-fold data-open="0">
+  <section class="card" id="monthCard" data-page="period" data-fold data-open="0">
     <div class="card-head">
       <h2>월별 손익</h2>
       <div class="seg" role="group" aria-label="표 보기 전환">
@@ -531,13 +544,13 @@
     <div class="tw"><table id="mtab"></table></div>
   </section>
 
-  <section class="card" id="prodCard" data-fold data-open="0">
+  <section class="card" id="prodCard" data-page="item" data-fold data-open="0">
     <div class="card-head"><h2>상품별 매출 <span class="only">네이버</span></h2><span class="hint" id="phint"></span></div>
     <div class="tw"><table id="ptab"></table></div>
     <button class="more" id="pmore" hidden></button>
   </section>
 
-  <section class="card" data-fold data-open="0">
+  <section class="card" id="basisCard" data-page="basis" data-fold data-open="0">
     <div class="card-head"><h2>매출을 이렇게 계산했습니다</h2><span class="hint">네이버 건별 정산내역의 '정산예정금액' 합계</span></div>
     <div class="rules">
       <div class="rule"><div class="h"><span class="sign plus">＋</span> 빠른정산 · 일반정산</div>
@@ -569,7 +582,7 @@
     </p>
   </section>
 
-  <section class="todo" id="todo" hidden>
+  <section class="todo" id="todo" data-page="basis" hidden>
     <h2>영업이익까지 보려면 이 자료가 더 필요합니다</h2>
     <ol id="todoList"></ol>
   </section>
@@ -1514,33 +1527,36 @@
   el('files').textContent = '원본: 네이버 건별 정산내역 ' + months.length + '개월 · data/원본/네이버/';
   setBasis(); renderMonths(); renderStock(); renderTodo(); all();
 
-  /* ── 왼쪽 메뉴 ──
-     누르면 그 자리로 스크롤합니다. 접혀 있는 카드는 먼저 펴 줍니다.
-     그리고 지금 화면에 보이는 곳의 메뉴에 색이 들어옵니다. */
-  (function nav() {
-    const links = [...document.querySelectorAll('.nav a[data-nav]')];
-    const secs = links.map(a => el(a.dataset.nav)).filter(Boolean);
+  /* ── 왼쪽 메뉴 = 화면 전환 ──
+     메뉴를 누르면 스크롤이 아니라 화면 자체가 바뀝니다.
+     각 섹션에 data-page 로 어느 화면 소속인지 적어 뒀고,
+     지금 화면이 아닌 섹션에는 pg-off 를 붙여 감춥니다.
+     주소창에 #계정별 같은 표시가 남아서, 뒤로가기로 이전 화면에 돌아갈 수 있습니다. */
+  (function pages() {
+    const btns = [...document.querySelectorAll('[data-page-btn]')];
+    const secs = [...document.querySelectorAll('[data-page]')];
+    const names = btns.map(b => b.dataset.pageBtn);
+    const HOME = names[0];
 
-    for (const a of links) {
-      a.addEventListener('click', e => {
-        const sec = el(a.dataset.nav);
-        if (!sec) return;
-        e.preventDefault();
-        if (sec.hasAttribute('data-fold')) sec.dataset.open = '1';
-        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
+    function show(page, push) {
+      if (!names.includes(page)) page = HOME;
+      for (const s of secs) {
+        const mine = s.dataset.page === page;
+        s.classList.toggle('pg-off', !mine);
+        // 화면으로 올라온 카드는 접혀 있지 않게 펴 줍니다.
+        if (mine && s.hasAttribute('data-fold')) s.dataset.open = '1';
+      }
+      for (const b of btns) b.setAttribute('aria-current', String(b.dataset.pageBtn === page));
+      if (push && location.hash.slice(1) !== page) history.pushState(null, '', '#' + page);
+      // 화면이 바뀌면 맨 위부터 보여 줍니다.
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
 
-    // 화면에 보이는 섹션을 표시합니다. 브라우저가 이 기능을 지원할 때만 씁니다.
-    if (!('IntersectionObserver' in window)) return;
-    const seen = new Set();
-    const io = new IntersectionObserver(rows => {
-      for (const r of rows) r.isIntersecting ? seen.add(r.target.id) : seen.delete(r.target.id);
-      let on = null;
-      for (const s of secs) if (seen.has(s.id)) { on = s.id; break; }
-      for (const a of links) a.classList.toggle('on', a.dataset.nav === on);
-    }, { rootMargin: '-72px 0px -60% 0px' });
-    for (const s of secs) io.observe(s);
+    for (const b of btns) b.addEventListener('click', () => show(b.dataset.pageBtn, true));
+    // 브라우저 뒤로가기/앞으로가기
+    window.addEventListener('popstate', () => show(location.hash.slice(1), false));
+
+    show(location.hash.slice(1) || HOME, false);
   })();
 })();
 </script>
