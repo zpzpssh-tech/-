@@ -21,6 +21,7 @@ import json
 import ssl
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -59,11 +60,43 @@ def load_conf():
     return sheets
 
 
+class _경로기록(urllib.request.HTTPRedirectHandler):
+    """구글은 주소를 한 번 더 넘겨줍니다(리다이렉트).
+    어느 주소에서 막혔는지 알려주려고, 거쳐 간 주소를 적어 둡니다."""
+
+    def __init__(self):
+        self.마지막주소 = None
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        self.마지막주소 = newurl
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def 호스트(url: str) -> str:
+    """주소에서 도메인만 뽑아냅니다. 예) https://a.b.com/x?y=1 → a.b.com"""
+    try:
+        return urllib.parse.urlsplit(url).hostname or url
+    except ValueError:
+        return url
+
+
+def 허용목록표기(host: str) -> str:
+    """네트워크 정책에 적을 형태로 바꿉니다.
+    구글이 파일을 내려주는 주소는 doc-04-64-sheets... 처럼 앞부분이 매번 바뀌므로,
+    한 번만 허용하면 다음에 또 막힙니다. 그래서 *.googleusercontent.com 처럼 적어야 합니다."""
+    for 뒷부분 in (".googleusercontent.com", ".googleusercontent.co.kr"):
+        if host.endswith(뒷부분):
+            return "*" + 뒷부분
+    return host
+
+
 def fetch(url):
     """주소를 열어 (본문 bytes, 최종주소) 를 돌려줍니다. 실패하면 사람이 읽을 수 있는 오류를 냅니다."""
+    기록 = _경로기록()
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=CTX), 기록)
     req = urllib.request.Request(url, headers={"User-Agent": "allTogetherNow-dashboard/1.0"})
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT, context=CTX) as r:
+        with opener.open(req, timeout=TIMEOUT) as r:
             return r.read(), r.geturl()
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
@@ -80,14 +113,32 @@ def fetch(url):
         raise RuntimeError(f"구글이 오류를 돌려줬습니다 (HTTP {e.code} {e.reason}).")
     except urllib.error.URLError as e:
         reason = str(e.reason)
+        막힌주소 = 기록.마지막주소 or url
+        막힌곳 = 호스트(막힌주소)
+        적을것 = 허용목록표기(막힌곳)
         if "403" in reason or "CONNECT" in reason.upper():
-            raise RuntimeError(
-                "회사/작업환경 네트워크가 docs.google.com 을 막고 있습니다.\n"
-                "      → 네트워크 정책에 docs.google.com 을 추가한 뒤, "
-                "새 세션(새 대화)에서 다시 실행해 주세요.\n"
+            안내 = [f"회사/작업환경 네트워크가 {막힌곳} 을(를) 막고 있습니다."]
+            if 기록.마지막주소:
+                안내.append(
+                    f"      (docs.google.com 은 열렸습니다. 구글이 파일을 실제로 내려주는\n"
+                    f"       {막힌곳} 에서 막혔습니다 — 두 주소를 모두 허용해야 합니다.)"
+                )
+            안내 += [
+                f"      → 네트워크 정책에 아래 두 줄을 추가한 뒤, "
+                "새 세션(새 대화)에서 다시 실행해 주세요.",
+                "           docs.google.com",
+                f"           {적을것}",
+            ]
+            if 적을것 != 막힌곳:
+                안내.append(
+                    f"        ({막힌곳} 의 앞부분은 받을 때마다 바뀝니다. "
+                    f"그래서 {적을것} 처럼 별표로 적어야 다음에도 됩니다.)"
+                )
+            안내.append(
                 "        정책은 세션이 시작될 때 한 번 정해져서, 실행 중인 세션에는 반영되지 않습니다."
             )
-        raise RuntimeError(f"연결하지 못했습니다: {reason}")
+            raise RuntimeError("\n".join(안내))
+        raise RuntimeError(f"연결하지 못했습니다({막힌곳}): {reason}")
 
 
 def looks_like_html(body: bytes) -> bool:
