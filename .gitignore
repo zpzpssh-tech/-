@@ -1,2 +1,5 @@
 __pycache__/
 .DS_Store
+
+# fetch_sheets.py 로 내려받은 구글 시트 사본 (언제든 다시 받을 수 있어 저장소에는 넣지 않습니다)
+data/원본/시트/*.csv
