@@ -25,6 +25,30 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 TEMPLATE = ROOT / "templates" / "dashboard.html"
 OUT = ROOT / "dashboard" / "index.html"
+# 그냥 열어 보거나 남에게 보낼 때 쓰는 독립 파일.
+# index.html 은 아티팩트 형식이라 <!doctype html> 이 없습니다. 그대로 열면 브라우저가
+# '옛날 방식(호환 모드)'으로 해석해서 브라우저마다 화면이 달라질 수 있습니다.
+# 그래서 문서 껍데기를 제대로 씌운 판본을 따로 만듭니다. 내용은 같습니다.
+OUT_FILE = ROOT / "dashboard" / "올투게더나우_손익대시보드.html"
+
+
+def standalone(html):
+    """브라우저에서 바로 열 수 있는 완전한 HTML 문서로 감쌉니다.
+
+    <!doctype html> 이 있어야 브라우저가 요즘 규칙대로 그립니다.
+    없으면 '호환 모드'가 되어 브라우저마다 화면이 조금씩 달라집니다.
+    """
+    head, sep, body = html.partition("</style>")
+    if not sep:                       # 형식이 바뀌면 통째로 body 에 넣습니다
+        head, body = "", html
+    return (
+        "<!doctype html>\n<html lang=\"ko\">\n<head>\n"
+        "<meta charset=\"utf-8\">\n"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        "<meta name=\"robots\" content=\"noindex, nofollow\">\n"
+        + head + sep +
+        "\n</head>\n<body>\n" + body.lstrip("\n") + "\n</body>\n</html>\n"
+    )
 
 
 def read_csv(path, required, allow_empty=False):
@@ -422,9 +446,11 @@ def main():
     html = template.replace("__DASHBOARD_DATA__", data_json)
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(html, encoding="utf-8")
+    OUT_FILE.write_text(standalone(html), encoding="utf-8")
 
     total = sum(s[5] for s in sales)
     print(f"대시보드 생성 완료 → {OUT.relative_to(ROOT)}")
+    print(f"  그냥 열어 보는 파일 → {OUT_FILE.relative_to(ROOT)}")
     print(f"  기간: {dates[0]} ~ {dates[-1]} ({len(dates)}일)")
     if item_rows:
         multi = sum(1 for r in item_rows if len(r["채널"]) > 1)
@@ -500,7 +526,12 @@ def main():
               f"· 주문은 {orders:,}건")
         print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")
         print(f"  네이버 기여이익: ₩{contrib:,} ({contrib / total * 100:.1f}%)")
-        print(f"  영업이익(회사 공통비 전액 반영): ₩{contrib - common_mkt - fixed:,}")
+        # 아래는 '네이버 하나로 회사 공통비를 다 감당할 수 있나' 를 보는 값입니다.
+        # 회사 전체 영업이익이 아닙니다(쿠팡 기여이익이 빠져 있어 훨씬 낮게 나옵니다).
+        # 회사 전체 영업이익은 대시보드 '손익 단계'의 '회사 영업이익' 을 보세요.
+        print(f"  참고) 네이버 기여이익만으로 회사 공통비(공통 마케팅비+고정지출)를 뺀 값: "
+              f"₩{contrib - common_mkt - fixed:,}")
+        print(f"        ※ 회사 전체 영업이익이 아닙니다. 쿠팡 기여이익이 빠져 있습니다.")
 
 
 if __name__ == "__main__":
