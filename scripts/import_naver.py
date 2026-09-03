@@ -166,7 +166,9 @@ def main():
     agg = defaultdict(lambda: {"orders": set(), "qty": 0, "rev": 0, "gross": 0})
     orders_by_date = defaultdict(set)     # 날짜별 주문번호 (상품이 여러 개인 주문을 1건으로)
     buyer_orders = defaultdict(set)       # 구매자명 → 주문번호 (재구매율 계산용)
-    ship_by_date = defaultdict(int)       # 날짜별 배송 건수 (정산 파일의 '배송비' 행 = 발송 1건)
+    # 주문번호별 배송비 행 수. 무료배송 주문은 배송비 행이 아예 없지만 택배는 나가므로,
+    # 나중에 '행이 없으면 1건'으로 세어 실제 발송 건수를 만듭니다.
+    ship_by_order = defaultdict(lambda: {"날짜": "", "행": 0, "상품": 0})
     cancel_orders = set()                 # 정산전 취소가 있었던 주문번호
     seen = set()
     name_hits = Counter()          # (상품코드, 정산상품명) → 등장 횟수
@@ -237,10 +239,15 @@ def main():
                                           "카테고리": categorize(full), "정산상품명": full,
                                           "상품번호": "", "원가": "", "포장비": ""}
 
-            orders_by_date[date].add(str(r[idx["주문번호"]]))
+            order_no = str(r[idx["주문번호"]])
+            orders_by_date[date].add(order_no)
+            so = ship_by_order[order_no]
+            so["날짜"] = so["날짜"] or date
             if kind == "배송비":
                 # 회수·정산후 취소 행은 마이너스로 잡혀 있어 발송 건수에서 뺍니다.
-                ship_by_date[date] += 1 if amount >= 0 else -1
+                so["행"] += 1 if amount >= 0 else -1
+            else:
+                so["상품"] += 1
             buyer = str(r[idx["구매자명"]] or "").strip()
             if buyer:
                 buyer_orders[buyer].add(str(r[idx["주문번호"]]))
@@ -255,6 +262,23 @@ def main():
     if unknown_states:
         sys.exit(f"[오류] 처음 보는 정산상태가 있습니다: {', '.join(sorted(unknown_states))}\n"
                  f"       이 건을 매출에 넣을지 뺄지 알려주시면 규칙에 추가하겠습니다.")
+
+    # ── 실제 발송(택배) 건수 ──
+    # 고객이 배송비를 안 낸 주문(무료배송)도 우리는 택배를 보냅니다. 그래서 배송비 행이
+    # 없거나 회수로 0이 된 주문도 상품이 있으면 1건으로 셉니다. 한 주문에 배송비 행이
+    # 여러 개면 그만큼 나눠 보낸 것이라 그대로 셉니다.
+    ship_by_date = defaultdict(int)
+    free_ship = split_ship = 0
+    for so in ship_by_order.values():
+        if not so["상품"]:
+            continue
+        n = so["행"]
+        if n <= 0:
+            free_ship += 1
+            n = 1
+        elif n > 1:
+            split_ship += n - 1
+        ship_by_date[so["날짜"]] += n
 
     # 고정 항목(배송비·옵션) 등록
     for code, name, cat in [("SHIP", "배송비", "배송비"), ("OPT", "옵션·추가구성", "미분류")]:
@@ -357,8 +381,9 @@ def main():
     print(f"총매출(수수료 차감 전): ₩{gross_total:,} · 네이버 수수료 ₩{gross_total - total:,} "
           f"({(gross_total - total) / gross_total * 100:.1f}%)")
     ships = sum(ship_by_date.values())
-    print(f"배송 건수(정산 파일의 배송비 행) {ships:,}건 · 주문 {total_orders:,}건 "
+    print(f"실제 발송(택배) {ships:,}건 · 주문 {total_orders:,}건 "
           f"→ 주문 대비 {ships / total_orders * 100:.1f}%")
+    print(f"  그중 배송비를 안 받은 무료배송 {free_ship:,}건, 나눠 보낸 분할배송 {split_ship:,}건")
     print(f"구매자 {buyers:,}명 · 재구매 고객 {repeat_buyers:,}명 "
           f"({repeat_buyers / buyers * 100:.1f}%) · 1인당 평균 {total_orders / buyers:.2f}회")
     if not (DATA / "원가일계.csv").exists():
