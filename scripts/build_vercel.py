@@ -28,7 +28,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "dashboard" / "index.html"
+# 정식 문서 껍데기(<!doctype html>)가 있는 판본을 씁니다.
+# 없으면 브라우저가 '호환 모드'로 그려서 브라우저마다 화면이 달라질 수 있습니다.
+SRC = ROOT / "dashboard" / "올투게더나우_손익대시보드.html"
 SITE = ROOT / "site"
 
 HANDLER = '''// 이 파일은 scripts/build_vercel.py 가 만듭니다. 직접 고치지 마세요.
