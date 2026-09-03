@@ -482,7 +482,8 @@
     <p class="hint" style="margin:8px 0 0;line-height:1.7">
       <b>택배비</b>는 <b>실제 발송(택배) 건수</b> × 건당 단가입니다. 고객이 배송비를 안 낸
       무료배송 주문도 택배는 나가므로 1건으로 세고, 한 주문을 나눠 보낸 분할배송은 그만큼 셉니다.
-      1~8월은 전량 N배송(₩3,280) 기준입니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
+      주문 상세 자료에 <b>배송속성</b>(N배송/판매자배송)이 있는 날은 그 날의 실제 비율로
+      단가를 계산하고, 자료가 없는 1~8월은 전량 N배송(₩3,280)으로 봅니다. <b>광고비</b>는 네이버 검색광고 리포트의 총비용을 그대로 씁니다.
       <b>고정지출과 공통 마케팅비</b>는 월 단위 금액을 선택한 기간의 날짜 수만큼 나눠서 반영합니다.
       기간을 짧게 잡으면 그만큼만 반영되니, 월 전체를 보시려면 위에서 월을 선택해 주세요.
     </p>
@@ -523,6 +524,7 @@
 
     // 네이버
     const shipUnit = SHIP['건당단가'] || 0;
+    const shipByDay = SHIP['일별단가'] || {};   // 배송속성 자료가 있는 날은 실제 단가
     for (const [d, , code, , q, net, gross] of SALES) {
       const r = get(d, '네이버', '네이버');
       r.gross += (gross || net); r.fee += (gross || net) - net; r.qty += q;
@@ -534,7 +536,7 @@
       if (!r) continue;
       r.ord = DAILY[d];
       r.ships = (d in SHIPCNT) ? SHIPCNT[d] : DAILY[d];
-      r.logi = r.ships * shipUnit;
+      r.logi = r.ships * (shipByDay[d] || shipUnit);
     }
     for (const d in ADD) { const r = rec[key(d, '네이버')]; if (r) r.ad += ADD[d]; }
 

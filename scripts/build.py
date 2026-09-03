@@ -225,6 +225,25 @@ def main():
                 k = {c.lstrip("\ufeff"): v for c, v in r.items()}
                 cp_cost.append([k["기간"].strip(), k["단위"].strip(), k["계정"].strip(),
                                 k["항목"].strip(), to_num(k["금액"], "쿠팡_비용.csv", 0)])
+    # 배송속성 자료가 있는 날은 그 날의 N배송/판매자배송 비율로 택배 단가를 계산합니다.
+    # 자료가 없는 날(1~8월)은 설정값(전량 N배송)을 그대로 씁니다.
+    ship_rate_by_day = {}
+    f_sa = DATA / "배송속성.csv"
+    if f_sa.exists():
+        n_price = float(ship.get("N배송단가", 0) or 0)
+        s_price = float(ship.get("판매자배송단가", 0) or 0)
+        with open(f_sa, newline="", encoding="utf-8-sig") as f:
+            for r in csv.DictReader(f):
+                k = {c.lstrip("\ufeff"): v for c, v in r.items()}
+                a = to_num(k["N배송"], "배송속성.csv", 0)
+                b = to_num(k["판매자배송"], "배송속성.csv", 0)
+                if a + b:
+                    ship_rate_by_day[k["날짜"].strip()] = round((a * n_price + b * s_price) / (a + b))
+        if ship_rate_by_day:
+            avg = sum(ship_rate_by_day.values()) / len(ship_rate_by_day)
+            print(f"  배송속성 반영: {len(ship_rate_by_day)}일 · 평균 건당 ₩{avg:,.0f} "
+                  f"(설정값 ₩{ship_unit:,})")
+
     # 로켓배송(직매입)은 발주서에서 온 별도 계정입니다. 매출·원가만 있고 수수료·물류비는 없습니다.
     f_rkt = DATA / "로켓_일별.csv"
     if f_rkt.exists():
@@ -394,7 +413,8 @@ def main():
         "고객지표": cust,
         "부가세": settings.get("부가세", {}),
         "택배비": {"건당단가": ship_unit, "N배송단가": ship.get("N배송단가", 0),
-                 "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate},
+                 "판매자배송단가": ship.get("판매자배송단가", 0), "N배송비율": n_rate,
+                 "일별단가": ship_rate_by_day},
     }
 
     template = TEMPLATE.read_text(encoding="utf-8")
@@ -471,12 +491,13 @@ def main():
         cg = sum(r[3] for r in cogs_rows if dates[0] <= r[0] <= dates[-1])
         orders = sum(v for k, v in daily_orders.items() if dates[0] <= k <= dates[-1])
         ships = sum(v for k, v in daily_ships.items() if dates[0] <= k <= dates[-1]) or orders
-        shipping = ships * ship_unit
+        shipping = sum(v * ship_rate_by_day.get(d, ship_unit) for d, v in daily_ships.items())
         ad = prorate("마케팅비", True)
         common_mkt = prorate("마케팅비", False)
         fixed = prorate("고정지출", False)
         contrib = total - cg - shipping - ad
-        print(f"  택배비: ₩{shipping:,} (배송 {ships:,}건 × ₩{ship_unit:,}) · 주문은 {orders:,}건")
+        print(f"  택배비: ₩{shipping:,.0f} (배송 {ships:,}건 · 평균 ₩{shipping / ships:,.0f}) "
+              f"· 주문은 {orders:,}건")
         print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")
         print(f"  네이버 기여이익: ₩{contrib:,} ({contrib / total * 100:.1f}%)")
         print(f"  영업이익(회사 공통비 전액 반영): ₩{contrib - common_mkt - fixed:,}")

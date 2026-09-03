@@ -11,6 +11,12 @@
   [원가] 시트      상품번호 | 상품명 | 옵션정보 | 원가
   [YYYYMM월] 시트  주문일시 | 주문상태 | 상품번호 | 상품명 | 옵션정보 | 수량
 
+주문 상세 파일 (선택):
+  data/원본/주문/*.xlsx 에 네이버에서 받은 주문 상세를 넣으면, 그 파일이 덮는 달은
+  원가관리 엑셀의 월별 시트 대신 이 파일을 씁니다 (더 최신이고 칸이 많습니다).
+  '배송속성'(N배송 / N판매자배송 / 일반배송) 칸이 있으면 날짜별 택배 종류도 뽑아
+  data/배송속성.csv 로 저장합니다. 택배비를 실제 단가로 계산하는 데 씁니다.
+
 원가 붙이는 순서 (위에서부터 먼저 맞는 것을 씁니다):
   1. 상품번호 + 옵션정보가 정확히 같을 때
   2. 그 상품번호에 옵션 없는 원가가 있을 때
@@ -35,6 +41,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "원본" / "원가"
+ORDER_SRC = ROOT / "data" / "원본" / "주문"
 DATA = ROOT / "data"
 
 EXCLUDE_STATES = {"취소", "반품"}          # 물건이 돌아와 원가가 발생하지 않는 상태
@@ -119,6 +126,60 @@ def main():
             return next(iter(cost_by_no[no].values())), "그 번호 원가 1개"
         return None, "못 찾음"
 
+    # ── 주문 상세 파일 (있으면 그 달은 이쪽을 씁니다) ──
+    NEED = ["주문일시", "주문상태", "상품번호", "상품명", "옵션정보", "수량"]
+    order_rows, ship_rows, covered = [], [], set()
+    if ORDER_SRC.exists():
+        for path2 in sorted(ORDER_SRC.glob("*.xlsx")):
+            if path2.name.startswith("~$"):
+                continue
+            wb2 = openpyxl.load_workbook(path2, read_only=True, data_only=True)
+            for sh2 in wb2.sheetnames:
+                ws2 = wb2[sh2]
+                ws2.reset_dimensions()
+                it2 = ws2.iter_rows(values_only=True)
+                head2 = [str(h).strip() if h else "" for h in (next(it2, None) or [])]
+                if any(c not in head2 for c in NEED):
+                    continue
+                J = {c: head2.index(c) for c in NEED}
+                for c in ("배송속성", "주문번호"):
+                    if c in head2:
+                        J[c] = head2.index(c)
+                for r in it2:
+                    if r is None or r[J["주문일시"]] is None:
+                        continue
+                    d = str(r[J["주문일시"]])[:10].replace(".", "-").replace("/", "-")
+                    order_rows.append((d, [r[J[c]] for c in NEED]))
+                    covered.add(d[:7])
+                    if "배송속성" in J and "주문번호" in J:
+                        ship_rows.append((d, str(r[J["주문번호"]]).strip(),
+                                          str(r[J["주문상태"]] or "").strip(),
+                                          str(r[J["배송속성"]] or "").strip()))
+            wb2.close()
+        if covered:
+            print(f"주문 상세 파일 {len(order_rows):,}줄 · 덮는 달 {', '.join(sorted(covered))} "
+                  f"→ 이 달은 원가관리 엑셀 대신 이 파일을 씁니다")
+
+    # ── 배송속성 (택배 종류) ──
+    if ship_rows:
+        by_order = {}
+        for d, o, state, attr in ship_rows:
+            if state == "취소":       # 취소 건은 발송하지 않았습니다
+                continue
+            by_order[o] = (d, attr)
+        cnt = defaultdict(lambda: {"N배송": 0, "판매자배송": 0})
+        for d, attr in by_order.values():
+            cnt[d]["N배송" if attr == "N배송" else "판매자배송"] += 1
+        with open(DATA / "배송속성.csv", "w", newline="", encoding="utf-8-sig") as f:
+            w = csv.writer(f)
+            w.writerow(["날짜", "N배송", "판매자배송"])
+            for d in sorted(cnt):
+                w.writerow([d, cnt[d]["N배송"], cnt[d]["판매자배송"]])
+        tn = sum(v["N배송"] for v in cnt.values())
+        ts = sum(v["판매자배송"] for v in cnt.values())
+        print(f"배송속성 {len(cnt)}일 · N배송 {tn:,}건 / 판매자배송 {ts:,}건 "
+              f"(N배송 {tn / (tn + ts) * 100:.1f}%) → data/배송속성.csv")
+
     # ── 월별 주문 시트 ──
     sheets = [s for s in wb.sheetnames if re.fullmatch(r"\d{6}월", s)]
     if not sheets:
@@ -143,6 +204,8 @@ def main():
         for r in ws.iter_rows(min_row=2, values_only=True):
             if r[I["주문일시"]] is None:
                 continue
+            if str(r[I["주문일시"]])[:10].replace(".", "-").replace("/", "-")[:7] in covered:
+                continue          # 주문 상세 파일이 있는 달은 건너뜁니다
             state = str(r[I["주문상태"]] or "").strip()
             try:
                 qty = int(float(r[I["수량"]] or 0))
@@ -171,6 +234,35 @@ def main():
                 missing[(no, opt, nm)] += qty
             else:
                 d["cogs"] += unit * qty
+
+    # 주문 상세 파일 줄도 같은 방식으로 원가를 붙입니다
+    for date, vals in order_rows:
+        state = str(vals[1] or "").strip()
+        try:
+            qty = int(float(vals[5] or 0))
+        except (TypeError, ValueError):
+            continue
+        if state in EXCLUDE_STATES:
+            excluded_qty += qty
+            continue
+        no = pid(vals[2])
+        opt = str(vals[4] or "").strip()
+        nm = str(vals[3] or "").strip()
+        if nm:
+            names[no][nm] += 1
+        unit, tier = find_cost(no, opt)
+        tiers[tier] += qty
+        om = opt_month[(date[:7], no, opt)]
+        om["qty"] += qty
+        om["cogs"] += (unit or 0) * qty
+        opt_name[(no, opt)] = nm or opt_name.get((no, opt), "")
+        d = daily[(date, no)]
+        d["qty"] += qty
+        if unit is None:
+            d["unknown"] += qty
+            missing[(no, opt, nm)] += qty
+        else:
+            d["cogs"] += unit * qty
     wb.close()
 
     # ── 저장 ──
