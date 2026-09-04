@@ -442,10 +442,12 @@ def main():
             print(f"  매출에 없는 상품번호 {len(cogs_unmapped)}개는 원가에서 제외했습니다.")
     else:
         print("  원가일계.csv 가 없습니다. scripts/import_costs.py 를 먼저 실행해 주세요.")
+    cp_left = 0
     if cp_daily:
         print()
         acct_cfg = {a["계정"]: a for a in accounts}
         rng = (dates[0], dates[-1])
+        cp_left = 0
         print(f"  {'계정':<12}{'총매출':>15}{'수수료':>13}{'원가':>13}{'물류비':>13}{'광고비':>13}{'남는 돈':>14}")
         for a in accounts:
             name = a["계정"]
@@ -464,6 +466,7 @@ def main():
             ad = sum(c[4] for c in cp_cost if c[2] == name and c[3].startswith("광고비")
                      and rng[0][:7] <= c[0][:7] <= rng[1][:7])
             left = gross - fee - cg - logi - coupon - ad
+            cp_left += left
             print(f"  {name:<12}{gross:>15,}{fee:>13,}{cg:>13,}{logi:>13,}{ad:>13,}{left:>14,}")
 
     if not costs:
@@ -495,12 +498,22 @@ def main():
         ad = prorate("마케팅비", True)
         common_mkt = prorate("마케팅비", False)
         fixed = prorate("고정지출", False)
-        contrib = total - cg - shipping - ad
+        # 네이버 기여이익 (부가세 전) + 쿠팡 계정들의 남는 돈 = 전 채널 기여이익
+        nv_pre = total - cg - shipping - ad
+        vr = float((settings.get("부가세") or {}).get("세율", 0.1)) \
+            if (settings.get("부가세") or {}).get("적용") else 0.0
+        nv_contrib = nv_pre - (nv_pre * vr / (1 + vr) if vr else 0)
+        cp_contrib = cp_left - (cp_left * vr / (1 + vr) if vr else 0)
+        contrib = nv_contrib + cp_contrib
+        op = contrib - common_mkt - fixed
         print(f"  택배비: ₩{shipping:,.0f} (배송 {ships:,}건 · 평균 ₩{shipping / ships:,.0f}) "
               f"· 주문은 {orders:,}건")
         print(f"  채널 광고비: ₩{ad:,} · 공통 마케팅비: ₩{common_mkt:,} · 고정지출: ₩{fixed:,}")
-        print(f"  네이버 기여이익: ₩{contrib:,} ({contrib / total * 100:.1f}%)")
-        print(f"  영업이익(회사 공통비 전액 반영): ₩{contrib - common_mkt - fixed:,}")
+        print(f"  네이버 기여이익: ₩{nv_contrib:,.0f} ({nv_contrib / total * 100:.1f}%) "
+              f"· 쿠팡 4계정 ₩{cp_contrib:,.0f}")
+        print(f"  전 채널 기여이익: ₩{contrib:,.0f}")
+        print(f"  회사 영업이익(공통 마케팅비·고정지출 뺀 것): ₩{op:,.0f}")
+        print("  ※ 이 요약은 쿠팡 월 단위 비용을 달째로 넣어 대략치입니다. 정확한 값은 대시보드를 보세요.")
 
 
 if __name__ == "__main__":
