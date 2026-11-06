@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HYPER GEL 상세페이지 v3</title>
+<style>
+  /* 폰트: 한글은 Pretendard(굵게+기울임), 영문 숫자는 스포츠 유니폼 같은 Barlow Condensed */
+  @font-face{font-family:"Pretendard";font-weight:500;src:url(fonts/Pretendard-Medium.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard";font-weight:600;src:url(fonts/Pretendard-SemiBold.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard";font-weight:700;src:url(fonts/Pretendard-Bold.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard";font-weight:800;src:url(fonts/Pretendard-ExtraBold.woff2) format("woff2")}
+  @font-face{font-family:"Pretendard";font-weight:900;src:url(fonts/Pretendard-Black.woff2) format("woff2")}
+  @font-face{font-family:"Barlow";font-weight:700;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+  @font-face{font-family:"Barlow";font-weight:800;font-style:italic;src:url(fonts/barlow-condensed-latin-800-italic.woff2) format("woff2")}
+  @font-face{font-family:"Barlow";font-weight:900;font-style:italic;src:url(fonts/barlow-condensed-latin-900-italic.woff2) format("woff2")}
+
+  /* 색: 블랙 바탕 + 형광 라임(에너지) + 패키지 네이비 */
+  :root{
+    --black:#07090D; --black2:#10141B; --black3:#181D26;
+    --navy:#0E2747; --navy2:#16365F;
+    --lime:#D7F21C; --lime2:#B8D400;
+    --white:#fff; --gray:#8A929E; --gray2:#C3C9D2; --line:#262C36;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#000}
+  body{font-family:"Pretendard",sans-serif;color:#fff;-webkit-font-smoothing:antialiased;word-break:keep-all}
+  .page{max-width:860px;margin:0 auto;background:var(--black);overflow:hidden}
+  section{position:relative;padding:110px 60px}
+  img{display:block;max-width:100%}
+
+  /* 공통 타이포 */
+  .en{font-family:"Barlow",sans-serif;font-style:italic;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
+  .kicker{display:inline-flex;align-items:center;gap:12px;font-family:"Barlow";font-style:italic;font-weight:800;font-size:24px;letter-spacing:.08em;color:var(--lime);text-transform:uppercase}
+  .kicker:before{content:"";width:34px;height:6px;background:var(--lime);transform:skewX(-30deg)}
+  .h{font-weight:900;font-size:58px;line-height:1.18;letter-spacing:-.05em;margin-top:22px;transform:skewX(-7deg);transform-origin:left}
+  .h .l{color:var(--lime)}
+  .p{font-size:22px;line-height:1.7;color:var(--gray2);margin-top:26px;font-weight:500}
+  .p b{color:#fff;font-weight:800}
+  .center{text-align:center}
+  .center .h{transform-origin:center}
+  .center .kicker{justify-content:center}
+  .outline{color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.22)}
+
+  /* 사선 스트라이프 배경 (패키지의 대각선 그래픽) */
+  .stripes:before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      linear-gradient(115deg,transparent 0 55%,rgba(215,242,28,.95) 55% 61%,transparent 61% 66%,rgba(215,242,28,.35) 66% 68%,transparent 68%),
+      linear-gradient(115deg,transparent 0 60%,var(--navy) 60% 100%);}
+  /* 글자가 많은 섹션은 스트라이프를 오른쪽 끝으로 밀어서 글자를 가리지 않게 */
+  .stripes.right:before{background:
+      linear-gradient(115deg,transparent 0 80%,rgba(215,242,28,.95) 80% 85%,transparent 85% 89%,rgba(215,242,28,.35) 89% 91%,transparent 91%),
+      linear-gradient(115deg,transparent 0 84%,var(--navy) 84% 100%);}
+  .speed{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(215,242,28,.7),transparent)}
+
+  /* 사선으로 잘리는 섹션 경계 */
+  .cut-b{clip-path:polygon(0 0,100% 0,100% calc(100% - 70px),0 100%)}
+  .cut-t{margin-top:-70px;padding-top:180px}
+
+  /* 1. HERO */
+  .hero{padding:90px 50px 0;min-height:1180px;background:radial-gradient(ellipse at 70% 75%,rgba(215,242,28,.18),transparent 60%),var(--black)}
+  .hero .brand{font-family:"Barlow";font-weight:700;font-size:22px;letter-spacing:.4em;color:var(--gray);position:relative}
+  .hero .title{position:relative;margin-top:16px;line-height:.82}
+  .hero .title span{display:block;font-size:210px}
+  .hero .title .g{color:var(--lime);margin-left:120px}
+  .hero .tag{position:relative;margin-top:34px;font-size:44px;font-weight:900;letter-spacing:-.05em;transform:skewX(-7deg);transform-origin:left}
+  .hero .sub{position:relative;font-size:22px;color:var(--gray2);margin-top:14px;line-height:1.6}
+  .hero .shot{position:relative;margin:60px -10px 0;clip-path:polygon(6% 0,100% 0,94% 100%,0 100%);box-shadow:0 0 0 0}
+  .hero .shot img{width:100%}
+  .hero .shot-wrap{position:relative;padding:6px;margin-top:60px;background:var(--lime);clip-path:polygon(6% 0,100% 0,94% 100%,0 100%)}
+  .hero .shot-wrap .shot{margin:0;clip-path:polygon(6% 0,100% 0,94% 100%,0 100%)}
+
+  /* 2. 티커 띠 */
+  .ticker{background:var(--lime);color:var(--black);padding:20px 0;transform:rotate(-3deg) scale(1.08);margin:40px 0;white-space:nowrap;overflow:hidden;position:relative;z-index:2}
+  .ticker div{font-family:"Barlow";font-style:italic;font-weight:900;font-size:40px;letter-spacing:.02em}
+  .ticker i{display:inline-block;width:14px;height:14px;background:var(--black);margin:0 22px 6px;transform:skewX(-20deg)}
+
+  /* 3. 스탯 */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:60px}
+  .stat{padding:10px 0 0 26px;border-left:6px solid var(--lime)}
+  .stat .n{font-family:"Barlow";font-style:italic;font-weight:900;font-size:120px;line-height:.9}
+  .stat .n small{font-size:42px;color:var(--lime);margin-left:4px}
+  .stat .k{font-size:20px;color:var(--gray);margin-top:12px;font-weight:700}
+
+  /* 4. 배터리 */
+  .battery-sec{background:var(--black2)}
+  .bats{display:flex;justify-content:space-between;align-items:flex-end;margin-top:64px;gap:14px}
+  .bat{flex:1;text-align:center}
+  .bat .body{height:220px;border:4px solid #3a4250;border-radius:16px;padding:8px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+  .bat .body:before{content:"";position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:44px;height:12px;background:#3a4250;border-radius:4px 4px 0 0}
+  .bat .fill{border-radius:8px;background:repeating-linear-gradient(0deg,#5c6b80 0 26px,transparent 26px 32px)}
+  .bat.warn .fill{background:repeating-linear-gradient(0deg,#ff5a47 0 26px,transparent 26px 32px)}
+  .bat.full .body{border-color:var(--lime);box-shadow:0 0 40px rgba(215,242,28,.35)}
+  .bat.full .body:before{background:var(--lime)}
+  .bat.full .fill{background:repeating-linear-gradient(0deg,var(--lime) 0 26px,transparent 26px 32px)}
+  .bat .t{font-family:"Barlow";font-style:italic;font-weight:900;font-size:34px;margin-top:18px}
+  .bat .s{font-size:16px;color:var(--gray);font-weight:700;margin-top:2px}
+  .bat.full .t{color:var(--lime)}
+  .plus{align-self:center;font-family:"Barlow";font-style:italic;font-weight:900;font-size:60px;color:var(--lime);flex:none;margin-bottom:60px}
+  .note{font-size:15px;color:#5d6572;margin-top:30px}
+
+  /* 5. 기능 3개 */
+  .features{background:var(--navy)}
+  .feat{display:flex;gap:30px;align-items:flex-start;padding:46px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+  .feat:last-child{border:0}
+  .feat .num{font-family:"Barlow";font-style:italic;font-weight:900;font-size:130px;line-height:.8;flex:none;width:170px;color:transparent;-webkit-text-stroke:2.5px var(--lime)}
+  .feat .ic{display:inline-grid;place-items:center;width:58px;height:58px;background:var(--lime);transform:skewX(-12deg);margin-bottom:20px}
+  .feat .ic svg{transform:skewX(12deg)}
+  .feat h3{font-size:36px;font-weight:900;letter-spacing:-.04em;transform:skewX(-7deg);transform-origin:left}
+  .feat .en-sub{font-family:"Barlow";font-style:italic;font-weight:800;font-size:22px;color:var(--lime);letter-spacing:.06em;margin-top:6px}
+  .feat p{font-size:20px;line-height:1.7;color:#c3cfdf;margin-top:16px}
+
+  /* 6. 스포츠 그리드 */
+  .sports{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:60px}
+  .sp{position:relative;background:var(--black3);padding:34px 30px 30px;overflow:hidden;clip-path:polygon(0 0,100% 0,100% 82%,92% 100%,0 100%)}
+  .sp .big{font-family:"Barlow";font-style:italic;font-weight:900;font-size:76px;line-height:.85;color:#232a35;position:absolute;right:-6px;bottom:-4px;text-transform:uppercase}
+  .sp .tag{position:relative;display:inline-block;font-family:"Barlow";font-style:italic;font-weight:800;font-size:18px;background:var(--lime);color:var(--black);padding:4px 12px;letter-spacing:.06em}
+  .sp h3{position:relative;font-size:30px;font-weight:900;margin-top:16px;letter-spacing:-.04em}
+  .sp p{position:relative;font-size:18px;color:var(--gray);margin-top:8px;line-height:1.55;font-weight:600}
+
+  /* 7. 레이스 트랙 타이밍 */
+  .timing{background:var(--black2)}
+  .track{margin-top:70px;position:relative;height:150px}
+  .lane{position:absolute;left:0;right:0;top:62px;height:26px;background:repeating-linear-gradient(90deg,#2b323e 0 40px,#1f252f 40px 80px);transform:skewX(-20deg)}
+  .lane:after{content:"";position:absolute;inset:0;border-top:3px solid #3a4250;border-bottom:3px solid #3a4250}
+  .flag{position:absolute;top:0;transform:translateX(-50%);text-align:center}
+  .flag .pin{width:62px;height:62px;margin:0 auto;background:var(--lime);color:var(--black);display:grid;place-items:center;font-family:"Barlow";font-style:italic;font-weight:900;font-size:26px;clip-path:polygon(0 0,100% 0,100% 72%,50% 100%,0 72%)}
+  .flag .lbl{font-family:"Barlow";font-style:italic;font-weight:800;font-size:22px;color:var(--gray);margin-top:44px;letter-spacing:.04em}
+  .tcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:40px}
+  .tc{background:var(--black3);padding:30px 24px;border-top:5px solid var(--lime)}
+  .tc .w{font-family:"Barlow";font-style:italic;font-weight:900;font-size:34px;color:var(--lime);line-height:1}
+  .tc h3{font-size:24px;font-weight:900;margin-top:12px;letter-spacing:-.03em}
+  .tc p{font-size:17px;color:var(--gray);line-height:1.6;margin-top:10px;font-weight:600}
+
+  /* 8. 먹는 법 */
+  .how{background:var(--lime);color:var(--black)}
+  .how .kicker{color:var(--black)}
+  .how .kicker:before{background:var(--black)}
+  .how .h .l{color:var(--navy)}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:56px}
+  .st{background:var(--black);color:#fff;padding:36px 26px 34px;clip-path:polygon(0 0,100% 0,100% 85%,88% 100%,0 100%)}
+  .st .n{font-family:"Barlow";font-style:italic;font-weight:900;font-size:64px;color:var(--lime);line-height:.9}
+  .st svg{margin:22px 0 18px}
+  .st h3{font-size:28px;font-weight:900;letter-spacing:-.03em}
+  .st p{font-size:18px;color:var(--gray2);margin-top:8px;line-height:1.55}
+
+  /* 9. 컬러 */
+  .colors{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:60px -60px 0}
+  .cl{position:relative;padding:40px 18px 0;text-align:center;overflow:hidden}
+  .cl img{width:82%;margin:0 auto;transform:rotate(-6deg) translateY(18px);box-shadow:0 30px 60px rgba(0,0,0,.45)}
+  .cl .nm{font-family:"Barlow";font-style:italic;font-weight:900;font-size:44px;text-transform:uppercase;line-height:1}
+  .cl .ds{font-size:16px;font-weight:700;margin:8px 0 28px;opacity:.75}
+  .c1{background:var(--navy2)}
+  .c2{background:#E8EBEF;color:var(--black)}
+  .c3{background:var(--lime);color:var(--black)}
+
+  /* 10. 물리치료사 */
+  .pt{background:var(--black)}
+  .pt .q{font-size:46px;font-weight:900;line-height:1.35;letter-spacing:-.05em;margin-top:28px;transform:skewX(-7deg);transform-origin:left}
+  .pt .q .l{color:var(--lime)}
+  .badges{display:flex;gap:12px;margin-top:44px;flex-wrap:wrap}
+  .badges span{font-size:19px;font-weight:800;padding:14px 22px;border:2px solid var(--lime);color:var(--lime);transform:skewX(-12deg)}
+  .badges span em{display:inline-block;font-style:normal;transform:skewX(12deg)}
+
+  /* 11. Q&A */
+  .faq{background:var(--black2)}
+  .qa{padding:32px 0;border-bottom:1px solid var(--line)}
+  .qa:first-of-type{border-top:1px solid var(--line);margin-top:50px}
+  .qa h3{font-size:25px;font-weight:900;display:flex;gap:16px;align-items:baseline;letter-spacing:-.03em}
+  .qa h3 .en{color:var(--lime);font-size:34px}
+  .qa p{font-size:19px;color:var(--gray2);line-height:1.7;margin-top:10px;padding-left:40px}
+  .todo{background:#fff3b0;color:#7a5b00;border-radius:4px;padding:1px 8px;font-weight:800}
+
+  /* 12. 구성 + 정보 (가독성 위해 밝은 배경) */
+  .spec{background:#F2F4F6;color:var(--black)}
+  .spec .kicker{color:var(--navy)}
+  .spec .kicker:before{background:var(--navy)}
+  .spec-wrap{display:flex;gap:40px;align-items:center;margin-top:50px}
+  .spec-wrap img{width:330px;flex:none;box-shadow:16px 16px 0 var(--lime)}
+  .spec-wrap dl{flex:1}
+  .spec-wrap dl div{display:flex;justify-content:space-between;padding:18px 0;border-bottom:2px solid #dde1e6;font-size:20px}
+  .spec-wrap dt{color:#69717c;font-weight:600}
+  .spec-wrap dd{font-weight:900}
+  .info{background:#fff;color:#222;padding:80px 60px}
+  .info h2{font-size:30px;font-weight:900;margin-bottom:22px}
+  table{width:100%;border-collapse:collapse;font-size:17px;border-top:3px solid var(--black)}
+  th,td{padding:16px 14px;border-bottom:1px solid #e3e6ea;text-align:left;vertical-align:top;line-height:1.55}
+  th{width:27%;color:#69717c;font-weight:700;background:#f7f8fa}
+  .caution{margin-top:40px;background:#f7f8fa;border-left:6px solid var(--lime);padding:28px 30px}
+  .caution h3{font-size:21px;font-weight:900;margin-bottom:12px}
+  .caution li{font-size:17px;line-height:1.75;color:#5c6470;margin-left:20px}
+
+  /* 13. 엔딩 */
+  .end{padding:130px 50px 120px;text-align:center}
+  .end .big{font-size:150px;line-height:.85;position:relative}
+  .end .big .l{color:var(--lime)}
+  .end p{position:relative;font-size:24px;color:var(--gray2);margin-top:30px;font-weight:700}
+  .end .logo{position:relative;font-family:"Barlow";font-weight:700;letter-spacing:.4em;color:var(--gray);margin-top:50px;font-size:20px}
+
+  @media (max-width:600px){
+    section,.info{padding:70px 22px}
+    .hero{padding:60px 22px 0;min-height:0}
+    .hero .title span{font-size:110px}.hero .title .g{margin-left:50px}
+    .hero .tag{font-size:28px}.hero .sub{font-size:17px}
+    .h{font-size:36px}.p{font-size:17px}
+    .stat .n{font-size:58px}.stat .n small{font-size:22px}.stat{padding-left:12px}
+    .feat{flex-direction:column;gap:10px}.feat .num{font-size:80px}
+    .sports,.tcards,.steps{grid-template-columns:1fr}
+    .colors{margin:40px -22px 0}.cl .nm{font-size:26px}
+    .bat .body{height:140px}.bat .t{font-size:22px}.plus{font-size:34px}
+    .pt .q{font-size:28px}
+    .spec-wrap{flex-direction:column}.spec-wrap img{width:100%}
+    .end .big{font-size:80px}
+    .ticker div{font-size:26px}
+    .flag .lbl{font-size:15px}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- 1. HERO -->
+  <section class="hero stripes">
+    <div class="speed" style="top:330px"></div>
+    <div class="speed" style="top:345px;opacity:.5"></div>
+    <p class="brand">U-CURE · ACTIVE ENERGY GEL</p>
+    <h1 class="title en"><span>HYPER</span><span class="g">GEL</span></h1>
+    <p class="tag">끝까지 달리는 힘.</p>
+    <p class="sub">빠른 에너지 + 전해질<br>운동 중 한 포로 바로 충전</p>
+    <div class="shot-wrap"><div class="shot"><img src="images/product.webp" alt="HYPER GEL 박스와 파우치 3종"></div></div>
+  </section>
+
+  <!-- 2. 티커 -->
+  <div class="ticker"><div>RAPID ENERGY<i></i>ELECTROLYTES<i></i>ENDURANCE<i></i>RAPID ENERGY<i></i>ELECTROLYTES<i></i>ENDURANCE</div></div>
+
+  <!-- 3. 스탯 -->
+  <section style="padding-top:70px">
+    <span class="kicker">Spec</span>
+    <h2 class="h">작지만 강한<br><span class="l">한 포의 에너지</span></h2>
+    <div class="stats">
+      <div class="stat"><div class="n">40<small>G</small></div><div class="k">한 포 용량</div></div>
+      <div class="stat"><div class="n">130<small>KCAL</small></div><div class="k">한 포 열량</div></div>
+      <div class="stat"><div class="n">10<small>EA</small></div><div class="k">한 박스 구성</div></div>
+    </div>
+  </section>
+
+  <!-- 4. 배터리 -->
+  <section class="battery-sec center">
+    <span class="kicker">Why</span>
+    <h2 class="h">운동 후반,<br>몸의 배터리가 <span class="l">방전</span>됩니다</h2>
+    <p class="p">운동할수록 몸속 에너지는 줄어들고,<br>땀으로 <b>수분과 전해질</b>까지 빠져나갑니다.<br>방전되기 <b>전에</b> 충전하세요.</p>
+    <div class="bats">
+      <div class="bat"><div class="body"><div class="fill" style="height:100%"></div></div><div class="t">START</div><div class="s">운동 시작</div></div>
+      <div class="bat"><div class="body"><div class="fill" style="height:62%"></div></div><div class="t">1 HOUR</div><div class="s">1시간 후</div></div>
+      <div class="bat warn"><div class="body"><div class="fill" style="height:24%"></div></div><div class="t">2 HOURS+</div><div class="s">후반 구간</div></div>
+      <div class="plus">+</div>
+      <div class="bat full"><div class="body"><div class="fill" style="height:100%"></div></div><div class="t">HYPER GEL</div><div class="s">한 포 충전</div></div>
+    </div>
+    <p class="note">* 이해를 돕기 위한 개념도이며, 개인과 운동 강도에 따라 다릅니다.</p>
+  </section>
+
+  <!-- 5. 기능 -->
+  <section class="features">
+    <span class="kicker">Point</span>
+    <h2 class="h">에너지를 위한<br><span class="l">3가지 설계</span></h2>
+    <div style="margin-top:30px">
+      <div class="feat">
+        <div class="num">01</div>
+        <div>
+          <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#07090D" stroke-width="2.6" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>
+          <h3>힘 빠질 때, 바로 충전</h3><p class="en-sub">RAPID ENERGY</p>
+          <p>씹을 필요 없이 바로 넘어가는 젤 타입.<br>숨이 찬 운동 중에도 부담 없이 에너지를 보충합니다.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="num">02</div>
+        <div>
+          <span class="ic"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#07090D" stroke-width="2.6" stroke-linejoin="round"><path d="M12 2.5S5 10 5 15a7 7 0 0 0 14 0c0-5-7-12.5-7-12.5z"/></svg></span>
+          <h3>땀으로 나간 전해질까지</h3><p class="en-sub">ELECTROLYTES</p>
+          <p>땀에는 물만 있는 게 아닙니다. 나트륨·칼륨 같은 전해질도<br>함께 빠져나갑니다. 에너지와 전해질을 한 포로.</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="num">03</div>
+        <div>
+          <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#07090D" stroke-width="2.4" stroke-linejoin="round"><path d="M2 20 9 8l4 6 3-4 6 10z"/></svg></span>
+          <h3>후반에 무너지지 않게</h3><p class="en-sub">ENDURANCE</p>
+          <p>하산길, 후반 9홀, 마지막 5km.<br>가장 힘든 구간에서 페이스를 지키도록 미리 챙기세요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. 종목 -->
+  <section>
+    <span class="kicker">For Your Sport</span>
+    <h2 class="h">어떤 운동이든,<br><span class="l">주머니 속 한 포</span></h2>
+    <p class="p">운동을 즐기는 30~50대, 예전 같지 않은 <b>후반 체력</b>이 고민이라면.</p>
+    <div class="sports">
+      <div class="sp"><span class="tag">HIKING</span><h3>주말 등산</h3><p>정상에서 한 포,<br>하산 전에 한 포</p><span class="big">HIKE</span></div>
+      <div class="sp"><span class="tag">GOLF</span><h3>골프 라운딩</h3><p>후반 9홀 시작 전<br>주머니 속 한 포</p><span class="big">GOLF</span></div>
+      <div class="sp"><span class="tag">RUNNING</span><h3>러닝 · 마라톤</h3><p>10km 이상 달릴 때<br>급수 타이밍에 함께</p><span class="big">RUN</span></div>
+      <div class="sp"><span class="tag">CYCLING</span><h3>자전거 라이딩</h3><p>멈추지 않고<br>한 손으로 섭취</p><span class="big">RIDE</span></div>
+      <div class="sp"><span class="tag">RACKET</span><h3>테니스 · 배드민턴</h3><p>세트 사이 휴식에<br>짧고 간단하게</p><span class="big">SET</span></div>
+      <div class="sp"><span class="tag">FITNESS</span><h3>헬스 · 크로스핏</h3><p>고강도 운동 전<br>가볍게 시작하는 한 포</p><span class="big">GYM</span></div>
+    </div>
+  </section>
+
+  <!-- 7. 섭취 타이밍 -->
+  <section class="timing">
+    <span class="kicker">Timing</span>
+    <h2 class="h">언제 먹을까?<br><span class="l">3번만 기억하세요</span></h2>
+    <div class="track">
+      <div class="lane"></div>
+      <div class="flag" style="left:8%"><div class="pin">1</div><div class="lbl">BEFORE</div></div>
+      <div class="flag" style="left:50%"><div class="pin">2</div><div class="lbl">DURING</div></div>
+      <div class="flag" style="left:90%"><div class="pin">3</div><div class="lbl">LAST SPURT</div></div>
+    </div>
+    <div class="tcards">
+      <div class="tc"><div class="w">-30 MIN</div><h3>운동 전</h3><p>시작 15~30분 전<br>한 포로 미리 준비</p></div>
+      <div class="tc"><div class="w">EVERY 45'</div><h3>운동 중</h3><p>40~60분마다 한 포<br>지치기 <b style="color:#fff">전에</b> 먹기</p></div>
+      <div class="tc"><div class="w">FINAL</div><h3>마지막 스퍼트</h3><p>하산 직전, 후반 9홀,<br>결승 5km 전</p></div>
+    </div>
+  </section>
+
+  <!-- 8. 먹는 법 -->
+  <section class="how">
+    <span class="kicker">How To</span>
+    <h2 class="h">뜯고, 짜고, 끝.<br><span class="l">3초 충전</span></h2>
+    <div class="steps">
+      <div class="st"><div class="n">01</div>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#D7F21C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path d="M9 3h6v4H9z"/><path d="M3.5 5h4"/></svg>
+        <h3>뜯고</h3><p>윗부분 절취선을<br>가볍게 뜯어주세요</p></div>
+      <div class="st"><div class="n">02</div>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#D7F21C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h8v11a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z"/><path d="M10 5h4v4h-4z"/><path d="M12 1.5v2"/><path d="M4.5 14h3M16.5 14h3"/></svg>
+        <h3>짜서</h3><p>아래부터 눌러<br>한 번에 드세요</p></div>
+      <div class="st"><div class="n">03</div>
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#D7F21C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l-1.5 16a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1z"/><path d="M7.6 10h8.8"/></svg>
+        <h3>물 한 모금</h3><p>물과 함께 드시면<br>더 깔끔합니다</p></div>
+    </div>
+  </section>
+
+  <!-- 9. 컬러 -->
+  <section class="center" style="padding-bottom:0">
+    <span class="kicker">Color</span>
+    <h2 class="h">골라 쓰는<br><span class="l">3가지 컬러</span></h2>
+    <p class="p">가방 속에서도 한눈에. 주머니에 쏙 들어가는 <b>40g</b></p>
+    <div class="colors">
+      <div class="cl c1"><div class="nm">Navy</div><div class="ds">단단하고 차분하게</div><img src="images/pouch-navy.jpg" alt="네이비"></div>
+      <div class="cl c2"><div class="nm">White</div><div class="ds">깔끔하고 가볍게</div><img src="images/pouch-white.jpg" alt="화이트"></div>
+      <div class="cl c3"><div class="nm">Lime</div><div class="ds">눈에 확 띄게</div><img src="images/pouch-lime.jpg" alt="라임"></div>
+    </div>
+  </section>
+
+  <!-- 10. 물리치료사 -->
+  <section class="pt stripes right" style="padding-bottom:130px">
+    <span class="kicker" style="position:relative">Why U-CURE</span>
+    <p class="q" style="position:relative">“운동하는 몸을 매일 봅니다.<br>그래서 <span class="l">후반에 버티는 힘</span>이<br>얼마나 중요한지 압니다.”</p>
+    <p class="p" style="position:relative">현직 물리치료사가 기획한 브랜드, 유큐어.<br>보호대에 이어 <b>운동하는 분들을 위한 에너지</b>까지.</p>
+    <div class="badges" style="position:relative">
+      <span><em>현직 물리치료사 기획</em></span><span><em>30~50대 액티브</em></span><span><em>보호대 브랜드 유큐어</em></span>
+    </div>
+  </section>
+
+  <!-- 11. Q&A -->
+  <section class="faq">
+    <span class="kicker">Q &amp; A</span>
+    <h2 class="h">자주 묻는 질문</h2>
+    <div class="qa"><h3><span class="en">Q</span>운동 안 하는 날 먹어도 되나요?</h3><p>드셔도 되지만, 운동처럼 에너지를 많이 쓰는 상황을 위해 만든 제품입니다. <b style="color:#fff">운동 전·중</b>에 드시는 걸 권장합니다.</p></div>
+    <div class="qa"><h3><span class="en">Q</span>하루에 몇 포가 적당할까요?</h3><p>1시간 내외 운동은 1포, 3~4시간 등산·라운딩은 2~4포 정도가 적당합니다.</p></div>
+    <div class="qa"><h3><span class="en">Q</span>꼭 물이랑 같이 먹어야 하나요?</h3><p>필수는 아니지만, 물 한두 모금과 함께 드시면 입안이 끈적이지 않고 훨씬 편안합니다.</p></div>
+    <div class="qa"><h3><span class="en">Q</span>카페인이 들어 있나요?</h3><p><span class="todo">원료 확인 후 입력</span></p></div>
+    <div class="qa"><h3><span class="en">Q</span>보관은 어떻게 하나요?</h3><p>직사광선을 피해 서늘한 곳에 보관하세요. 개봉 후에는 바로 드시는 것이 좋습니다.</p></div>
+  </section>
+
+  <!-- 12. 구성 -->
+  <section class="spec">
+    <span class="kicker">In The Box</span>
+    <h2 class="h" style="color:var(--black)">제품 구성</h2>
+    <div class="spec-wrap">
+      <img src="images/box.jpg" alt="HYPER GEL 박스">
+      <dl>
+        <div><dt>제품명</dt><dd>HYPER GEL</dd></div>
+        <div><dt>한 포 용량</dt><dd>40g</dd></div>
+        <div><dt>한 포 열량</dt><dd>130kcal</dd></div>
+        <div><dt>구성</dt><dd>1박스 · 10포</dd></div>
+        <div><dt>컬러</dt><dd>Navy · White · Lime</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="info">
+    <h2>상품 정보 제공 고시</h2>
+    <table>
+      <tr><th>제품명</th><td>U-CURE HYPER GEL (액티브 에너지 젤)</td></tr>
+      <tr><th>식품의 유형</th><td><span class="todo">입력 필요</span></td></tr>
+      <tr><th>내용량</th><td>40g × 10포 (400g) / 1포당 130kcal</td></tr>
+      <tr><th>원재료명 및 함량</th><td><span class="todo">입력 필요</span></td></tr>
+      <tr><th>영양성분</th><td>열량 130kcal · 탄수화물 <span class="todo">OOg</span> · 당류 <span class="todo">OOg</span> · 나트륨 <span class="todo">OOmg</span> · 칼륨 <span class="todo">OOmg</span></td></tr>
+      <tr><th>알레르기 유발물질</th><td><span class="todo">입력 필요</span></td></tr>
+      <tr><th>제조원 / 판매원</th><td><span class="todo">입력 필요</span> / 유큐어</td></tr>
+      <tr><th>소비기한</th><td>제품 별도 표기일까지</td></tr>
+      <tr><th>보관방법</th><td>직사광선을 피해 서늘하고 건조한 곳에 보관</td></tr>
+      <tr><th>소비자상담</th><td><span class="todo">입력 필요</span></td></tr>
+    </table>
+    <div class="caution">
+      <h3>섭취 시 주의사항</h3>
+      <ul>
+        <li>본 제품은 질병의 예방 및 치료를 위한 의약품이 아닙니다.</li>
+        <li>당뇨 등 혈당 관리가 필요하신 분은 섭취 전 전문가와 상담하세요.</li>
+        <li>특정 원료에 알레르기가 있는 분은 원재료명을 확인 후 섭취하세요.</li>
+        <li>개봉 시 절단면에 손을 다치지 않도록 주의하세요.</li>
+        <li>어린이의 손이 닿지 않는 곳에 보관하세요.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 13. 엔딩 -->
+  <section class="end stripes right" style="text-align:left">
+    <h2 class="big en"><span style="position:relative">GO</span><br><span class="l" style="position:relative">FURTHER.</span></h2>
+    <p>오늘 운동도, 끝까지.</p>
+    <p class="logo">U-CURE · HYPER GEL</p>
+  </section>
+
+</div>
+</body>
+</html>
