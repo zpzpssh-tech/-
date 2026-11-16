@@ -779,7 +779,7 @@ for (const id of ['st-q', 'st-part', 'st-status', 'st-win']) $(id).addEventListe
 $('st-export').addEventListener('click', async () => {
   const st = stockOf();
   const head = ['코드', '상품명', '부위', '옵션', '본사창고', '파스토', '보유', '입고예정', '하루판매', '남은일수', '발주점', '제안수량', '상태'];
-  const rows = [...st].map(([code, r]) => { const s = S.skus.get(code) || {}; return [code, s.name, s.part, s.option, r.hq, r.fassto, r.have, r.pending, r.daily.toFixed(2), r.days === Infinity ? '' : Math.round(r.days), r.point, r.suggest, STATUS[r.status][1]]; });
+  const rows = [...st].map(([code, r]) => { const s = S.skus.get(code) || {}; return [code, s.name, s.part, s.option, r.hq, r.fassto, r.have, r.pending, r.daily.toFixed(2), r.days === Infinity ? '' : Math.round(r.days), r.point, (r.status === 'bad' || r.status === 'warn') ? r.suggest : '', STATUS[r.status][1]]; });
   const csv = '﻿' + [head, ...rows].map((r) => r.map((c) => { const s = String(c ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(',')).join('\n');
   const dl = await window.claude?.use?.('downloads');
   if (!dl) { toast('이 화면에서는 파일 저장을 쓸 수 없습니다'); return; }
