@@ -9,6 +9,16 @@
  * 열은 항상 "맨 뒤에" 추가합니다. 예전 버전으로 만든 시트도 그대로 쓸 수 있습니다.
  */
 
+/* ---------- 처음 한 번: 시트 탭 만들기 ----------
+ * 편집기 위쪽 선택칸에서 'setup'을 고르고 ▶ 실행하세요.
+ * (이름 끝에 _ 가 붙은 함수는 내부용이라 선택칸에 나오지 않습니다) */
+function setup() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  PropertiesService.getScriptProperties().setProperty('SHEET_ID', ss.getId());
+  Object.values(TABS).forEach((t) => tab_(ss, t));
+  if (!rows_(TABS.PARTNER).length) append_(TABS.PARTNER, DEFAULT_PARTNERS.map((p) => [p[0], p[1], p[2], now_()]));
+  return '준비 완료: ' + ss.getName();
+}
 const TABS = {
   SKU: { name: 'SKU', head: ['코드', '상품명', '부위', '옵션', '안전재고', '리드타임(일)', '사용', '수정일', '기준원가', '소매가', '도매가'] },
   PARTNER: { name: '거래처', head: ['이름', '기본 단가', '메모', '수정일'] },
@@ -31,8 +41,8 @@ const DEFAULT_PARTNERS = [
   ['쿠팡 유큐어', '소매가', 'YCU'],
   ['도매 거래처', '도매가', '병원·센터 등 B2B'],
 ];
-const rev = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [v, k]));
-const MOVE_CODE = rev(MOVE_LABEL), LOC_CODE = rev(LOC_LABEL);
+const rev_ = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [v, k]));
+const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
 
 /* ---------- 웹페이지 열기 ---------- */
 function doGet() {
@@ -41,14 +51,6 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-/* ---------- 처음 한 번: 시트 탭 만들기 ---------- */
-function setup() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  PropertiesService.getScriptProperties().setProperty('SHEET_ID', ss.getId());
-  Object.values(TABS).forEach((t) => tab_(ss, t));
-  if (!rows_(TABS.PARTNER).length) append_(TABS.PARTNER, DEFAULT_PARTNERS.map((p) => [p[0], p[1], p[2], now_()]));
-  return '준비 완료: ' + ss.getName();
-}
 function book_() {
   const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
