@@ -164,6 +164,22 @@ function saveSkus(list) {
     return getData();
   });
 }
+/** SKU 삭제: 기록이 하나도 없는 SKU만 지울 수 있음 (있으면 '미사용'으로 숨기기) */
+function deleteSku(code) {
+  return withLock_(() => {
+    code = String(code || '').trim().toUpperCase();
+    const used = rows_(TABS.MOVE).filter((r) => str_(r[4]).toUpperCase() === code).length;
+    if (used) throw new Error(`${code}는 입출고 기록이 ${used}건 있어서 지울 수 없습니다. 수정에서 '사용 중' 체크를 풀어 숨겨 주세요.`);
+    const sh = tab_(book_(), TABS.SKU);
+    const vals = rows_(TABS.SKU);
+    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]).toUpperCase() === code) sh.deleteRow(i + 2);
+    // 이 SKU로 연결해 둔 주문서 연결도 함께 정리
+    const msh = tab_(book_(), TABS.MAP);
+    const mv = rows_(TABS.MAP);
+    for (let i = mv.length - 1; i >= 0; i--) if (str_(mv[i][2]).toUpperCase() === code) msh.deleteRow(i + 2);
+    return getData();
+  });
+}
 function savePartner(p, oldName) {
   return withLock_(() => {
     const name = String(p.name || '').trim();

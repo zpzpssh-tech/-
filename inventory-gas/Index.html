@@ -336,7 +336,8 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
         <button class="primary" id="it-save">저장</button>
       </div>
       <datalist id="part-list"><option>무릎</option><option>손목</option><option>허리</option><option>팔꿈치</option><option>발/발목</option><option>어깨/목</option><option>손가락</option><option>기타</option></datalist>
-      <p class="small muted" style="margin:0">여러 개를 한 번에 넣으려면 '엑셀' 탭 → 상품(SKU) 목록 불러오기를 쓰세요.</p>
+      <p class="small muted" style="margin:0">여러 개를 한 번에 넣으려면 '엑셀 불러오기/내보내기' → 상품(SKU) 목록 불러오기를 쓰세요.
+        <b>삭제</b>는 아래 목록의 '삭제' 버튼으로 합니다. 입출고 기록이 있는 SKU는 지난 기록을 지키기 위해 지울 수 없으니, '수정'에서 <b>사용 중</b> 체크를 풀어 숨기세요.</p>
     </div>
     <div class="panel">
       <h2>등록된 SKU</h2>
@@ -444,7 +445,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'stock', side: '', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -997,12 +998,17 @@ function renderItems() {
   else if (!S.skus.size) t.innerHTML = '<tr><td class="empty"><b>등록된 SKU가 없습니다</b>위 칸에 입력하거나 \'엑셀\' 탭에서 한 번에 불러오세요.</td></tr>';
   else {
     const list = [...S.skus.values()].sort((a, b) => (a.part || '').localeCompare(b.part || '') || a.code.localeCompare(b.code));
+    const used = new Set(S.moves.map((m) => m.sku));
     const c = (n) => `<td class="n">${n ? fmt(n) : '<span class="muted">—</span>'}</td>`;
     t.innerHTML = '<thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가</th><th class="n">소매가</th><th class="n">도매가</th><th class="n">안전재고</th><th class="n">리드타임</th><th>상태</th><th></th></tr></thead><tbody>' +
       list.map((s) => `<tr><td class="code">${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.part || '')}</td><td>${esc(s.option || '')}</td>
         ${c(s.cost)}${c(s.retail)}${c(s.wholesale)}<td class="n">${fmt(s.safety)}</td><td class="n">${fmt(s.lead)}일</td>
         <td>${s.active === false ? '<span class="pill mute">미사용</span>' : '<span class="pill ok">사용</span>'}</td>
-        <td>${S.canWrite ? `<button class="ghost" data-edit="${esc(s.code)}">수정</button>` : ''}</td></tr>`).join('') + '</tbody>';
+        <td>${!S.canWrite ? '' : S.confirmSku === s.code
+          ? `<span class="confirm">${esc(s.code)} 삭제할까요? <button class="danger sm" data-skudel="${esc(s.code)}">삭제</button><button class="ghost" data-skucancel>취소</button></span>`
+          : `<button class="ghost" data-edit="${esc(s.code)}">수정</button>` + (used.has(s.code)
+            ? `<span class="muted small" title="입출고 기록이 있는 SKU는 지울 수 없습니다. 수정에서 '사용 중'을 풀어 숨기세요"> 기록 있음</span>`
+            : `<button class="ghost" data-skuask="${esc(s.code)}">삭제</button>`)}</td></tr>`).join('') + '</tbody>';
   }
   const pt = $('pt-table');
   pt.innerHTML = !S.partners.size ? '<tr><td class="empty">등록된 거래처가 없습니다.</td></tr>' :
@@ -1306,7 +1312,16 @@ $('hi-table').addEventListener('click', (e) => {
 
 $('it-save').addEventListener('click', saveItem);
 $('it-cancel').addEventListener('click', () => fillItemForm(null));
-$('it-table').addEventListener('click', (e) => { const b = e.target.closest('[data-edit]'); if (!b) return; fillItemForm(S.skus.get(b.dataset.edit)); $('v-items').scrollIntoView({ behavior: 'smooth' }); });
+$('it-table').addEventListener('click', async (e) => {
+  const ed = e.target.closest('[data-edit]'), ask = e.target.closest('[data-skuask]'), del = e.target.closest('[data-skudel]'), cancel = e.target.closest('[data-skucancel]');
+  if (ed) { fillItemForm(S.skus.get(ed.dataset.edit)); $('v-items').scrollIntoView({ behavior: 'smooth' }); }
+  else if (ask) { S.confirmSku = ask.dataset.skuask; renderItems(); }
+  else if (cancel) { S.confirmSku = null; renderItems(); }
+  else if (del && guard()) {
+    const code = del.dataset.skudel; S.confirmSku = null;
+    try { applyData(await api('deleteSku', code)); toast(`${code}를 삭제했습니다`); if (S.editing === code) fillItemForm(null); } catch (err) { writeFail(err); renderItems(); }
+  }
+});
 $('pt-save').addEventListener('click', savePartner);
 $('pt-cancel').addEventListener('click', () => fillPartnerForm(null));
 $('pt-table').addEventListener('click', async (e) => {
