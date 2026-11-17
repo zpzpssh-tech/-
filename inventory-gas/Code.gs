@@ -245,11 +245,11 @@ function deleteMap(id) {
   });
 }
 /** 주문서 차감: 기록 + 새 연결 + 중복 방지용 서명을 한 번에 저장 */
-function applyUpload(list, newMaps, sig, file) {
+function applyUpload(list, newMaps, sig, file, label) {
   return withLock_(() => {
     const at = now_();
-    append_(TABS.MOVE, moveRows_(list, '주문서 차감'));
-    append_(TABS.UPLOAD, [[sig, file, list.reduce((a, m) => a - Number(m.qty), 0), at, me_()]]);
+    append_(TABS.MOVE, moveRows_(list, label || '주문서 차감'));
+    append_(TABS.UPLOAD, [[sig, file, list.filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(Number(m.qty)), 0), at, me_()]]);
     upsertMaps_(newMaps, at);
     return getData();
   });

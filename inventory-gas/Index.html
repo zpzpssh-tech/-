@@ -263,7 +263,7 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
       <a href="#home" data-view="home">홈</a>
       <a href="#stock" data-view="stock">재고 보기</a>
       <a href="#record" data-view="record">입출고 하기</a>
-      <a href="#upload" data-view="upload">주문서 출고</a>
+      <a href="#upload" data-view="upload">엑셀 입출고</a>
       <a href="#history" data-view="history">기록 보기</a>
       <div class="grp">관리</div>
       <a href="#cost" data-view="cost">원가·재고금액</a>
@@ -361,11 +361,12 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
   <section id="v-upload" class="view" hidden>
     <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>주문서 차감</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
-      <h2>주문서 엑셀로 한 번에 차감</h2>
-      <p class="small muted" style="margin:0">네이버·쿠팡(판매자배송)·기타몰 주문 엑셀(.xlsx/.csv)을 올리면 상품별 수량을 합쳐서 재고에서 뺍니다.
-        처음 보는 상품명·옵션은 SKU를 한 번만 골라 주면 다음부터 자동으로 연결됩니다.
+      <h2>엑셀로 한 번에 입출고</h2>
+      <div class="seg" id="up-mode" role="group" aria-label="입고/출고"><button type="button" data-upmode="out" aria-pressed="true">출고 · 주문서</button><button type="button" data-upmode="in" aria-pressed="false">입고 · 입고 내역</button></div>
+      <p class="small muted" style="margin:0" id="up-desc"></p>
+      <p class="small muted" style="margin:0">상품명·옵션은 <b>매칭 규칙</b>과 <b>연결표</b>로 자동 연결됩니다. 처음 보는 상품만 SKU를 한 번 골라 주면 다음부터 자동입니다.
         네이버 엑셀에 비밀번호가 걸려 있으면 엑셀에서 <b>다른 이름으로 저장</b>(비밀번호 없이)한 뒤 올려 주세요.</p>
-      <div class="row"><label class="f grow">주문서 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
+      <div class="row"><label class="f grow">엑셀 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
       <div id="up-body"></div>
     </div>
   </section>
@@ -548,7 +549,7 @@ const FORMS = {
   loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>. 평균원가 기준 금액이 조정손익(손실)으로 잡힙니다.' },
   count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록하고, 차이 금액을 조정손익에 반영합니다. <b>처음 시작할 때 시작 재고</b>도 여기서(또는 엑셀 탭에서) 넣으세요.' },
 };
-const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '주문서 출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
 const ICON = {
   in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
@@ -574,7 +575,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, rules: [], up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -736,7 +737,7 @@ function renderStock() {
 /* ---------- 홈 ---------- */
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
-    `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>주문서 출고</b><span>네이버·쿠팡 주문 엑셀로 일괄 출고</span></button>`;
+    `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>엑셀 입출고</b><span>주문서 출고 · 입고 내역 입고</span></button>`;
   if (!ready()) { $('hm-status').innerHTML = ''; $('hm-list').innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
   if (!S.skus.size) {
     $('hm-sub').textContent = '처음 시작하시나요? 아래 순서대로 하면 됩니다.';
@@ -1014,7 +1015,8 @@ function closeModal(val) {
 const KW = {
   name: ['상품명', '노출상품명', '등록상품명', '노출상품명(옵션명)', '제품명', '품명'],
   opt: ['옵션정보', '등록옵션명', '노출옵션명', '옵션명', '옵션'],
-  qty: ['수량', '구매수(수량)', '주문수량', '구매수량', '판매수량', '출고수량'],
+  qty: ['수량', '구매수(수량)', '주문수량', '구매수량', '판매수량', '출고수량', '입고수량', '입고 수량', '발주수량'],
+  price: ['입고단가', '매입단가', '매입가', '단가', '공급가', '원가'],
 };
 function guessCol(header, list) {
   const h = header.map((x) => norm(x));
@@ -1046,8 +1048,8 @@ function readOrders(file) {
     const hi = findHeader(aoa, [KW.name, KW.opt, KW.qty]);
     const header = (aoa[hi] || []).map((x, i) => norm(x) || `열 ${i + 1}`);
     S.up = { file: file.name, header, rows: aoa.slice(hi + 1).filter((r) => r.some((c) => norm(c))),
-      cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty),
-      date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
+      cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: guessCol(header, KW.price),
+      mode: S.upMode, date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
     renderUpload();
   }, (msg) => { S.up = null; $('up-body').innerHTML = `<div class="banner">${msg}</div>`; });
 }
@@ -1057,10 +1059,10 @@ function upGroups() {
   for (const r of u.rows) {
     const name = norm(r[u.cName]); if (!name) continue;
     const opt = u.cOpt >= 0 ? norm(r[u.cOpt]) : '';
-    const q = toNum(r[u.cQty]);
+    const q = toNum(r[u.cQty]), pr = u.cPrice >= 0 ? toNum(r[u.cPrice]) : 0;
     const key = opt ? `${name} ¦ ${opt}` : name;
-    const e = g.get(key) || { key, name, opt, qty: 0, rows: 0 };
-    e.qty += q; e.rows++; g.set(key, e);
+    const e = g.get(key) || { key, name, opt, qty: 0, rows: 0, amt: 0, pq: 0 };
+    e.qty += q; e.rows++; if (pr > 0) { e.amt += pr * q; e.pq += q; } g.set(key, e);
   }
   return [...g.values()].sort((a, b) => b.qty - a.qty);
 }
@@ -1071,7 +1073,9 @@ function matchRule(name, opt) {
 }
 function upResolve(e) {
   const u = S.up, mapped = S.maps.get(hash(e.key));
-  const rule = !mapped ? matchRule(e.name, e.opt) : null;
+  // 엑셀에 SKU 코드(예: BK-004-BK)가 그대로 적혀 있으면 바로 연결
+  const codeHit = !mapped ? (`${e.name} ${e.opt}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)) : null;
+  const rule = !mapped ? (codeHit ? { sku: codeHit, mult: 1 } : matchRule(e.name, e.opt)) : null;
   const base = mapped || (rule ? { sku: rule.sku, mult: rule.mult } : null);
   const sku = u.pick[e.key] ?? (base ? base.sku : '');
   const mult = u.mult[e.key] ?? (base ? base.mult : 1);
@@ -1086,7 +1090,7 @@ function upSummary() {
     else if (r.sku !== '__skip') per.set(r.sku, (per.get(r.sku) || 0) + e.qty * r.mult);
   }
   const total = [...per.values()].reduce((a, b) => a + b, 0);
-  const sig = hash(u.file + '|' + groups.map((e) => e.key + ':' + e.qty).join('|'));
+  const sig = hash(u.mode + '|' + u.file + '|' + groups.map((e) => e.key + ':' + e.qty).join('|'));
   return { groups, unresolved, per, total, sig, dup: S.uploads.get(sig) };
 }
 function updateUpload() {
@@ -1097,7 +1101,7 @@ function updateUpload() {
     const r = upResolve(e); td.innerHTML = r.sku && r.sku !== '__skip' ? fmt(e.qty * r.mult) : '<span class="muted">—</span>';
   });
   $('up-unres').innerHTML = m.unresolved ? `<b style="color:var(--bad)">아직 연결 안 된 ${m.unresolved}종류</b>의 SKU를 골라 주세요.` : '모두 연결됐습니다.';
-  $('up-total').innerHTML = `SKU ${fmt(m.per.size)}개 · 총 <b class="num">${fmt(m.total)}</b>개 차감 (${LOC[u.loc]})`;
+  $('up-total').innerHTML = `SKU ${fmt(m.per.size)}개 · 총 <b class="num">${fmt(m.total)}</b>개 ${u.mode === 'in' ? '입고' : '출고'} (${LOC[u.loc]})`;
   $('up-dup').hidden = !m.dup;
   if (m.dup) $('up-dupwhen').textContent = m.dup.at;
   $('up-apply').disabled = !S.canWrite || !m.per.size || m.unresolved > 0 || (m.dup && !u.dupOk);
@@ -1116,12 +1120,13 @@ function renderUpload() {
       <label class="f">옵션 열${colSel('up-copt', u.cOpt, true)}</label>
       <label class="f">수량 열${colSel('up-cqty', u.cQty)}</label>
       <label class="f">출고일<input type="date" id="up-date" value="${esc(u.date)}"></label>
-      <label class="f">어디서 나갔나요?<select id="up-loc"><option value="hq"${u.loc === 'hq' ? ' selected' : ''}>본사창고 (자사 발송)</option><option value="fassto"${u.loc === 'fassto' ? ' selected' : ''}>파스토 (N배송 주문)</option></select></label>
+      ${u.mode === 'in' ? `<label class="f">단가 열 (있으면)${colSel('up-cprice', u.cPrice, true)}</label>` : ''}
+      <label class="f">${u.mode === 'in' ? '어느 창고로 들어왔나요?' : '어디서 나갔나요?'}<select id="up-loc"><option value="hq"${u.loc === 'hq' ? ' selected' : ''}>본사창고${u.mode === 'in' ? '' : ' (자사 발송)'}</option><option value="fassto"${u.loc === 'fassto' ? ' selected' : ''}>파스토${u.mode === 'in' ? ' (공장에서 바로)' : ' (N배송 주문)'}</option></select></label>
     </div>
     ${u.cName < 0 || u.cQty < 0 ? '<div class="banner">상품명 열과 수량 열을 골라 주세요.</div>' : ''}
     <p class="small muted" style="margin:0"><b>${esc(u.file)}</b> · 주문 ${fmt(u.rows.length)}줄 → 상품·옵션 ${fmt(groups.length)}종류. <span id="up-unres"></span>
       <b>배수</b> = 주문 1개당 실제로 나가는 SKU 개수 (예: "2개 세트" 옵션이면 2).</p>
-    <div class="tablebox"><table><thead><tr><th>주문서 상품명 · 옵션</th><th class="n">주문 수량</th><th>SKU</th><th class="n">배수</th><th class="n">차감</th></tr></thead><tbody>
+    <div class="tablebox"><table><thead><tr><th>엑셀의 상품명 · 옵션</th><th class="n">${u.mode === 'in' ? '입고 수량' : '주문 수량'}</th><th>SKU</th><th class="n">배수</th><th class="n">${u.mode === 'in' ? '재고에 더함' : '재고에서 뺌'}</th></tr></thead><tbody>
       ${groups.map((e) => { const r = upResolve(e); return `<tr>
         <td class="wrapcell">${esc(e.name)}${e.opt ? `<br><span class="muted small">${esc(e.opt)}</span>` : ''}</td>
         <td class="n">${fmt(e.qty)}</td>
@@ -1136,7 +1141,7 @@ function renderUpload() {
       <label class="f"><span><input type="checkbox" id="up-remember"${u.remember ? ' checked' : ''}> 이번에 고른 연결을 기억하기</span></label>
       <span class="grow"></span>
       <span class="muted" id="up-total"></span>
-      <button class="primary" id="up-apply" disabled>재고에서 빼기</button>
+      <button class="primary" id="up-apply" disabled>${u.mode === 'in' ? '재고에 입고하기' : '재고에서 출고하기'}</button>
     </div>`;
   updateUpload();
 }
@@ -1150,15 +1155,32 @@ async function applyUpload() {
     const old = S.maps.get(hash(e.key));
     if (u.remember && (!old || old.sku !== r.sku || Number(old.mult) !== r.mult)) newMaps.push({ id: hash(e.key), key: e.key, sku: r.sku, mult: r.mult });
     if (r.sku === '__skip') continue;
-    const p = per.get(r.sku) || { qty: 0, rows: 0 };
-    p.qty += e.qty * r.mult; p.rows += e.rows; per.set(r.sku, p);
+    const p = per.get(r.sku) || { qty: 0, rows: 0, amt: 0, pq: 0 };
+    p.qty += e.qty * r.mult; p.rows += e.rows;
+    if (e.pq) { p.amt += e.amt; p.pq += e.pq * r.mult; }   // 묶음(배수)이면 개당 단가 = 금액 ÷ 실제 개수
+    per.set(r.sku, p);
   }
-  const type = u.loc === 'fassto' ? 'nsale' : 'ship';
-  const list = [...per].filter(([, p]) => p.qty > 0).map(([sku, p]) => ({ sku, loc: u.loc, qty: -p.qty, type, date: u.date || today(), memo: `${u.file} (${p.rows}건)` }));
+  const date = u.date || today(), memo = (p) => `${u.file} (${p.rows}건)`;
+  let list;
+  if (u.mode === 'in') {
+    const lg = ledger(stockWin());
+    list = [];
+    for (const [sku, p] of per) {
+      if (p.qty <= 0) continue;
+      const price = p.pq ? Math.round(p.amt / p.pq) : 0;
+      list.push({ sku, loc: u.loc, qty: p.qty, type: 'inbound', date, memo: memo(p), price });
+      const pend = (lg.get(sku) || {}).pending || 0;
+      if (pend > 0) list.push({ sku, loc: 'pending', qty: -Math.min(p.qty, pend), type: 'inbound', date, memo: memo(p), price });
+    }
+  } else {
+    const type = u.loc === 'fassto' ? 'nsale' : 'ship';
+    list = [...per].filter(([, p]) => p.qty > 0).map(([sku, p]) => ({ sku, loc: u.loc, qty: -p.qty, type, date, memo: memo(p) }));
+  }
   const btn = $('up-apply'); btn.disabled = true;
+  const units = list.filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(m.qty), 0);
   try {
-    applyData(await api('applyUpload', list, newMaps, $('up-body').dataset.sig, u.file));
-    toast(`${fmt(list.reduce((a, b) => a - b.qty, 0))}개 차감했습니다`);
+    applyData(await api('applyUpload', list, newMaps, $('up-body').dataset.sig, u.file, u.mode === 'in' ? '엑셀 입고' : '주문서 출고'));
+    toast(`${fmt(units)}개 ${u.mode === 'in' ? '입고' : '출고'}했습니다`);
     S.up = null; $('up-file').value = ''; renderUpload();
   } catch (e) { writeFail(e); btn.disabled = false; }
 }
@@ -1574,6 +1596,7 @@ $('up-body').addEventListener('change', (e) => {
   if (el.id === 'up-cname') u.cName = Number(el.value);
   else if (el.id === 'up-copt') u.cOpt = Number(el.value);
   else if (el.id === 'up-cqty') u.cQty = Number(el.value);
+  else if (el.id === 'up-cprice') u.cPrice = Number(el.value);
   else if (el.id === 'up-date') u.date = el.value;
   else if (el.id === 'up-loc') u.loc = el.value;
   else if (el.id === 'up-remember') u.remember = el.checked;
@@ -1581,9 +1604,19 @@ $('up-body').addEventListener('change', (e) => {
   else if (el.dataset.pick !== undefined) u.pick[el.dataset.pick] = el.value;
   else if (el.dataset.mult !== undefined) u.mult[el.dataset.mult] = Math.max(1, Number(el.value) || 1);
   else return;
-  if (el.id === 'up-cname' || el.id === 'up-copt' || el.id === 'up-cqty') renderUpload(); else updateUpload();
+  if (el.id === 'up-cname' || el.id === 'up-copt' || el.id === 'up-cqty' || el.id === 'up-cprice') renderUpload(); else updateUpload();
 });
 $('up-body').addEventListener('click', (e) => { if (e.target.id === 'up-apply') applyUpload(); });
+function setUpMode(mode) {
+  S.upMode = mode;
+  for (const b of document.querySelectorAll('[data-upmode]')) b.setAttribute('aria-pressed', String(b.dataset.upmode === mode));
+  $('up-desc').innerHTML = mode === 'in'
+    ? '공장 입고 내역 엑셀(상품명 · 옵션 · <b>입고수량</b>, 단가가 있으면 단가까지)을 올리면 상품별로 합쳐서 <b>재고에 더합니다</b>. 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄고, 단가가 있으면 원가도 다시 계산됩니다.'
+    : '네이버·쿠팡(판매자배송)·기타몰 <b>주문 엑셀</b>을 올리면 상품별 수량을 합쳐서 <b>재고에서 뺍니다</b>. 네이버 엑셀에 비밀번호가 걸려 있으면 엑셀에서 다른 이름으로 저장(비밀번호 없이)한 뒤 올려 주세요.';
+  if (S.up && S.up.mode !== mode) { S.up = null; $('up-file').value = ''; renderUpload(); }
+}
+$('up-mode').addEventListener('click', (e) => { const b = e.target.closest('[data-upmode]'); if (b) setUpMode(b.dataset.upmode); });
+setUpMode('out');
 
 $('st-q').addEventListener('input', renderStock);
 $('st-win').addEventListener('change', () => { refresh(); });
