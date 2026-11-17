@@ -597,7 +597,8 @@ function ledger(win) {
   const seen = new Set();
   for (const mv of [...S.moves].sort(cmpMove)) {
     const r = get(mv.sku), q = mv.qty, inWin = mv.date >= from;
-    const first = !seen.has(mv.sku + '|' + mv.loc); seen.add(mv.sku + '|' + mv.loc);
+    // 기초재고: 그 SKU·창고에 처음으로 들어온 플러스 수량 (출고를 먼저 적고 나중에 재고를 넣어도 손익으로 잡지 않음)
+    const key = mv.sku + '|' + mv.loc, first = q > 0 && !seen.has(key); if (q > 0) seen.add(key);
     if (mv.loc === 'pending') { r.pending += q; continue; }
     if (mv.type === 'fassto_out' || mv.type === 'fassto_in') { if (r[mv.loc] !== undefined) r[mv.loc] += q; continue; }
     const held = Math.max(r.hq + r.fassto, 0);
@@ -629,7 +630,9 @@ function ledger(win) {
     r.days = r.daily > 0 ? r.have / r.daily : Infinity;
     const need = r.daily * (lead + 60) + safety - r.avail;
     r.suggest = need > 0 ? Math.ceil(need / 50) * 50 : 0;
-    if (r.daily === 0 && r.avail > safety) r.status = 'none';
+    r.started = seen.has(code + '|hq') || seen.has(code + '|fassto');
+    if (!r.started && r.have <= 0) r.status = 'nostock';
+    else if (r.daily === 0 && r.avail > safety) r.status = 'none';
     else if (r.avail <= r.point) r.status = 'bad';
     else if (r.avail <= r.point * 1.3) r.status = 'warn';
     else r.status = 'ok';
@@ -637,7 +640,7 @@ function ledger(win) {
   LG = { key, map: m };
   return m;
 }
-const STATUS = { bad: ['bad', '지금 주문하세요'], warn: ['warn', '곧 주문하세요'], ok: ['ok', '충분해요'], none: ['mute', '판매 없음'] };
+const STATUS = { bad: ['bad', '지금 주문하세요'], warn: ['warn', '곧 주문하세요'], ok: ['ok', '충분해요'], none: ['mute', '판매 없음'], nostock: ['mute', '재고 미입력'] };
 const skuLabel = (code) => { const s = S.skus.get(code); return s ? `${code} · ${s.name}${s.option ? ' ' + s.option : ''}` : code; };
 const stockWin = () => Number($('st-win').value) || 60;
 
@@ -686,15 +689,15 @@ function stockRows(statusFilter, partFilter, q) {
     if (q && !(`${code} ${s.name} ${s.option || ''}`.toLowerCase().includes(q))) continue;
     rows.push({ code, s, r });
   }
-  const order = { bad: 0, warn: 1, ok: 2, none: 3 }, dn = (d) => (d === Infinity ? 1e12 : d);
+  const order = { bad: 0, warn: 1, ok: 2, none: 3, nostock: 4 }, dn = (d) => (d === Infinity ? 1e12 : d);
   return rows.sort((a, b) => order[a.r.status] - order[b.r.status] || dn(a.r.days) - dn(b.r.days) || a.code.localeCompare(b.code));
 }
 function statusCounts() {
-  const c = { bad: 0, warn: 0, ok: 0, neg: 0, all: 0 };
-  for (const { r } of stockRows('', '', '')) { c.all++; if (r.status === 'bad') c.bad++; else if (r.status === 'warn') c.warn++; else c.ok++; if (r.hq < 0 || r.fassto < 0) c.neg++; }
+  const c = { bad: 0, warn: 0, ok: 0, neg: 0, all: 0, nostock: 0 };
+  for (const { r } of stockRows('', '', '')) { c.all++; if (r.status === 'nostock') { c.nostock++; continue; } if (r.status === 'bad') c.bad++; else if (r.status === 'warn') c.warn++; else c.ok++; if (r.hq < 0 || r.fassto < 0) c.neg++; }
   return c;
 }
-const daysWord = (r) => (r.have < 0 ? '재고가 마이너스예요 · 빠진 기록이 있는지 확인하세요' : r.daily === 0 ? '최근 판매가 없어요' : r.days > 365 ? '1년 넘게 버틸 수 있어요' : `약 ${fmt(r.days)}일 버틸 수 있어요`);
+const daysWord = (r) => (r.status === 'nostock' ? (r.sold || r.have < 0 ? `아직 재고를 안 넣었어요 · 출고 ${fmt(-r.have)}개 기록됨` : '아직 재고를 안 넣었어요') : r.have < 0 ? '재고가 마이너스예요 · 빠진 기록이 있는지 확인하세요' : r.daily === 0 ? '최근 판매가 없어요' : r.days > 365 ? '1년 넘게 버틸 수 있어요' : `약 ${fmt(r.days)}일 버틸 수 있어요`);
 function stockCard({ code, s, r }) {
   const lead = Number(s.lead) || 50;
   const pct = r.have <= 0 ? 2 : r.days === Infinity ? 100 : Math.max(4, Math.min(100, (r.days / (lead * 2)) * 100));
@@ -711,7 +714,7 @@ function stockCard({ code, s, r }) {
 function renderStock() {
   const parts = [...new Set([...S.skus.values()].filter((x) => x.active !== false).map((x) => x.part).filter(Boolean))].sort();
   const cnt = ready() ? statusCounts() : { bad: 0, warn: 0, ok: 0, all: 0 };
-  $('st-status').innerHTML = [['', `전체 ${cnt.all}`], ['bad', `지금 주문 ${cnt.bad}`], ['warn', `곧 주문 ${cnt.warn}`], ['ok', `충분 ${cnt.ok}`]]
+  $('st-status').innerHTML = [['', `전체 ${cnt.all}`], ['bad', `지금 주문 ${cnt.bad}`], ['warn', `곧 주문 ${cnt.warn}`], ['ok', `충분 ${cnt.ok}`], ...(cnt.nostock ? [['nostock', `재고 미입력 ${cnt.nostock}`]] : [])]
     .map(([k, l]) => `<button type="button" class="chip" data-ststatus="${k}" aria-pressed="${k === S.stStatus}">${l}</button>`).join('');
   $('st-part').innerHTML = parts.length ? ['', ...parts].map((p) => `<button type="button" class="chip" data-stpart="${esc(p)}" aria-pressed="${p === S.stPart}">${p ? esc(p) : '모든 부위'}</button>`).join('') : '';
   for (const b of document.querySelectorAll('[data-stmode]')) b.setAttribute('aria-pressed', String(b.dataset.stmode === S.stMode));
@@ -749,7 +752,7 @@ function renderHome() {
     return;
   }
   const c = statusCounts();
-  $('hm-sub').textContent = `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
+  $('hm-sub').textContent = `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.nostock ? ` · 재고를 아직 안 넣은 상품 ${c.nostock}개 (재고 실사로 넣어 주세요)` : '') + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
   $('hm-status').innerHTML = `
     <button type="button" class="stile bad" data-stfilter="bad"><b>${fmt(c.bad)}</b><span class="t">지금 주문하세요</span><span class="d">공장 주문이 늦으면 품절돼요</span></button>
     <button type="button" class="stile warn" data-stfilter="warn"><b>${fmt(c.warn)}</b><span class="t">곧 주문하세요</span><span class="d">주문 시점이 가까워요</span></button>
