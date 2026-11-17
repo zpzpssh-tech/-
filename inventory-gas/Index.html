@@ -204,7 +204,7 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
 .tile[aria-pressed="true"] b { color: var(--accent); }
 .tile.minor { min-height: 0; border-style: dashed; }
 .seg.sub { padding: 10px; background: var(--sunken); border-radius: 10px; }
-.seg.sub::before { content: "어디로 / 어떻게?"; width: 100%; font-size: 12px; font-weight: 700; color: var(--muted); }
+.seg.sub::before { content: "세부 구분"; width: 100%; font-size: 12px; font-weight: 700; color: var(--muted); }
 .step { display: flex; align-items: center; gap: 10px; }
 .stepno { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -263,7 +263,7 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
       <a href="#home" data-view="home">홈</a>
       <a href="#stock" data-view="stock">재고 보기</a>
       <a href="#record" data-view="record">입출고 하기</a>
-      <a href="#upload" data-view="upload">주문서로 한 번에 빼기</a>
+      <a href="#upload" data-view="upload">주문서 출고</a>
       <a href="#history" data-view="history">기록 보기</a>
       <div class="grp">관리</div>
       <a href="#cost" data-view="cost">원가·재고금액</a>
@@ -296,7 +296,7 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
     <div class="hero"><h2>오늘의 재고</h2><p class="muted small" id="hm-sub">재고를 불러오는 중…</p></div>
     <div class="status3" id="hm-status"></div>
     <div class="panel">
-      <h2>무엇을 기록할까요?</h2>
+      <h2>입출고 등록</h2>
       <div class="tiles" id="hm-actions"></div>
     </div>
     <div class="panel">
@@ -332,25 +332,25 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
   <section id="v-record" class="view" hidden>
     <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고 하기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
-      <div class="step"><span class="stepno">1</span><h2>무슨 일이 있었나요?</h2></div>
+      <div class="step"><span class="stepno">1</span><h2>구분</h2></div>
       <div class="tiles" id="rc-groups"></div>
       <div class="seg sub" id="rc-sub" hidden></div>
       <div class="explain" id="rc-explain"></div>
       <div class="row">
         <label class="f">날짜<input type="date" id="rc-date"></label>
-        <label class="f" id="rc-loc-wrap" hidden>어느 창고?<select id="rc-loc"></select></label>
-        <label class="f" id="rc-partner-wrap" hidden>어디에 팔았나요?<select id="rc-partner"></select></label>
-        <label class="f grow">메모 (안 적어도 돼요)<input id="rc-memo" placeholder="예: 쿠팡 PO 140927859, 중국 11월 발주분"></label>
+        <label class="f" id="rc-loc-wrap" hidden>창고<select id="rc-loc"></select></label>
+        <label class="f" id="rc-partner-wrap" hidden>거래처<select id="rc-partner"></select></label>
+        <label class="f grow">메모 (선택)<input id="rc-memo" placeholder="예: 쿠팡 PO 140927859, 중국 11월 발주분"></label>
       </div>
     </div>
     <div class="panel">
-      <div class="step"><span class="stepno">2</span><h2>어떤 상품인가요?</h2><span class="muted small">누르면 아래에 담겨요</span></div>
+      <div class="step"><span class="stepno">2</span><h2>상품 선택</h2><span class="muted small">눌러서 선택</span></div>
       <input id="pk-q" placeholder="상품 이름, 옵션, 코드로 찾기">
       <div class="chips" id="pk-parts"></div>
       <div class="picklist" id="pk-list"></div>
     </div>
     <div class="panel">
-      <div class="step"><span class="stepno">3</span><h2 id="rc-step3">몇 개인가요?</h2></div>
+      <div class="step"><span class="stepno">3</span><h2 id="rc-step3">수량</h2></div>
       <div class="lines" id="rc-lines"></div>
       <div class="savebar"><div class="totals" id="rc-totals"></div><button class="primary big" id="rc-save">기록하기</button></div>
     </div>
@@ -535,7 +535,7 @@ const FORMS = {
   loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>. 평균원가 기준 금액이 조정손익(손실)으로 잡힙니다.' },
   count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록하고, 차이 금액을 조정손익에 반영합니다. <b>처음 시작할 때 시작 재고</b>도 여기서(또는 엑셀 탭에서) 넣으세요.' },
 };
-const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '주문서로 한 번에 빼기', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '주문서 출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
 const ICON = {
   in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
@@ -546,13 +546,13 @@ const ICON = {
 };
 // 큰 버튼 5개 → 그 안의 세부 종류
 const GROUPS = {
-  in: { label: '물건이 들어왔어요', sub: '공장에서 입고', icon: 'in', forms: ['inbound'] },
-  out: { label: '물건이 나갔어요', sub: '로켓 · 거래처 · 직접 발송', icon: 'out', forms: ['rocket', 'b2b', 'ship', 'loss'] },
-  move: { label: '파스토로 보냈어요', sub: '창고 이동 (판매 아님)', icon: 'move', forms: ['fassto'] },
-  count: { label: '재고를 세어봤어요', sub: '창고 실사 · 파스토 확인', icon: 'count', forms: ['count', 'nsale'] },
-  etc: { label: '그 밖에', sub: '공장 주문 · 반품', icon: 'etc', forms: ['order', 'return'] },
+  in: { label: '입고', sub: '공장 물건 도착', icon: 'in', forms: ['inbound'] },
+  out: { label: '출고', sub: '로켓 · 거래처 · 직접 발송 · 불량', icon: 'out', forms: ['rocket', 'b2b', 'ship', 'loss'] },
+  move: { label: '파스토 이동', sub: '본사창고 → 파스토 (판매 아님)', icon: 'move', forms: ['fassto'] },
+  count: { label: '재고 실사', sub: '창고 실사 · 파스토 재고 반영', icon: 'count', forms: ['count', 'nsale'] },
+  etc: { label: '기타', sub: '발주 등록 · 반품 입고', icon: 'etc', forms: ['order', 'return'] },
 };
-const SUBLABEL = { inbound: '공장 입고', rocket: '쿠팡 로켓에 납품', b2b: '거래처에 판매', ship: '직접 발송 · 샘플', loss: '불량 · 폐기', fassto: '파스토로 이동', count: '창고에서 직접 셈', nsale: '파스토 화면 숫자 입력', order: '공장에 주문했어요', return: '반품이 들어왔어요' };
+const SUBLABEL = { inbound: '공장 입고', rocket: '로켓 출고', b2b: '거래처 출고', ship: '개별 출고', loss: '불량·폐기', fassto: '파스토 이동', count: '창고 실사', nsale: '파스토 재고 반영', order: '발주 등록', return: '반품 입고' };
 const groupOf = (form) => Object.keys(GROUPS).find((k) => GROUPS[k].forms.includes(form)) || 'in';
 
 const S = {
@@ -723,14 +723,14 @@ function renderStock() {
 /* ---------- 홈 ---------- */
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
-    `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>주문서로 한 번에 빼기</b><span>네이버·쿠팡 주문 엑셀</span></button>`;
+    `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>주문서 출고</b><span>네이버·쿠팡 주문 엑셀로 일괄 출고</span></button>`;
   if (!ready()) { $('hm-status').innerHTML = ''; $('hm-list').innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
   if (!S.skus.size) {
     $('hm-sub').textContent = '처음 시작하시나요? 아래 순서대로 하면 됩니다.';
     $('hm-status').innerHTML = '';
     $('hm-list-title').textContent = '처음 시작하기';
     $('hm-list').innerHTML = `<div class="card"><b>① 상품 등록</b><span class="muted small">기존 재고 엑셀을 올리거나 상품을 하나씩 추가</span><a href="#excel">엑셀로 올리기 →</a><a href="#items">하나씩 추가 →</a></div>
-      <div class="card"><b>② 지금 재고 넣기</b><span class="muted small">창고에서 세어본 수량을 입력</span><a href="#record" data-gogroup="count">재고 세어 넣기 →</a></div>
+      <div class="card"><b>② 지금 재고 넣기</b><span class="muted small">창고에서 세어본 수량을 입력</span><a href="#record" data-gogroup="count">재고 실사로 넣기 →</a></div>
       <div class="card"><b>③ 매일 기록</b><span class="muted small">들어오고 나갈 때마다 큰 버튼으로 기록</span></div>`;
     return;
   }
@@ -756,10 +756,10 @@ function openSku(code) {
     <div class="locgrid"><div><b>${fmt(r.hq)}</b><span>본사창고</span></div><div><b>${fmt(r.fassto)}</b><span>파스토</span></div><div><b>${fmt(r.pending)}</b><span>오는 중</span></div></div>
     <p class="small" style="margin:12px 0">하루 평균 <b>${r.daily ? r.daily.toFixed(1) : 0}개</b> 팔리고, 보유+오는 중이 <b>${fmt(r.point)}개</b> 아래로 내려가면 주문할 때예요.${(r.status === 'bad' || r.status === 'warn') && r.suggest ? ` 추천 주문량은 <b>${fmt(r.suggest)}개</b>입니다.` : ''}</p>
     <div class="qbtns" style="margin-bottom:12px">
-      <button class="primary" data-quick="inbound" data-code="${esc(code)}">들어왔어요</button>
-      <button data-quick="rocket" data-code="${esc(code)}">나갔어요</button>
-      <button data-quick="count" data-code="${esc(code)}">세어봤어요</button>
-      ${(r.status === 'bad' || r.status === 'warn') ? `<button data-quick="order" data-code="${esc(code)}" data-qty="${r.suggest || ''}">공장에 주문 등록</button>` : ''}
+      <button class="primary" data-quick="inbound" data-code="${esc(code)}">입고</button>
+      <button data-quick="rocket" data-code="${esc(code)}">출고</button>
+      <button data-quick="count" data-code="${esc(code)}">실사</button>
+      ${(r.status === 'bad' || r.status === 'warn') ? `<button data-quick="order" data-code="${esc(code)}" data-qty="${r.suggest || ''}">발주 등록</button>` : ''}
     </div>
     <div class="small muted" style="font-weight:700;margin-bottom:6px">최근 기록</div>
     <div class="tablebox" style="max-height:240px"><table>${recent.length ? '<thead><tr><th>날짜</th><th>무슨 일</th><th>창고</th><th class="n">수량</th></tr></thead><tbody>' +
@@ -806,7 +806,7 @@ function renderForm() {
   else lw.hidden = true;
   $('rc-partner-wrap').hidden = f.price !== 'sell';
   if (f.price === 'sell') { $('rc-partner').value = ''; renderPartnerSelect(); if (f.partner && S.partners.has(f.partner)) $('rc-partner').value = f.partner; }
-  $('rc-step3').textContent = f.mode === 'count' ? '세어본 수량을 입력하세요' : '몇 개인가요?';
+  $('rc-step3').textContent = f.mode === 'count' ? '실사 수량' : '수량';
   $('rc-save').textContent = f.mode === 'count' ? '재고 맞추기' : `${SUBLABEL[S.form]} 기록하기`;
   // 세기 ↔ 일반 수량이 바뀌면 수량을 새로 채움
   if (S.prevMode !== f.mode) { const st = ready() ? ledger(stockWin()) : new Map(); S.lines.forEach((ln) => { ln.q = f.mode === 'count' ? String(Math.max(0, (st.get(parseSku(ln.v)) || {})[formLoc()] || 0)) : '1'; }); S.prevMode = f.mode; }
@@ -913,7 +913,7 @@ function renderTotals() {
   }
   const el = $('rc-totals');
   if (!n) { el.innerHTML = '<span>상품을 담아 주세요</span>'; return; }
-  if (f.mode === 'count') { el.innerHTML = `<span>상품 <b>${n}</b>개를 세어본 수량으로 맞춰요</span>`; return; }
+  if (f.mode === 'count') { el.innerHTML = `<span>상품 <b>${n}</b>개를 실사 수량으로 맞춥니다</span>`; return; }
   el.innerHTML = `<span>상품 <b>${n}</b>개 · 모두 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b></span>` : '') +
     (f.price === 'sell' && amt ? `<span>예상 이익 <b>${won(profit)}</b> (평균원가 기준)</span>` : '');
 }
@@ -955,7 +955,7 @@ async function saveRecord() {
     applyData(await api('addMoves', out, FORMS[S.form].label));
     S.lines = []; $('rc-memo').value = '';
     renderLines(); renderPicker();
-    toast(FORMS[S.form].mode === 'count' ? '세어본 수량으로 재고를 맞췄어요' : `${SUBLABEL[S.form]} 기록했어요`);
+    toast(FORMS[S.form].mode === 'count' ? '실사 수량으로 재고를 맞췄습니다' : `${SUBLABEL[S.form]} 기록했습니다`);
   } catch (e) { writeFail(e); }
   finally { btn.disabled = !S.canWrite; }
 }
