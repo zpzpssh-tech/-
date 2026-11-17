@@ -183,6 +183,74 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
   .view > :not(.vhead) { margin: 0 12px; }
   .loc { padding: 6px 8px; } .loc b { font-size: 15px; } .loc span { font-size: 11px; }
 }
+/* ===== 쉬운 화면 ===== */
+.hero h2 { font-size: 18px; }
+.hero p { margin: 4px 0 0; }
+.status3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stile { text-align: left; height: auto; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 2px; cursor: pointer; }
+.stile b { font-size: 30px; font-weight: 800; line-height: 1.1; }
+.stile .t { font-size: 14px; font-weight: 700; }
+.stile .d { font-size: 12px; color: var(--muted); font-weight: 500; }
+.stile.bad { background: var(--bad-soft); border-color: transparent; } .stile.bad b, .stile.bad .t { color: var(--bad); }
+.stile.warn { background: var(--warn-soft); border-color: transparent; } .stile.warn b, .stile.warn .t { color: var(--warn); }
+.stile.ok { background: var(--ok-soft); border-color: transparent; } .stile.ok b, .stile.ok .t { color: var(--ok); }
+.stile:hover { filter: brightness(.98); background-image: none; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tile { height: auto; min-height: 96px; padding: 14px; border-radius: 12px; display: grid; gap: 4px; justify-items: start; align-content: start; text-align: left; border: 1.5px solid var(--line); background: var(--surface); }
+.tile svg { width: 26px; height: 26px; color: var(--accent); }
+.tile b { font-size: 15px; font-weight: 700; }
+.tile span { font-size: 12px; color: var(--muted); font-weight: 500; }
+.tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.tile[aria-pressed="true"] b { color: var(--accent); }
+.tile.minor { min-height: 0; border-style: dashed; }
+.seg.sub { padding: 10px; background: var(--sunken); border-radius: 10px; }
+.seg.sub::before { content: "어디로 / 어떻게?"; width: 100%; font-size: 12px; font-weight: 700; color: var(--muted); }
+.step { display: flex; align-items: center; gap: 10px; }
+.stepno { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { height: 30px; padding: 0 12px; border-radius: 999px; font-weight: 500; font-size: 13px; }
+.chip[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--surface); }
+.picklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 360px; overflow-y: auto; padding: 2px; }
+.pick { height: auto; text-align: left; display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; position: relative; }
+.pick .pname { font-weight: 700; }
+.pick .popt { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.pick .pstock { font-size: 12px; color: var(--muted); font-weight: 500; }
+.pick .pin { position: absolute; top: 8px; right: 10px; font-size: 11.5px; color: var(--accent); font-weight: 700; }
+.pick.on { border-color: var(--accent); background: var(--accent-soft); }
+.line.cart { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; gap: 10px 14px; }
+.cname { flex: 1 1 220px; min-width: 0; }
+.cname b { font-size: 14px; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.stepper button { border: 0; border-radius: 0; width: 38px; height: 38px; padding: 0; font-size: 18px; background: var(--sunken); }
+.stepper input { border: 0; border-radius: 0; width: 84px; height: 38px; text-align: center; font-size: 16px; font-weight: 700; }
+.savebar { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0 2px; background: var(--surface); border-top: 1px solid var(--line); }
+.savebar .totals { flex: 1 1 200px; }
+button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.card { height: auto; text-align: left; display: grid; gap: 6px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); font-weight: 400; border-left: 4px solid var(--line-strong); }
+.card.st-bad { border-left-color: var(--bad); } .card.st-warn { border-left-color: var(--warn); } .card.st-ok { border-left-color: var(--ok); }
+.card:hover { background: var(--surface); box-shadow: var(--shadow); }
+.ctop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card .cname b { font-size: 14.5px; }
+.cbig { font-size: 13px; color: var(--muted); }
+.cbig b { font-size: 26px; font-weight: 800; color: var(--fg); letter-spacing: -0.02em; margin-right: 2px; }
+.gauge { height: 8px; background: var(--sunken); border-radius: 99px; overflow: hidden; }
+.gauge i { display: block; height: 100%; border-radius: 99px; background: var(--ok); }
+.st-bad .gauge i { background: var(--bad); } .st-warn .gauge i { background: var(--warn); } .st-none .gauge i { background: var(--line-strong); }
+.cdays { font-size: 13px; font-weight: 600; }
+.cloc { font-size: 12px; color: var(--muted); }
+.csug { font-size: 12.5px; background: var(--sunken); border-radius: 6px; padding: 5px 8px; }
+.viewtoggle { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.viewtoggle button { border: 0; border-radius: 0; height: 32px; }
+.viewtoggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.modal.wide { width: min(600px, 100%); text-align: left; }
+.modal.wide h3 { text-align: left; }
+.locgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.locgrid div { background: var(--sunken); border-radius: 10px; padding: 10px 12px; }
+.locgrid b { display: block; font-size: 20px; font-weight: 800; }
+.locgrid span { font-size: 12px; color: var(--muted); }
+.qbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 600px) { .status3 { grid-template-columns: 1fr; } .stile b { font-size: 24px; } .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .picklist { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { button, nav.tabs a { transition: background .12s, color .12s, border-color .12s; } }
 </style>
 </head>
@@ -191,11 +259,12 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
   <aside class="sidebar">
     <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1></div>
     <nav class="tabs" id="tabs">
-      <div class="grp">업무</div>
-      <a href="#stock" data-view="stock">재고 현황</a>
-      <a href="#record" data-view="record">입출고 기록</a>
-      <a href="#upload" data-view="upload">주문서 차감</a>
-      <a href="#history" data-view="history">기록 내역</a>
+      <div class="grp">매일 쓰는 것</div>
+      <a href="#home" data-view="home">홈</a>
+      <a href="#stock" data-view="stock">재고 보기</a>
+      <a href="#record" data-view="record">입출고 하기</a>
+      <a href="#upload" data-view="upload">주문서로 한 번에 빼기</a>
+      <a href="#history" data-view="history">기록 보기</a>
       <div class="grp">관리</div>
       <a href="#cost" data-view="cost">원가·재고금액</a>
       <a href="#items" data-view="items">상품·거래처</a>
@@ -221,48 +290,71 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
   <div id="banner" hidden></div>
 
   <div class="work" id="work">
-  <!-- 재고 현황 -->
-  <section id="v-stock" class="view">
-    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>재고 현황</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
-    <div class="kpis" id="kpis"></div>
+  <!-- 홈 -->
+  <section id="v-home" class="view" hidden>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>홈</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div class="hero"><h2>오늘의 재고</h2><p class="muted small" id="hm-sub">재고를 불러오는 중…</p></div>
+    <div class="status3" id="hm-status"></div>
     <div class="panel">
-      <div class="row">
-        <label class="f grow">검색<input id="st-q" placeholder="코드, 상품명, 옵션"></label>
-        <label class="f">부위<select id="st-part"></select></label>
-        <label class="f">상태<select id="st-status"><option value="">전체</option><option value="bad">발주 필요</option><option value="warn">주의</option><option value="ok">여유</option><option value="none">판매 없음</option></select></label>
-        <label class="f">판매속도 기준<select id="st-win"><option value="30">최근 30일</option><option value="60" selected>최근 60일</option><option value="90">최근 90일</option></select></label>
-      </div>
-      <div class="tablebox"><table id="st-table"></table></div>
-      <p class="small muted" style="margin:0">
-        <b>보유</b> = 본사창고 + 파스토 · <b>입고예정</b> = 발주했지만 아직 안 온 수량 ·
-        <b>발주점</b> = 하루 판매량 × 리드타임 + 안전재고. 보유+입고예정이 발주점 아래면 '발주 필요', <b>제안 수량</b>은 도착 후 60일 판매분까지 채우는 양(50개 단위).
-        로켓 센터 재고는 쿠팡 소유라 넣지 않습니다.
-      </p>
+      <h2>무엇을 기록할까요?</h2>
+      <div class="tiles" id="hm-actions"></div>
+    </div>
+    <div class="panel">
+      <div class="row"><h2 class="grow" id="hm-list-title">주문이 필요한 상품</h2><a href="#stock" class="small">전체 재고 보기 →</a></div>
+      <div class="cards" id="hm-list"></div>
     </div>
   </section>
 
-  <!-- 입출고 기록 -->
-  <section id="v-record" class="view" hidden>
-    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고 기록</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+  <!-- 재고 보기 -->
+  <section id="v-stock" class="view" hidden>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>재고 보기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
-      <h2>무슨 일이 있었나요?</h2>
-      <div class="seg" id="rc-types"></div>
+      <div class="row">
+        <input id="st-q" class="grow" placeholder="상품 이름, 옵션, 코드로 찾기">
+        <div class="viewtoggle" role="group" aria-label="보기 방식"><button type="button" data-stmode="card" aria-pressed="true">카드로 보기</button><button type="button" data-stmode="table" aria-pressed="false">표로 보기</button></div>
+      </div>
+      <div class="chips" id="st-status"></div>
+      <div class="chips" id="st-part"></div>
+      <div id="st-cards" class="cards"></div>
+      <div class="tablebox" id="st-tablebox" hidden><table id="st-table"></table></div>
+      <details class="small muted">
+        <summary>숫자는 이렇게 계산해요</summary>
+        <p><b>보유</b> = 본사창고 + 파스토 (지금 팔 수 있는 수량). <b>오는 중</b> = 공장에 주문했지만 아직 안 온 수량.<br>
+        <b>버틸 수 있는 날</b> = 보유 ÷ 하루 평균 판매량. 판매량은
+        <select id="st-win" style="height:26px;padding:0 6px"><option value="30">최근 30일</option><option value="60" selected>최근 60일</option><option value="90">최근 90일</option></select> 기준입니다.<br>
+        <b>지금 주문하세요</b> = 보유+오는 중이 "하루 판매량 × 리드타임(주문~입고 일수) + 안전재고"보다 적을 때. <b>추천 주문량</b>은 도착 후 60일 판매분까지 채우는 양(50개 단위)입니다.
+        로켓 센터 재고는 쿠팡 소유라 넣지 않습니다.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- 입출고 하기 -->
+  <section id="v-record" class="view" hidden>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고 하기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div class="panel">
+      <div class="step"><span class="stepno">1</span><h2>무슨 일이 있었나요?</h2></div>
+      <div class="tiles" id="rc-groups"></div>
+      <div class="seg sub" id="rc-sub" hidden></div>
       <div class="explain" id="rc-explain"></div>
       <div class="row">
         <label class="f">날짜<input type="date" id="rc-date"></label>
-        <label class="f" id="rc-loc-wrap" hidden>위치<select id="rc-loc"></select></label>
-        <label class="f" id="rc-partner-wrap" hidden>거래처<select id="rc-partner"></select></label>
-        <label class="f grow">메모 (선택)<input id="rc-memo" placeholder="예: 쿠팡 PO 140927859, 중국 11월 발주분"></label>
+        <label class="f" id="rc-loc-wrap" hidden>어느 창고?<select id="rc-loc"></select></label>
+        <label class="f" id="rc-partner-wrap" hidden>어디에 팔았나요?<select id="rc-partner"></select></label>
+        <label class="f grow">메모 (안 적어도 돼요)<input id="rc-memo" placeholder="예: 쿠팡 PO 140927859, 중국 11월 발주분"></label>
       </div>
-      <div class="lines" id="rc-lines"></div>
-      <div class="totals" id="rc-totals"></div>
-      <div class="row">
-        <button id="rc-add">+ 상품 줄 추가</button>
-        <span class="grow"></span>
-        <button class="primary" id="rc-save">기록하기</button>
-      </div>
-      <datalist id="sku-list"></datalist>
     </div>
+    <div class="panel">
+      <div class="step"><span class="stepno">2</span><h2>어떤 상품인가요?</h2><span class="muted small">누르면 아래에 담겨요</span></div>
+      <input id="pk-q" placeholder="상품 이름, 옵션, 코드로 찾기">
+      <div class="chips" id="pk-parts"></div>
+      <div class="picklist" id="pk-list"></div>
+    </div>
+    <div class="panel">
+      <div class="step"><span class="stepno">3</span><h2 id="rc-step3">몇 개인가요?</h2></div>
+      <div class="lines" id="rc-lines"></div>
+      <div class="savebar"><div class="totals" id="rc-totals"></div><button class="primary big" id="rc-save">기록하기</button></div>
+    </div>
+    <datalist id="sku-list"></datalist>
   </section>
 
   <!-- 주문서 업로드 -->
@@ -394,6 +486,12 @@ tfoot td { font-weight: 700; background: var(--sunken); border-top: 1px solid va
     <div class="md-btns" id="md-btns"></div>
   </div>
 </div>
+<div class="modal-bg" id="skumodal" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="sk-title">
+    <div class="row"><h3 id="sk-title" class="grow"></h3><button class="ghost" id="sk-close" aria-label="닫기">닫기 ✕</button></div>
+    <div id="sk-body"></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -426,8 +524,8 @@ const MOVE = {
 };
 const SALES = new Set(['rocket', 'b2b', 'ship', 'nsale']);
 const FORMS = {
-  inbound: { label: '입고', mode: 'qty', price: 'buy', text: '공장 물건이 <b>본사창고에 도착</b>했을 때. 본사창고에 더하고, 발주 등록해 둔 입고예정 수량이 있으면 그만큼 자동으로 뺍니다. <b>입고단가</b>(개당 매입원가, 운송비 포함)를 넣으면 평균원가가 다시 계산됩니다.' },
-  order: { label: '발주 등록', mode: 'qty', price: 'buy', text: '공장에 <b>생산 주문을 넣었을 때</b>. 아직 창고엔 없지만 \'입고예정\'으로 잡아 둬야 중복 발주를 막을 수 있습니다.' },
+  inbound: { label: '입고', mode: 'qty', price: 'buy', text: '공장 물건이 <b>본사창고에 도착</b>했을 때. 본사창고에 더해지고, 공장에 주문해 둔 '오는 중' 수량은 자동으로 줄어듭니다. <b>개당 매입가</b>(운송비 포함)를 넣으면 원가가 자동으로 다시 계산돼요.' },
+  order: { label: '발주 등록', mode: 'qty', price: 'buy', text: '공장에 <b>생산 주문을 넣었을 때</b>. 아직 창고엔 없지만 \'오는 중\'으로 잡아 두면 같은 상품을 두 번 주문하는 실수를 막을 수 있어요.' },
   fassto: { label: '파스토 보내기', mode: 'qty', text: '본사창고에서 <b>파스토(N배송)로 옮길 때</b>. 판매가 아니라 창고 이동입니다: 본사창고 −, 파스토 +.' },
   rocket: { label: '로켓 출고', mode: 'qty', price: 'sell', partner: '쿠팡 로켓배송', text: '쿠팡 <b>로켓 센터로 납품</b>할 때. 입고되면 쿠팡이 산 물건이라 본사창고에서 빼고 끝냅니다. 공급단가는 직전 납품가가 자동으로 들어갑니다.' },
   b2b: { label: '거래처 출고', mode: 'qty', price: 'sell', partner: '', text: '병원·센터·도매처 등 <b>거래처에 판매</b>할 때. 거래처와 상품을 고르면 <b>그 거래처에 직전에 판 단가</b>가 자동으로 들어가고, 처음이면 소매가/도매가 중 고르게 물어봅니다.' },
@@ -437,14 +535,32 @@ const FORMS = {
   loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>. 평균원가 기준 금액이 조정손익(손실)으로 잡힙니다.' },
   count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록하고, 차이 금액을 조정손익에 반영합니다. <b>처음 시작할 때 시작 재고</b>도 여기서(또는 엑셀 탭에서) 넣으세요.' },
 };
-const VIEWS = { stock: '재고 현황', record: '입출고 기록', upload: '주문서 차감', history: '기록 내역', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '주문서로 한 번에 빼기', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', excel: '엑셀 불러오기/내보내기' };
+const ICON = {
+  in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
+  out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
+  move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
+  count: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 13l2 2 4-4"/></svg>',
+  etc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></svg>',
+  sheet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg>',
+};
+// 큰 버튼 5개 → 그 안의 세부 종류
+const GROUPS = {
+  in: { label: '물건이 들어왔어요', sub: '공장에서 입고', icon: 'in', forms: ['inbound'] },
+  out: { label: '물건이 나갔어요', sub: '로켓 · 거래처 · 직접 발송', icon: 'out', forms: ['rocket', 'b2b', 'ship', 'loss'] },
+  move: { label: '파스토로 보냈어요', sub: '창고 이동 (판매 아님)', icon: 'move', forms: ['fassto'] },
+  count: { label: '재고를 세어봤어요', sub: '창고 실사 · 파스토 확인', icon: 'count', forms: ['count', 'nsale'] },
+  etc: { label: '그 밖에', sub: '공장 주문 · 반품', icon: 'etc', forms: ['order', 'return'] },
+};
+const SUBLABEL = { inbound: '공장 입고', rocket: '쿠팡 로켓에 납품', b2b: '거래처에 판매', ship: '직접 발송 · 샘플', loss: '불량 · 폐기', fassto: '파스토로 이동', count: '창고에서 직접 셈', nsale: '파스토 화면 숫자 입력', order: '공장에 주문했어요', return: '반품이 들어왔어요' };
+const groupOf = (form) => Object.keys(GROUPS).find((k) => GROUPS[k].forms.includes(form)) || 'in';
 
 const S = {
   me: '', appUrl: '', canWrite: true, ver: 0,
   skus: new Map(), partners: new Map(), moves: [], maps: new Map(), uploads: new Map(),
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
-  view: 'stock', side: '', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
+  view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
   editing: null, editingPartner: null, confirmSku: null, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
@@ -507,7 +623,7 @@ function ledger(win) {
   LG = { key, map: m };
   return m;
 }
-const STATUS = { bad: ['bad', '발주 필요'], warn: ['warn', '주의'], ok: ['ok', '여유'], none: ['mute', '판매 없음'] };
+const STATUS = { bad: ['bad', '지금 주문하세요'], warn: ['warn', '곧 주문하세요'], ok: ['ok', '충분해요'], none: ['mute', '판매 없음'] };
 const skuLabel = (code) => { const s = S.skus.get(code); return s ? `${code} · ${s.name}${s.option ? ' ' + s.option : ''}` : code; };
 const stockWin = () => Number($('st-win').value) || 60;
 
@@ -521,7 +637,7 @@ function writeFail(e) {
   toast(msg && msg.length < 90 ? msg : '저장하지 못했습니다. 잠시 후 다시 시도해 주세요');
 }
 function applyWriteState() {
-  for (const id of ['rc-save', 'rc-add', 'it-save', 'pt-save']) $(id).disabled = !S.canWrite;
+  for (const id of ['rc-save', 'it-save', 'pt-save']) $(id).disabled = !S.canWrite;
   if (!S.canWrite) banner('보기 전용 권한입니다. 기록하려면 대표님께 재고DB 시트의 \'편집자\' 권한을 요청하세요.');
 }
 function xlsxDownload(filename, sheetName, aoa) {
@@ -541,55 +657,122 @@ function renderLocs() {
   $('locs').innerHTML = `
     <div class="loc"><b>${v(hq)}</b><span>본사창고</span></div>
     <div class="loc"><b>${v(fa)}</b><span>파스토 (N배송)</span></div>
-    <div class="loc"><b>${v(pe)}</b><span>입고예정</span></div>
+    <div class="loc"><b>${v(pe)}</b><span>오는 중</span></div>
     <div class="loc"><b>${ready() ? fmt(val / 10000) : '—'}<span style="font-size:12px">만원</span></b><span>재고금액</span></div>`;
 }
 
 /* ---------- 재고 현황 ---------- */
-function renderStock() {
-  const parts = [...new Set([...S.skus.values()].map((s) => s.part).filter(Boolean))].sort();
-  const sel = $('st-part'), cur = sel.value;
-  sel.innerHTML = '<option value="">전체</option>' + parts.map((p) => `<option${p === cur ? ' selected' : ''}>${esc(p)}</option>`).join('');
-  const t = $('st-table');
-  if (!ready()) { $('kpis').innerHTML = ''; t.innerHTML = `<tr><td class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</td></tr>`; return; }
-  const st = ledger(stockWin());
-  const q = norm($('st-q').value).toLowerCase(), part = sel.value, stf = $('st-status').value;
-  let nBad = 0, nWarn = 0, nNeg = 0, nActive = 0;
-  const rows = [];
+function stockRows(statusFilter, partFilter, q) {
+  const st = ledger(stockWin()), rows = [];
   for (const [code, r] of st) {
     const s = S.skus.get(code) || { name: '(등록 안 된 SKU)', part: '', option: '' };
     if (s.active === false && r.avail === 0) continue;
-    nActive++;
-    if (r.status === 'bad') nBad++; if (r.status === 'warn') nWarn++;
-    if (r.hq < 0 || r.fassto < 0) nNeg++;
-    if (part && s.part !== part) continue;
-    if (stf && r.status !== stf) continue;
-    if (q && !(`${code} ${s.name} ${s.option}`.toLowerCase().includes(q))) continue;
+    if (partFilter && s.part !== partFilter) continue;
+    if (statusFilter === 'ok' ? !(r.status === 'ok' || r.status === 'none') : statusFilter && r.status !== statusFilter) continue;
+    if (q && !(`${code} ${s.name} ${s.option || ''}`.toLowerCase().includes(q))) continue;
     rows.push({ code, s, r });
   }
   const order = { bad: 0, warn: 1, ok: 2, none: 3 }, dn = (d) => (d === Infinity ? 1e12 : d);
-  rows.sort((a, b) => order[a.r.status] - order[b.r.status] || dn(a.r.days) - dn(b.r.days) || a.code.localeCompare(b.code));
-  $('kpis').innerHTML = `
-    <div class="kpi"><b>${fmt(nActive)}</b><span>관리 중인 SKU</span></div>
-    <div class="kpi ${nBad ? 'bad' : ''}"><b>${fmt(nBad)}</b><span>발주 필요</span></div>
-    <div class="kpi ${nWarn ? 'warn' : ''}"><b>${fmt(nWarn)}</b><span>주의 (발주점 근접)</span></div>
-    <div class="kpi ${nNeg ? 'bad' : ''}"><b>${fmt(nNeg)}</b><span>마이너스 재고 (기록 누락 의심)</span></div>`;
-  if (!S.skus.size) { t.innerHTML = `<tr><td class="empty"><b>아직 등록된 상품이 없습니다</b>'엑셀' 탭에서 기존 재고표를 불러오거나, '상품·거래처' 탭에서 SKU를 등록하세요.</td></tr>`; return; }
+  return rows.sort((a, b) => order[a.r.status] - order[b.r.status] || dn(a.r.days) - dn(b.r.days) || a.code.localeCompare(b.code));
+}
+function statusCounts() {
+  const c = { bad: 0, warn: 0, ok: 0, neg: 0, all: 0 };
+  for (const { r } of stockRows('', '', '')) { c.all++; if (r.status === 'bad') c.bad++; else if (r.status === 'warn') c.warn++; else c.ok++; if (r.hq < 0 || r.fassto < 0) c.neg++; }
+  return c;
+}
+const daysWord = (r) => (r.have < 0 ? '재고가 마이너스예요 · 빠진 기록이 있는지 확인하세요' : r.daily === 0 ? '최근 판매가 없어요' : r.days > 365 ? '1년 넘게 버틸 수 있어요' : `약 ${fmt(r.days)}일 버틸 수 있어요`);
+function stockCard({ code, s, r }) {
+  const lead = Number(s.lead) || 50;
+  const pct = r.have <= 0 ? 2 : r.days === Infinity ? 100 : Math.max(4, Math.min(100, (r.days / (lead * 2)) * 100));
+  return `<button type="button" class="card st-${r.status}" data-sku="${esc(code)}">
+    <div class="ctop"><span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span><span class="code">${esc(code)}</span></div>
+    <div class="cname"><b>${esc(s.name)}</b> <span class="muted">${esc(s.option || '')}</span></div>
+    <div class="cbig"><b>${fmt(r.have)}</b>개 있어요</div>
+    <div class="gauge" aria-hidden="true"><i style="width:${pct}%"></i></div>
+    <div class="cdays">${daysWord(r)}</div>
+    <div class="cloc">본사 ${fmt(r.hq)} · 파스토 ${fmt(r.fassto)}${r.pending ? ` · 오는 중 ${fmt(r.pending)}` : ''}</div>
+    ${(r.status === 'bad' || r.status === 'warn') && r.suggest ? `<div class="csug">추천 주문량 <b>${fmt(r.suggest)}개</b></div>` : ''}
+  </button>`;
+}
+function renderStock() {
+  const parts = [...new Set([...S.skus.values()].filter((x) => x.active !== false).map((x) => x.part).filter(Boolean))].sort();
+  const cnt = ready() ? statusCounts() : { bad: 0, warn: 0, ok: 0, all: 0 };
+  $('st-status').innerHTML = [['', `전체 ${cnt.all}`], ['bad', `지금 주문 ${cnt.bad}`], ['warn', `곧 주문 ${cnt.warn}`], ['ok', `충분 ${cnt.ok}`]]
+    .map(([k, l]) => `<button type="button" class="chip" data-ststatus="${k}" aria-pressed="${k === S.stStatus}">${l}</button>`).join('');
+  $('st-part').innerHTML = parts.length ? ['', ...parts].map((p) => `<button type="button" class="chip" data-stpart="${esc(p)}" aria-pressed="${p === S.stPart}">${p ? esc(p) : '모든 부위'}</button>`).join('') : '';
+  for (const b of document.querySelectorAll('[data-stmode]')) b.setAttribute('aria-pressed', String(b.dataset.stmode === S.stMode));
+  const cards = $('st-cards'), tb = $('st-tablebox'), t = $('st-table');
+  cards.hidden = S.stMode !== 'card'; tb.hidden = S.stMode !== 'table';
+  if (!ready()) { cards.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; cards.hidden = false; tb.hidden = true; return; }
+  if (!S.skus.size) { cards.innerHTML = `<div class="empty"><b>아직 등록된 상품이 없어요</b>'엑셀 불러오기/내보내기'에서 기존 재고표를 올리거나, '상품·거래처'에서 상품을 추가하세요.</div>`; cards.hidden = false; tb.hidden = true; return; }
+  const rows = stockRows(S.stStatus, S.stPart, norm($('st-q').value).toLowerCase());
+  if (S.stMode === 'card') { cards.innerHTML = rows.length ? rows.map(stockCard).join('') : '<div class="empty">조건에 맞는 상품이 없어요.</div>'; return; }
   const dd = (d) => (d === Infinity ? '—' : d > 999 ? '999+' : fmt(d));
-  t.innerHTML = `<thead><tr><th>상태</th><th>코드</th><th>상품</th><th class="n">본사창고</th><th class="n">파스토</th><th class="n">보유</th><th class="n">입고예정</th><th class="n">하루 판매</th><th class="n">남은 일수</th><th class="n">발주점</th><th class="n">제안 수량</th></tr></thead><tbody>` +
-    (rows.length ? rows.map(({ code, s, r }) => `<tr>
-      <td><span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span></td>
-      <td class="code">${esc(code)}</td>
-      <td>${esc(s.name)} <span class="muted">${esc(s.option || '')}</span>${s.active === false ? ' <span class="pill mute">미사용</span>' : ''}</td>
-      <td class="n ${r.hq < 0 ? 'neg' : ''}">${fmt(r.hq)}</td>
-      <td class="n ${r.fassto < 0 ? 'neg' : ''}">${fmt(r.fassto)}</td>
-      <td class="n"><b>${fmt(r.have)}</b></td>
-      <td class="n">${r.pending ? fmt(r.pending) : '<span class="muted">0</span>'}</td>
-      <td class="n">${r.daily ? r.daily.toFixed(1) : '<span class="muted">0</span>'}</td>
-      <td class="n">${dd(r.days)}</td>
-      <td class="n">${fmt(r.point)}</td>
-      <td class="n">${r.suggest && (r.status === 'bad' || r.status === 'warn') ? '<b>' + fmt(r.suggest) + '</b>' : '<span class="muted">—</span>'}</td>
-    </tr>`).join('') : `<tr><td colspan="11" class="empty">조건에 맞는 SKU가 없습니다.</td></tr>`) + '</tbody>';
+  t.innerHTML = `<thead><tr><th>상태</th><th>코드</th><th>상품</th><th class="n">본사창고</th><th class="n">파스토</th><th class="n">보유</th><th class="n">오는 중</th><th class="n">하루 평균 판매</th><th class="n">버틸 수 있는 날</th><th class="n">주문할 시점</th><th class="n">추천 주문량</th></tr></thead><tbody>` +
+    (rows.length ? rows.map(({ code, s, r }) => `<tr data-sku="${esc(code)}" style="cursor:pointer">
+      <td><span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span></td><td class="code">${esc(code)}</td>
+      <td>${esc(s.name)} <span class="muted">${esc(s.option || '')}</span></td>
+      <td class="n ${r.hq < 0 ? 'neg' : ''}">${fmt(r.hq)}</td><td class="n ${r.fassto < 0 ? 'neg' : ''}">${fmt(r.fassto)}</td>
+      <td class="n"><b>${fmt(r.have)}</b></td><td class="n">${r.pending ? fmt(r.pending) : '<span class="muted">0</span>'}</td>
+      <td class="n">${r.daily ? r.daily.toFixed(1) : '<span class="muted">0</span>'}</td><td class="n">${dd(r.days)}일</td>
+      <td class="n" title="보유+오는 중이 이 수량 아래로 내려가면 주문">${fmt(r.point)}개 이하</td>
+      <td class="n">${r.suggest && (r.status === 'bad' || r.status === 'warn') ? '<b>' + fmt(r.suggest) + '</b>' : '<span class="muted">—</span>'}</td></tr>`).join('')
+      : `<tr><td colspan="11" class="empty">조건에 맞는 상품이 없어요.</td></tr>`) + '</tbody>';
+}
+
+/* ---------- 홈 ---------- */
+function renderHome() {
+  $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
+    `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>주문서로 한 번에 빼기</b><span>네이버·쿠팡 주문 엑셀</span></button>`;
+  if (!ready()) { $('hm-status').innerHTML = ''; $('hm-list').innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
+  if (!S.skus.size) {
+    $('hm-sub').textContent = '처음 시작하시나요? 아래 순서대로 하면 됩니다.';
+    $('hm-status').innerHTML = '';
+    $('hm-list-title').textContent = '처음 시작하기';
+    $('hm-list').innerHTML = `<div class="card"><b>① 상품 등록</b><span class="muted small">기존 재고 엑셀을 올리거나 상품을 하나씩 추가</span><a href="#excel">엑셀로 올리기 →</a><a href="#items">하나씩 추가 →</a></div>
+      <div class="card"><b>② 지금 재고 넣기</b><span class="muted small">창고에서 세어본 수량을 입력</span><a href="#record" data-gogroup="count">재고 세어 넣기 →</a></div>
+      <div class="card"><b>③ 매일 기록</b><span class="muted small">들어오고 나갈 때마다 큰 버튼으로 기록</span></div>`;
+    return;
+  }
+  const c = statusCounts();
+  $('hm-sub').textContent = `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
+  $('hm-status').innerHTML = `
+    <button type="button" class="stile bad" data-stfilter="bad"><b>${fmt(c.bad)}</b><span class="t">지금 주문하세요</span><span class="d">공장 주문이 늦으면 품절돼요</span></button>
+    <button type="button" class="stile warn" data-stfilter="warn"><b>${fmt(c.warn)}</b><span class="t">곧 주문하세요</span><span class="d">주문 시점이 가까워요</span></button>
+    <button type="button" class="stile ok" data-stfilter="ok"><b>${fmt(c.ok)}</b><span class="t">충분해요</span><span class="d">당분간 걱정 없어요</span></button>`;
+  const need = stockRows('', '', '').filter((x) => x.r.status === 'bad' || x.r.status === 'warn').slice(0, 9);
+  $('hm-list-title').textContent = need.length ? '주문이 필요한 상품' : '주문이 필요한 상품이 없어요';
+  $('hm-list').innerHTML = need.length ? need.map(stockCard).join('') : '<div class="empty">모든 상품이 충분해요. 들어오고 나갈 때 위 버튼으로 기록만 해 주세요.</div>';
+}
+
+/* ---------- 상품 상세 ---------- */
+function openSku(code) {
+  const s = S.skus.get(code); if (!s) return;
+  const r = ledger(stockWin()).get(code) || {};
+  const recent = S.moves.filter((m) => m.sku === code && m.type !== 'fassto_in').sort((a, b) => -cmpMove(a, b)).slice(0, 8);
+  $('sk-title').innerHTML = `${esc(s.name)} <span class="muted" style="font-weight:500">${esc(s.option || '')}</span>`;
+  $('sk-body').innerHTML = `
+    <div class="small muted" style="margin-bottom:10px"><span class="code">${esc(code)}</span> · <span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span> ${daysWord(r)}</div>
+    <div class="locgrid"><div><b>${fmt(r.hq)}</b><span>본사창고</span></div><div><b>${fmt(r.fassto)}</b><span>파스토</span></div><div><b>${fmt(r.pending)}</b><span>오는 중</span></div></div>
+    <p class="small" style="margin:12px 0">하루 평균 <b>${r.daily ? r.daily.toFixed(1) : 0}개</b> 팔리고, 보유+오는 중이 <b>${fmt(r.point)}개</b> 아래로 내려가면 주문할 때예요.${(r.status === 'bad' || r.status === 'warn') && r.suggest ? ` 추천 주문량은 <b>${fmt(r.suggest)}개</b>입니다.` : ''}</p>
+    <div class="qbtns" style="margin-bottom:12px">
+      <button class="primary" data-quick="inbound" data-code="${esc(code)}">들어왔어요</button>
+      <button data-quick="rocket" data-code="${esc(code)}">나갔어요</button>
+      <button data-quick="count" data-code="${esc(code)}">세어봤어요</button>
+      ${(r.status === 'bad' || r.status === 'warn') ? `<button data-quick="order" data-code="${esc(code)}" data-qty="${r.suggest || ''}">공장에 주문 등록</button>` : ''}
+    </div>
+    <div class="small muted" style="font-weight:700;margin-bottom:6px">최근 기록</div>
+    <div class="tablebox" style="max-height:240px"><table>${recent.length ? '<thead><tr><th>날짜</th><th>무슨 일</th><th>창고</th><th class="n">수량</th></tr></thead><tbody>' +
+      recent.map((m) => `<tr><td>${esc(m.date)}</td><td>${esc(MOVE[m.type] || m.type)}${m.partner ? ' · ' + esc(m.partner) : ''}</td><td>${LOC[m.loc] || ''}</td><td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td></tr>`).join('') + '</tbody>'
+      : '<tbody><tr><td class="empty">아직 기록이 없어요</td></tr></tbody>'}</table></div>`;
+  $('skumodal').hidden = false;
+}
+function closeSku() { $('skumodal').hidden = true; }
+function startRecord(form, code, qty) {
+  S.form = form; S.lines = [];
+  location.hash = '#record';
+  renderForm();
+  if (code) { addToCart(code); if (qty) { S.lines[0].q = String(qty); renderLines(); } }
 }
 
 /* ---------- 입출고 기록 ---------- */
@@ -602,28 +785,63 @@ function formLoc() { const f = FORMS[S.form]; return f.fixedLoc || (f.locs ? $('
 function curPartner() { return FORMS[S.form].price === 'sell' ? $('rc-partner').value : ''; }
 
 function setupRecord() {
-  $('rc-types').innerHTML = Object.entries(FORMS).map(([k, f]) => `<button type="button" data-form="${k}" aria-pressed="${k === S.form}">${f.label}</button>`).join('');
   $('rc-date').value = today();
-  S.lines = [newLine(), newLine()];
+  S.lines = [];
   renderForm();
 }
 function renderPartnerSelect() {
   const f = FORMS[S.form], sel = $('rc-partner');
   const want = sel.value || f.partner || '';
-  sel.innerHTML = '<option value="">— 거래처 선택 —</option>' + [...S.partners.values()].map((p) => `<option${p.name === want ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">— 골라 주세요 —</option>' + [...S.partners.values()].map((p) => `<option${p.name === want ? ' selected' : ''}>${esc(p.name)}</option>`).join('');
 }
 function renderForm() {
-  const f = FORMS[S.form];
-  for (const b of $('rc-types').querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.form === S.form));
+  const f = FORMS[S.form], g = groupOf(S.form);
+  $('rc-groups').innerHTML = Object.entries(GROUPS).map(([k, G]) => `<button type="button" class="tile${k === 'etc' ? ' minor' : ''}" data-group="${k}" aria-pressed="${k === g}">${ICON[G.icon]}<b>${G.label}</b><span>${G.sub}</span></button>`).join('');
+  const forms = GROUPS[g].forms;
+  $('rc-sub').hidden = forms.length < 2;
+  $('rc-sub').innerHTML = forms.map((k) => `<button type="button" data-form="${k}" aria-pressed="${k === S.form}">${SUBLABEL[k]}</button>`).join('');
   $('rc-explain').innerHTML = f.text;
   const lw = $('rc-loc-wrap');
   if (f.locs) { lw.hidden = false; const cur = $('rc-loc').value; $('rc-loc').innerHTML = f.locs.map((l) => `<option value="${l}"${l === cur ? ' selected' : ''}>${LOC[l]}</option>`).join(''); }
   else lw.hidden = true;
   $('rc-partner-wrap').hidden = f.price !== 'sell';
   if (f.price === 'sell') { $('rc-partner').value = ''; renderPartnerSelect(); if (f.partner && S.partners.has(f.partner)) $('rc-partner').value = f.partner; }
+  $('rc-step3').textContent = f.mode === 'count' ? '세어본 수량을 입력하세요' : '몇 개인가요?';
+  $('rc-save').textContent = f.mode === 'count' ? '재고 맞추기' : `${SUBLABEL[S.form]} 기록하기`;
+  // 세기 ↔ 일반 수량이 바뀌면 수량을 새로 채움
+  if (S.prevMode !== f.mode) { const st = ready() ? ledger(stockWin()) : new Map(); S.lines.forEach((ln) => { ln.q = f.mode === 'count' ? String(Math.max(0, (st.get(parseSku(ln.v)) || {})[formLoc()] || 0)) : '1'; }); S.prevMode = f.mode; }
   S.lines.forEach((ln) => { ln.p = ''; ln.src = ''; });
   S.lines.forEach((_, i) => fillPrice(i, false));
-  renderLines();
+  renderLines(); renderPicker();
+}
+function renderPicker() {
+  const list = $('pk-list');
+  if (!ready()) { list.innerHTML = '<div class="empty">불러오는 중…</div>'; return; }
+  const active = [...S.skus.values()].filter((x) => x.active !== false);
+  if (!active.length) { list.innerHTML = '<div class="empty"><b>등록된 상품이 없어요</b><a href="#items">상품·거래처</a>나 <a href="#excel">엑셀 불러오기</a>에서 먼저 추가해 주세요.</div>'; $('pk-parts').innerHTML = ''; return; }
+  const parts = [...new Set(active.map((x) => x.part).filter(Boolean))].sort();
+  $('pk-parts').innerHTML = parts.length ? ['', ...parts].map((p) => `<button type="button" class="chip" data-pkpart="${esc(p)}" aria-pressed="${p === S.pkPart}">${p ? esc(p) : '전체'}</button>`).join('') : '';
+  const q = norm($('pk-q').value).toLowerCase(), st = ledger(stockWin()), loc = formLoc();
+  const inCart = new Map(S.lines.map((ln) => [parseSku(ln.v), ln]));
+  const found = active.filter((x) => (!S.pkPart || x.part === S.pkPart) && (!q || `${x.code} ${x.name} ${x.option || ''}`.toLowerCase().includes(q)))
+    .sort((a, b) => (a.part || '').localeCompare(b.part || '') || a.name.localeCompare(b.name) || (a.option || '').localeCompare(b.option || ''));
+  list.innerHTML = found.length ? found.slice(0, 80).map((x) => {
+    const r = st.get(x.code) || {}, c = inCart.get(x.code);
+    return `<button type="button" class="pick${c ? ' on' : ''}" data-add="${esc(x.code)}"><span class="pname">${esc(x.name)}</span><span class="popt">${esc(x.option || '옵션 없음')}</span><span class="pstock">${LOC[loc]}에 ${fmt(r[loc] || 0)}개</span>${c ? `<span class="pin">담김 ✓</span>` : ''}</button>`;
+  }).join('') + (found.length > 80 ? `<div class="empty">${found.length - 80}개 더 있어요. 검색어로 좁혀 주세요.</div>` : '')
+    : '<div class="empty">찾는 상품이 없어요. 다른 이름으로 찾아보세요.</div>';
+}
+function addToCart(code) {
+  const f = FORMS[S.form];
+  let i = S.lines.findIndex((ln) => parseSku(ln.v) === code);
+  if (i >= 0) { if (f.mode !== 'count') S.lines[i].q = String(toNum(S.lines[i].q) + 1); }
+  else {
+    const cur = ready() ? (ledger(stockWin()).get(code) || {})[formLoc()] || 0 : 0;
+    S.lines.push({ v: skuLabel(code), q: f.mode === 'count' ? String(Math.max(0, cur)) : '1', p: '', src: '' });
+    i = S.lines.length - 1;
+    fillPrice(i, true);
+  }
+  renderLines(); renderPicker();
 }
 function lastBuyPrice(code) { return S.lastBuy.get(code) || null; }
 function fillPrice(i, interactive) {
@@ -652,8 +870,8 @@ function lineHint(ln, st, loc) {
   if (!code) return '';
   const r = st.get(code) || { hq: 0, fassto: 0, pending: 0, unit: 0 };
   const cur = r[loc] ?? 0;
-  if (f.mode === 'count' && ln.q !== '') return `장부 ${fmt(cur)} → 실제 ${fmt(ln.q)} (<b>${signed(Number(ln.q) - cur)}</b>)`;
-  let h = `${LOC[loc]} 현재 ${fmt(cur)}` + (S.form === 'inbound' && r.pending ? ` · 입고예정 ${fmt(r.pending)}` : '');
+  if (f.mode === 'count' && ln.q !== '') { const d = Number(ln.q) - cur; return `장부에는 ${fmt(cur)}개 → ` + (d ? `<b>${d > 0 ? fmt(d) + '개 더 있음' : fmt(-d) + '개 모자람'}</b>` : '<b>딱 맞아요</b>'); }
+  let h = `${LOC[loc]}에 지금 ${fmt(cur)}개` + (S.form === 'inbound' && r.pending ? ` · 오는 중 ${fmt(r.pending)}개` : '');
   const p = toNum(ln.p);
   if (f.price === 'sell' && p > 0 && r.unit > 0) h += ` · 마진 ${Math.round(((p - r.unit) / p) * 100)}%`;
   if (f.price === 'buy' && r.unit > 0) h += ` · 현재 평균원가 ${won(r.unit)}`;
@@ -662,13 +880,16 @@ function lineHint(ln, st, loc) {
 function renderLines() {
   const f = FORMS[S.form];
   const st = ready() ? ledger(stockWin()) : new Map(), loc = formLoc();
-  $('rc-lines').innerHTML = S.lines.map((ln, i) => `<div class="line" data-i="${i}">
-      <input class="sku" list="sku-list" placeholder="SKU 코드나 상품명 입력 후 목록에서 선택" value="${esc(ln.v)}" data-k="v" id="ln-v-${i}">
-      <input type="number" min="0" placeholder="${f.mode === 'count' ? '실제 수량' : '수량'}" value="${esc(ln.q)}" data-k="q" id="ln-q-${i}">
-      ${f.price ? `<input class="money" type="number" min="0" placeholder="${f.price === 'sell' ? '판매단가' : '입고단가'}" value="${esc(ln.p)}" data-k="p" id="ln-p-${i}"><span class="tag" id="ln-t-${i}" ${ln.src ? '' : 'hidden'}>${esc(ln.src)}</span>` : ''}
-      <span class="hint" id="ln-h-${i}">${lineHint(ln, st, loc)}</span>
-      <button class="ghost" data-del="${i}" aria-label="줄 삭제">✕</button>
-    </div>`).join('');
+  if (!S.lines.length) { $('rc-lines').innerHTML = '<div class="empty"><b>아직 담은 상품이 없어요</b>위 목록에서 상품을 누르면 여기에 담겨요.</div>'; renderTotals(); return; }
+  $('rc-lines').innerHTML = S.lines.map((ln, i) => {
+    const code = parseSku(ln.v), sk = S.skus.get(code) || {};
+    return `<div class="line cart" data-i="${i}">
+      <div class="cname"><b>${esc(sk.name || ln.v)}</b> <span class="muted">${esc(sk.option || '')}</span><div class="hint" id="ln-h-${i}">${lineHint(ln, st, loc)}</div></div>
+      <div class="stepper"><button type="button" data-step="-1" aria-label="하나 빼기">−</button><input type="number" min="0" inputmode="numeric" placeholder="${f.mode === 'count' ? '센 수량' : '수량'}" value="${esc(ln.q)}" data-k="q" id="ln-q-${i}" aria-label="수량"><button type="button" data-step="1" aria-label="하나 더하기">+</button></div>
+      ${f.price ? `<label class="f">${f.price === 'sell' ? '개당 판매가' : '개당 매입가'}<span style="display:flex;gap:6px;align-items:center"><input class="money" type="number" min="0" placeholder="원" value="${esc(ln.p)}" data-k="p" id="ln-p-${i}"><span class="tag" id="ln-t-${i}" ${ln.src ? '' : 'hidden'}>${esc(ln.src)}</span></span></label>` : ''}
+      <button class="ghost" data-del="${i}" aria-label="빼기">✕</button>
+    </div>`;
+  }).join('');
   renderTotals();
 }
 function syncLine(i) {
@@ -691,8 +912,9 @@ function renderTotals() {
     const r = st.get(code); if (f.price === 'sell' && p && r) profit += (p - r.unit) * q;
   }
   const el = $('rc-totals');
-  if (!n || f.mode === 'count') { el.innerHTML = ''; return; }
-  el.innerHTML = `<span>합계 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b></span>` : '') +
+  if (!n) { el.innerHTML = '<span>상품을 담아 주세요</span>'; return; }
+  if (f.mode === 'count') { el.innerHTML = `<span>상품 <b>${n}</b>개를 세어본 수량으로 맞춰요</span>`; return; }
+  el.innerHTML = `<span>상품 <b>${n}</b>개 · 모두 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b></span>` : '') +
     (f.price === 'sell' && amt ? `<span>예상 이익 <b>${won(profit)}</b> (평균원가 기준)</span>` : '');
 }
 function buildMoves() {
@@ -731,9 +953,9 @@ async function saveRecord() {
   const btn = $('rc-save'); btn.disabled = true;
   try {
     applyData(await api('addMoves', out, FORMS[S.form].label));
-    S.lines = [newLine(), newLine()]; $('rc-memo').value = '';
-    renderLines();
-    toast(`${FORMS[S.form].label} 기록했습니다`);
+    S.lines = []; $('rc-memo').value = '';
+    renderLines(); renderPicker();
+    toast(FORMS[S.form].mode === 'count' ? '세어본 수량으로 재고를 맞췄어요' : `${SUBLABEL[S.form]} 기록했어요`);
   } catch (e) { writeFail(e); }
   finally { btn.disabled = !S.canWrite; }
 }
@@ -1191,7 +1413,7 @@ function renderExcel() {
 function visibleViews() { return [S.view, S.side].filter((v, i, a) => v && a.indexOf(v) === i); }
 function route() {
   const v = (location.hash || '').slice(1);
-  S.view = VIEWS[v] ? v : 'stock';
+  S.view = VIEWS[v] ? v : 'home';
   if (S.side === S.view) S.side = '';
   layout();
 }
@@ -1205,7 +1427,7 @@ function layout() {
   }
   $('work').classList.toggle('split', vis.length > 1);
   $('ptitle').textContent = VIEWS[S.view];
-  $('pmeta').textContent = S.side ? `옆 창: ${VIEWS[S.side]}` : '본사창고 · 파스토 · 입고예정';
+  $('pmeta').textContent = S.side ? `옆 창: ${VIEWS[S.side]}` : '';
   for (const a of $('tabs').querySelectorAll('a')) {
     if (a.dataset.view === S.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     a.classList.toggle('side', a.dataset.view === S.side);
@@ -1217,8 +1439,9 @@ function layout() {
 function refresh() {
   renderLocs();
   for (const v of visibleViews()) {
+    if (v === 'home') renderHome();
     if (v === 'stock') renderStock();
-    if (v === 'record') { renderPartnerSelect(); updateHints(); }
+    if (v === 'record') { renderPartnerSelect(); updateHints(); renderPicker(); }
     if (v === 'upload') updateUpload();
     if (v === 'history') renderHistory();
     if (v === 'cost') renderCost();
@@ -1257,7 +1480,29 @@ async function load(quiet) {
 }
 
 /* ---------- 이벤트 ---------- */
-$('rc-types').addEventListener('click', (e) => { const b = e.target.closest('button[data-form]'); if (!b) return; S.form = b.dataset.form; renderForm(); });
+$('rc-groups').addEventListener('click', (e) => { const b = e.target.closest('[data-group]'); if (!b) return; S.form = GROUPS[b.dataset.group].forms[0]; renderForm(); });
+$('rc-sub').addEventListener('click', (e) => { const b = e.target.closest('[data-form]'); if (!b) return; S.form = b.dataset.form; renderForm(); });
+$('pk-q').addEventListener('input', renderPicker);
+$('pk-parts').addEventListener('click', (e) => { const b = e.target.closest('[data-pkpart]'); if (!b) return; S.pkPart = b.dataset.pkpart; renderPicker(); });
+$('pk-list').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) addToCart(b.dataset.add); });
+$('hm-actions').addEventListener('click', (e) => {
+  const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
+  if (g) startRecord(GROUPS[g.dataset.gogroup].forms[0]);
+  if (v) location.hash = '#' + v.dataset.goview;
+});
+$('hm-status').addEventListener('click', (e) => { const b = e.target.closest('[data-stfilter]'); if (!b) return; S.stStatus = b.dataset.stfilter; S.stPart = ''; location.hash = '#stock'; renderStock(); });
+$('hm-list').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) { openSku(c.dataset.sku); return; } const g = e.target.closest('[data-gogroup]'); if (g) { e.preventDefault(); startRecord(GROUPS[g.dataset.gogroup].forms[0]); } });
+$('st-status').addEventListener('click', (e) => { const b = e.target.closest('[data-ststatus]'); if (!b) return; S.stStatus = b.dataset.ststatus; renderStock(); });
+$('st-part').addEventListener('click', (e) => { const b = e.target.closest('[data-stpart]'); if (!b) return; S.stPart = b.dataset.stpart; renderStock(); });
+document.querySelectorAll('[data-stmode]').forEach((b) => b.addEventListener('click', () => { S.stMode = b.dataset.stmode; try { localStorage.setItem('inv-stmode', S.stMode); } catch (err) { /* 무시 */ } renderStock(); }));
+$('st-cards').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) openSku(c.dataset.sku); });
+$('st-table').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) openSku(c.dataset.sku); });
+$('sk-close').addEventListener('click', closeSku);
+$('skumodal').addEventListener('click', (e) => {
+  if (e.target.id === 'skumodal') { closeSku(); return; }
+  const q = e.target.closest('[data-quick]'); if (!q) return;
+  closeSku(); startRecord(q.dataset.quick, q.dataset.code, q.dataset.qty);
+});
 $('rc-loc').addEventListener('change', updateHints);
 $('rc-partner').addEventListener('change', () => { S.lines.forEach((ln, i) => { if (ln.src !== '직접') { ln.src = ''; fillPrice(i, false); syncLine(i); } }); updateHints(); });
 $('rc-lines').addEventListener('input', (e) => {
@@ -1267,19 +1512,15 @@ $('rc-lines').addEventListener('input', (e) => {
   if (el.dataset.k === 'p') { ln.src = '직접'; syncLine(Number(line.dataset.i)); }
   if (el.dataset.k !== 'v') updateHints();
 });
-$('rc-lines').addEventListener('change', (e) => {
-  const el = e.target; if (el.dataset.k !== 'v') return;
-  const i = Number(el.closest('.line').dataset.i), ln = S.lines[i], code = parseSku(el.value);
-  if (code) { el.value = skuLabel(code); ln.v = el.value; ln.src = ''; fillPrice(i, true); syncLine(i); }
-  updateHints();
-  if (code && $('modal').hidden) { const q = $('ln-q-' + i); if (q && !q.value) q.focus(); }
+$('rc-lines').addEventListener('click', (e) => {
+  const st = e.target.closest('[data-step]');
+  if (st) { const i = Number(st.closest('.line').dataset.i), ln = S.lines[i]; ln.q = String(Math.max(0, toNum(ln.q) + Number(st.dataset.step))); $('ln-q-' + i).value = ln.q; updateHints(); return; }
+  const b = e.target.closest('[data-del]'); if (!b) return; S.lines.splice(Number(b.dataset.del), 1); renderLines(); renderPicker();
 });
-$('rc-lines').addEventListener('click', (e) => { const b = e.target.closest('[data-del]'); if (!b) return; S.lines.splice(Number(b.dataset.del), 1); if (!S.lines.length) S.lines.push(newLine()); renderLines(); });
-$('rc-add').addEventListener('click', () => { S.lines.push(newLine()); renderLines(); const n = $('ln-v-' + (S.lines.length - 1)); if (n) n.focus(); });
 $('rc-save').addEventListener('click', saveRecord);
 $('md-btns').addEventListener('click', (e) => { const b = e.target.closest('button[data-price]'); if (b) closeModal(b.dataset.price); });
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(''); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(''); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('skumodal').hidden) closeSku(); });
 
 $('up-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readOrders(f); });
 $('up-body').addEventListener('change', (e) => {
@@ -1298,7 +1539,8 @@ $('up-body').addEventListener('change', (e) => {
 });
 $('up-body').addEventListener('click', (e) => { if (e.target.id === 'up-apply') applyUpload(); });
 
-for (const id of ['st-q', 'st-part', 'st-status', 'st-win']) $(id).addEventListener(id === 'st-q' ? 'input' : 'change', () => { renderStock(); renderLocs(); });
+$('st-q').addEventListener('input', renderStock);
+$('st-win').addEventListener('change', () => { refresh(); });
 for (const id of ['co-q', 'co-win']) $(id).addEventListener(id === 'co-q' ? 'input' : 'change', renderCost);
 $('co-recalc').addEventListener('click', async () => { $('co-recalc').disabled = true; LG.key = ''; await load(); $('co-recalc').disabled = false; toast('모든 기록으로 원가를 다시 계산했습니다'); });
 for (const id of ['hi-q', 'hi-type', 'hi-month']) $(id).addEventListener(id === 'hi-q' ? 'input' : 'change', () => { S.histLimit = 200; renderHistory(); });
@@ -1360,7 +1602,7 @@ $('reload').addEventListener('click', async () => { $('reload').disabled = true;
 window.addEventListener('hashchange', route);
 
 /* ---------- 시작 ---------- */
-try { const sd = localStorage.getItem('inv-side'); if (sd && VIEWS[sd]) S.side = sd; } catch (e) { /* 무시 */ }
+try { const sd = localStorage.getItem('inv-side'); if (sd && VIEWS[sd]) S.side = sd; const sm = localStorage.getItem('inv-stmode'); if (sm === 'table' || sm === 'card') S.stMode = sm; } catch (e) { /* 무시 */ }
 setupRecord();
 fillPartnerForm(null);
 route();
@@ -1374,7 +1616,7 @@ try {
 } catch (e) { /* 무시 */ }
 load();
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
-setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden) load(true); }, 120000);
+setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden) load(true); }, 120000);
 })();
 </script>
 </body>
