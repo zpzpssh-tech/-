@@ -448,6 +448,19 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
         <div class="tablebox"><table id="pt-table"></table></div>
       </div>
       <div class="panel">
+        <h2>매칭 규칙</h2>
+        <p class="small muted" style="margin:0">사이트 상품명이 바뀌어도 자동으로 연결되게 하는 규칙입니다. <b>띄어쓰기로 나눈 단어가 모두 들어 있으면</b> 해당 SKU로 연결합니다.
+          예: 상품명에 <span class="code">슬개건 밴드</span> + 옵션에 <span class="code">블랙 양쪽</span> → BK-004-BK × 2. 위에서부터 먼저 맞는 규칙을 씁니다.</p>
+        <div class="row">
+          <label class="f grow">상품명에 포함<input id="ru-name" placeholder="슬개건 밴드"></label>
+          <label class="f grow">옵션에 포함<input id="ru-opt" placeholder="블랙 양쪽"></label>
+          <label class="f">SKU<select id="ru-sku"></select></label>
+          <label class="f">배수<input type="number" id="ru-mult" min="1" value="1" style="width:70px"></label>
+          <button class="primary" id="ru-save">규칙 추가</button>
+        </div>
+        <div class="tablebox"><table id="ru-table"></table></div>
+      </div>
+      <div class="panel">
         <h2>주문서 연결표</h2>
         <p class="small muted" style="margin:0">주문서의 "상품명 · 옵션"이 어떤 SKU 몇 개인지 기억해 둔 목록입니다. 잘못 연결했다면 지우고 다음 업로드 때 다시 고르세요.</p>
         <div class="tablebox"><table id="mp-table"></table></div>
@@ -463,7 +476,7 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
       <p class="small muted" style="margin:0">기존에 쓰던 엑셀 재고표를 그대로 올리세요. 열 제목(코드, 상품명, 수량 등)을 자동으로 찾아 맞추고, 틀리면 직접 고를 수 있습니다.
         양식이 없다면 아래 '내보내기'에서 <b>양식 받기</b>를 눌러 채운 뒤 올리면 됩니다.</p>
       <div class="row">
-        <label class="f">무엇을 불러올까요?<select id="im-kind"><option value="sku">상품(SKU) 목록 · 가격</option><option value="stock">현재 재고 (실사 수량)</option></select></label>
+        <label class="f">무엇을 불러올까요?<select id="im-kind"><option value="sku">상품(SKU) 목록 · 가격</option><option value="stock">현재 재고 (실사 수량)</option><option value="rule">매칭 규칙 (사이트 상품명 → SKU)</option></select></label>
         <label class="f grow">엑셀 파일<input type="file" id="im-file" accept=".xlsx,.xls,.csv"></label>
       </div>
       <div id="im-body"></div>
@@ -561,7 +574,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -1051,11 +1064,18 @@ function upGroups() {
   }
   return [...g.values()].sort((a, b) => b.qty - a.qty);
 }
+const words = (s) => norm(s).toLowerCase().split(' ').filter(Boolean);
+function matchRule(name, opt) {
+  const n = norm(name).toLowerCase(), o = norm(opt).toLowerCase();
+  return S.rules.find((r) => S.skus.has(r.sku) && (r.name || r.opt) && words(r.name).every((w) => n.includes(w)) && words(r.opt).every((w) => o.includes(w))) || null;
+}
 function upResolve(e) {
   const u = S.up, mapped = S.maps.get(hash(e.key));
-  const sku = u.pick[e.key] ?? (mapped ? mapped.sku : '');
-  const mult = u.mult[e.key] ?? (mapped ? mapped.mult : 1);
-  return { sku, mult: Number(mult) || 1, known: !!mapped && u.pick[e.key] === undefined };
+  const rule = !mapped ? matchRule(e.name, e.opt) : null;
+  const base = mapped || (rule ? { sku: rule.sku, mult: rule.mult } : null);
+  const sku = u.pick[e.key] ?? (base ? base.sku : '');
+  const mult = u.mult[e.key] ?? (base ? base.mult : 1);
+  return { sku, mult: Number(mult) || 1, known: !!mapped && u.pick[e.key] === undefined, rule: !!rule && u.pick[e.key] === undefined };
 }
 function upSummary() {
   const u = S.up, groups = upGroups();
@@ -1105,7 +1125,7 @@ function renderUpload() {
       ${groups.map((e) => { const r = upResolve(e); return `<tr>
         <td class="wrapcell">${esc(e.name)}${e.opt ? `<br><span class="muted small">${esc(e.opt)}</span>` : ''}</td>
         <td class="n">${fmt(e.qty)}</td>
-        <td><select data-pick="${esc(e.key)}" style="max-width:300px">${skuOpts(r.sku)}</select>${r.known ? ' <span class="pill ok">자동</span>' : ''}</td>
+        <td><select data-pick="${esc(e.key)}" style="max-width:300px">${skuOpts(r.sku)}</select>${r.known ? ' <span class="pill ok">자동</span>' : r.rule ? ' <span class="pill ok" title="매칭 규칙으로 연결">규칙</span>' : ''}</td>
         <td class="n"><input type="number" min="1" style="width:64px" data-mult="${esc(e.key)}" value="${r.mult}"></td>
         <td class="n" data-cut="${esc(e.key)}"></td>
       </tr>`; }).join('')}
@@ -1240,6 +1260,11 @@ function renderItems() {
       return `<tr><td>${esc(p.name)}</td><td>${esc(p.basis)}</td><td class="muted">${esc(p.memo || '')}</td><td class="n">${fmt(n)}</td>
         <td>${S.canWrite ? `<button class="ghost" data-pedit="${esc(p.name)}">수정</button><button class="ghost" data-pdel="${esc(p.name)}">지우기</button>` : ''}</td></tr>`;
     }).join('') + '</tbody>';
+  $('ru-sku').innerHTML = '<option value="">— SKU —</option>' + [...S.skus.values()].filter((x) => x.active !== false).sort((a, b) => a.code.localeCompare(b.code)).map((x) => `<option value="${esc(x.code)}"${x.code === $('ru-sku').value ? ' selected' : ''}>${esc(skuLabel(x.code))}</option>`).join('');
+  $('ru-table').innerHTML = !S.rules.length ? '<tr><td class="empty">아직 규칙이 없습니다. 위에서 추가하거나 엑셀로 불러오세요.</td></tr>' :
+    '<thead><tr><th>상품명에 포함</th><th>옵션에 포함</th><th>SKU</th><th class="n">배수</th><th>메모</th><th></th></tr></thead><tbody>' +
+    S.rules.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.opt)}</td><td><span class="code">${esc(r.sku)}</span>${S.skus.has(r.sku) ? '' : ' <span class="pill bad">없는 SKU</span>'}</td><td class="n">${fmt(r.mult)}</td><td class="muted">${esc(r.memo || '')}</td>
+      <td>${S.canWrite ? `<button class="ghost" data-delrule="${esc(r.id)}">지우기</button>` : ''}</td></tr>`).join('') + '</tbody>';
   const mt = $('mp-table');
   if (!S.maps.size) { mt.innerHTML = '<tr><td class="empty">아직 연결된 항목이 없습니다. 주문서를 처음 올릴 때 만들어집니다.</td></tr>'; return; }
   mt.innerHTML = '<thead><tr><th>주문서 상품명 · 옵션</th><th>SKU</th><th class="n">배수</th><th></th></tr></thead><tbody>' +
@@ -1289,8 +1314,9 @@ const IMP = {
     option: ['옵션', '규격', '색상/사이즈', '옵션명'], cost: ['기준원가', '원가', '매입가', '입고단가', '매입단가'], retail: ['소매가', '판매가'], wholesale: ['도매가', '공급가'],
     safety: ['안전재고'], lead: ['리드타임', '리드타임(일)'] }, req: ['code', 'name'] },
   stock: { fields: { code: ['코드', 'SKU', 'SKU코드', '상품코드', '품목코드', '자체코드'], qty: ['실사수량', '현재고', '재고수량', '재고', '수량'], loc: ['위치', '창고'] }, req: ['code', 'qty'] },
+  rule: { fields: { rname: ['상품명에 포함', '상품명 포함', '상품명'], ropt: ['옵션에 포함', '옵션 포함', '옵션'], code: ['SKU', '코드', 'SKU코드'], mult: ['배수'], memo: ['메모'] }, req: ['code'] },
 };
-const FNAME = { code: '코드', name: '상품명', part: '부위', option: '옵션', cost: '기준원가', retail: '소매가', wholesale: '도매가', safety: '안전재고', lead: '리드타임', qty: '수량', loc: '위치' };
+const FNAME = { rname: '상품명에 포함', ropt: '옵션에 포함', mult: '배수', memo: '메모', code: '코드', name: '상품명', part: '부위', option: '옵션', cost: '기준원가', retail: '소매가', wholesale: '도매가', safety: '안전재고', lead: '리드타임', qty: '수량', loc: '위치' };
 function readImport(file) {
   const kind = $('im-kind').value, def = IMP[kind];
   readSheet(file, (aoa) => {
@@ -1304,6 +1330,16 @@ function readImport(file) {
 function locOf(v, dflt) { const s = norm(v); if (!s) return dflt; if (/파스토|fassto|n배송/i.test(s)) return 'fassto'; if (/본사|창고|hq/i.test(s)) return 'hq'; return dflt; }
 function impPlan() {
   const m = S.imp, c = m.col, cell = (r, f) => (c[f] >= 0 ? norm(r[c[f]]) : '');
+  if (m.kind === 'rule') {
+    const list = [], bad = [];
+    for (const r of m.rows) {
+      const sku = cell(r, 'code').toUpperCase(), name = cell(r, 'rname'), opt = cell(r, 'ropt');
+      if (!sku && !name && !opt) continue;
+      if (!S.skus.has(sku) || (!name && !opt)) { bad.push(sku || name); continue; }
+      list.push({ id: hash(name.toLowerCase() + '|' + opt.toLowerCase()), name, opt, sku, mult: toNum(cell(r, 'mult')) || 1, memo: cell(r, 'memo') });
+    }
+    return { list, bad };
+  }
   if (m.kind === 'sku') {
     const list = [], bad = [];
     for (const r of m.rows) {
@@ -1341,7 +1377,12 @@ function renderImport() {
   let preview = '', summary = '', canGo = false;
   if (!missing.length) {
     const plan = impPlan();
-    if (m.kind === 'sku') {
+    if (m.kind === 'rule') {
+      summary = `매칭 규칙 <b>${plan.list.length}</b>개` + (plan.bad.length ? ` · <span style="color:var(--bad)">건너뜀 ${plan.bad.length}줄</span> (등록 안 된 SKU이거나 상품명·옵션 단어가 비어 있음. SKU를 먼저 불러오세요)` : '');
+      preview = '<thead><tr><th>상품명에 포함</th><th>옵션에 포함</th><th>SKU</th><th class="n">배수</th><th>메모</th></tr></thead><tbody>' +
+        plan.list.map((x) => `<tr><td>${esc(x.name)}</td><td>${esc(x.opt)}</td><td class="code">${esc(x.sku)}</td><td class="n">${fmt(x.mult)}</td><td class="muted">${esc(x.memo)}</td></tr>`).join('') + '</tbody>';
+      canGo = plan.list.length > 0;
+    } else if (m.kind === 'sku') {
       const nNew = plan.list.filter((x) => x.isNew).length;
       summary = `새 SKU <b>${nNew}</b>개 · 기존 SKU 수정 <b>${plan.list.length - nNew}</b>개` + (plan.bad.length ? ` · <span style="color:var(--bad)">형식 오류로 건너뜀 ${plan.bad.length}줄</span> (코드는 영문·숫자·하이픈)` : '');
       preview = '<thead><tr><th></th><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가</th><th class="n">소매가</th><th class="n">도매가</th></tr></thead><tbody>' +
@@ -1367,7 +1408,8 @@ async function runImport() {
   if (!guard()) return;
   const m = S.imp, plan = impPlan(), btn = $('im-go'); btn.disabled = true;
   try {
-    if (m.kind === 'sku') { applyData(await api('saveSkus', plan.list)); toast(`SKU ${plan.list.length}개를 불러왔습니다`); }
+    if (m.kind === 'rule') { applyData(await api('saveRules', plan.list)); toast(`매칭 규칙 ${plan.list.length}개를 불러왔습니다`); }
+    else if (m.kind === 'sku') { applyData(await api('saveSkus', plan.list)); toast(`SKU ${plan.list.length}개를 불러왔습니다`); }
     else { applyData(await api('addMoves', plan.moves, '엑셀 재고 불러오기')); toast(`${plan.moves.length}건을 실사 조정으로 기록했습니다`); }
     S.imp = null; $('im-file').value = ''; renderImport();
   } catch (e) { writeFail(e); btn.disabled = false; }
@@ -1387,6 +1429,9 @@ const EXPORTS = {
   history: { label: '기록 내역', desc: '기록 내역 탭의 검색·필터 그대로', aoa() {
     return [['날짜', '종류', '위치', '코드', '상품명', '수량', '거래처', '단가', '메모', '기록자', '기록시각'],
       ...historyRows().map((m) => [m.date, MOVE[m.type] || m.type, LOC[m.loc] || m.loc, m.sku, (S.skus.get(m.sku) || {}).name || '', m.qty, m.partner || '', m.price || '', m.memo || '', m.by || '', m.at])];
+  } },
+  rules: { label: '매칭 규칙 · 양식', desc: '사이트 상품명 → SKU 연결 규칙. 받아서 고친 뒤 다시 불러올 수 있습니다', aoa() {
+    return [['상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모'], ...(S.rules.length ? S.rules.map((r) => [r.name, r.opt, r.sku, r.mult, r.memo]) : [['슬개건 밴드', '블랙 양쪽', 'BK-004-BK', 2, '(예시)']])];
   } },
   skus: { label: '상품(SKU) 목록 · 양식', desc: '지금 목록을 받아 고친 뒤 그대로 다시 불러올 수 있습니다', aoa() {
     return [['코드', '상품명', '부위', '옵션', '기준원가', '소매가', '도매가', '안전재고', '리드타임'],
@@ -1457,6 +1502,7 @@ function applyData(d) {
   S.moves = d.moves.map((m) => ({ ...m, qty: Number(m.qty) || 0, price: Number(m.price) || 0 }));
   S.maps = new Map(d.maps.map((x) => [x.id, x]));
   S.uploads = new Map(d.uploads.map((x) => [x.sig, x]));
+  S.rules = d.rules || [];
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
     if (!m.price) continue;
@@ -1571,6 +1617,14 @@ $('pt-table').addEventListener('click', async (e) => {
   if (ed) fillPartnerForm(S.partners.get(ed.dataset.pedit));
   if (del && guard()) { try { applyData(await api('deletePartner', del.dataset.pdel)); toast('거래처를 지웠습니다 (지난 기록은 그대로 남습니다)'); } catch (err) { writeFail(err); } }
 });
+$('ru-save').addEventListener('click', async () => {
+  if (!guard()) return;
+  const name = norm($('ru-name').value), opt = norm($('ru-opt').value), sku = $('ru-sku').value, mult = toNum($('ru-mult').value) || 1;
+  if (!sku) { toast('SKU를 골라 주세요'); return; }
+  if (!name && !opt) { toast('상품명이나 옵션에 들어갈 단어를 적어 주세요'); return; }
+  try { applyData(await api('saveRules', [{ id: hash(name.toLowerCase() + '|' + opt.toLowerCase()), name, opt, sku, mult, memo: '' }])); $('ru-name').value = ''; $('ru-opt').value = ''; $('ru-mult').value = 1; toast('규칙을 추가했습니다'); } catch (e) { writeFail(e); }
+});
+$('ru-table').addEventListener('click', async (e) => { const b = e.target.closest('[data-delrule]'); if (!b || !guard()) return; try { applyData(await api('deleteRule', b.dataset.delrule)); toast('규칙을 지웠습니다'); } catch (err) { writeFail(err); } });
 $('mp-table').addEventListener('click', async (e) => { const b = e.target.closest('[data-delmap]'); if (!b || !guard()) return; try { applyData(await api('deleteMap', b.dataset.delmap)); toast('연결을 지웠습니다'); } catch (err) { writeFail(err); } });
 
 $('im-kind').addEventListener('change', () => { S.imp = null; $('im-file').value = ''; renderImport(); });

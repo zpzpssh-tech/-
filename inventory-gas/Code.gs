@@ -24,6 +24,7 @@ const TABS = {
   PARTNER: { name: '거래처', head: ['이름', '기본 단가', '메모', '수정일'] },
   MOVE: { name: '기록', head: ['ID', '날짜', '종류', '위치', 'SKU', '수량', '메모', '묶음ID', '묶음이름', '기록시각', '기록자', '거래처', '단가'] },
   MAP: { name: '연결표', head: ['ID', '주문서 상품명·옵션', 'SKU', '배수', '수정일'] },
+  RULE: { name: '매칭규칙', head: ['ID', '상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모', '수정일'] },
   UPLOAD: { name: '업로드', head: ['서명', '파일명', '차감수량', '기록시각', '기록자'] },
 };
 // 시트에는 사람이 읽기 쉬운 한글로 저장하고, 프로그램 안에서는 코드로 씁니다.
@@ -123,7 +124,8 @@ function getData() {
   }));
   const maps = rows_(TABS.MAP).filter((r) => str_(r[0])).map((r) => ({ id: str_(r[0]), key: str_(r[1]), sku: str_(r[2]), mult: num_(r[3]) || 1 }));
   const uploads = rows_(TABS.UPLOAD).filter((r) => str_(r[0])).map((r) => ({ sig: str_(r[0]), file: str_(r[1]), units: num_(r[2]), at: str_(r[3]) }));
-  return { skus, partners, moves, maps, uploads, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ id: str_(r[0]), name: str_(r[1]), opt: str_(r[2]), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1, memo: str_(r[5]) }));
+  return { skus, partners, moves, maps, uploads, rules, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -209,6 +211,30 @@ function upsertMaps_(list, at) {
     else if (!idx.has(m.id)) { add.push(row); idx.set(m.id, -1); }
   });
   append_(TABS.MAP, add);
+}
+/** 매칭 규칙 저장 (같은 ID면 고쳐 쓰기) */
+function saveRules(list) {
+  return withLock_(() => {
+    const vals = rows_(TABS.RULE);
+    const idx = new Map(vals.map((r, i) => [str_(r[0]), i]));
+    const add = [], at = now_();
+    (list || []).forEach((x) => {
+      if (!x.id || !x.sku) return;
+      const row = [x.id, x.name || '', x.opt || '', String(x.sku).toUpperCase(), Math.max(1, num_(x.mult) || 1), x.memo || '', at];
+      if (idx.has(x.id) && idx.get(x.id) >= 0) putRow_(TABS.RULE, idx.get(x.id), row);
+      else if (!idx.has(x.id)) { add.push(row); idx.set(x.id, -1); }
+    });
+    append_(TABS.RULE, add);
+    return getData();
+  });
+}
+function deleteRule(id) {
+  return withLock_(() => {
+    const sh = tab_(book_(), TABS.RULE);
+    const vals = rows_(TABS.RULE);
+    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === id) sh.deleteRow(i + 2);
+    return getData();
+  });
 }
 function deleteMap(id) {
   return withLock_(() => {
