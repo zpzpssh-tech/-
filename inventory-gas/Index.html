@@ -320,6 +320,10 @@ table.mini tr[data-sku] { cursor: pointer; }
 .paper table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
 .paper td, .paper th { border: 1px solid #222; padding: 5px 6px; color: #111; background: #fff; white-space: normal; position: static; font-weight: 400; text-align: left; }
 .paper th { background: #eef0f3; font-weight: 700; text-align: center; }
+.paper table tr td, .paper table tr th { border: 1px solid #222; }
+.paper table tbody tr:hover td { background: #fff; }
+.paper table tr td.k, .paper table tr td.vert, .paper table tfoot tr td { background: #eef0f3; }
+.paper .pitems tfoot tr td { background: #f6f7f9; }
 .paper .sup td.k { background: #eef0f3; font-weight: 700; text-align: center; white-space: nowrap; width: 62px; letter-spacing: .1em; }
 .paper .sup td.vert { width: 26px; text-align: center; font-weight: 700; background: #eef0f3; line-height: 1.6; }
 .paper .seal-cell { position: relative; }
@@ -346,7 +350,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 견적서</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 견적서2</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -564,6 +568,7 @@ table.mini tr[data-sku] { cursor: pointer; }
         <div class="panel">
           <div class="row"><h2 class="grow" id="qt-title">새 견적서</h2><button id="qt-new" class="sm">새 견적</button></div>
           <div class="row">
+            <label class="f">공급자 (우리 회사)<select id="qt-sup" style="min-width:140px"></select></label>
             <label class="f">견적번호<input id="qt-no" style="width:150px"></label>
             <label class="f">견적일<input type="date" id="qt-date"></label>
             <label class="f grow">유효기간<input id="qt-valid" value="발행일로부터 7일"></label>
@@ -596,8 +601,12 @@ table.mini tr[data-sku] { cursor: pointer; }
         </div>
         <div class="panel">
           <details id="qt-conf-box">
-            <summary>회사 정보 · 도장 (견적서 공급자 칸)</summary>
-            <p class="small muted">한 번만 입력하면 됩니다. 재고DB 시트의 '설정' 탭에 저장되고, 같이 쓰는 사람 모두의 견적서에 들어갑니다.</p>
+            <summary>회사(공급자) 관리 · 도장</summary>
+            <p class="small muted">회사마다 한 번씩 저장해 두면, 견적서 맨 위 <b>공급자</b>에서 골라 쓸 수 있습니다. 재고DB 시트의 '설정' 탭에 저장됩니다.</p>
+            <div class="row">
+              <label class="f">고칠 회사<select id="cf-pick" style="min-width:160px"></select></label>
+              <label class="f grow">회사 구분 이름 (목록에 보이는 이름)<input id="cf-label" placeholder="예: 올투게더나우, 휴책, 유큐어"></label>
+            </div>
             <div class="row">
               <label class="f">등록번호<input id="cf-bizno" placeholder="000-00-00000" style="width:140px"></label>
               <label class="f">상호<input id="cf-name" style="width:140px"></label>
@@ -621,6 +630,7 @@ table.mini tr[data-sku] { cursor: pointer; }
               <img id="cf-seal-preview" alt="도장 미리보기" style="width:56px;height:56px;object-fit:contain" hidden>
               <button id="cf-seal-clear" class="sm ghost" hidden>도장 지우기</button>
               <span class="grow"></span>
+              <button id="cf-del" class="sm danger" hidden>이 회사 삭제</button>
               <button id="cf-save" class="primary">회사 정보 저장</button>
             </div>
           </details>
@@ -738,7 +748,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, sups: [], supEdit: null, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -1785,6 +1795,11 @@ function applyData(d) {
   S.rules = d.rules || [];
   S.memo = d.memo || { text: '', at: '', by: '' };
   S.conf = d.conf || {};
+  S.sups = [];
+  for (const [k, v] of Object.entries(S.conf)) if (k.startsWith('sup:')) { try { S.sups.push({ ...JSON.parse(v), id: k.slice(4) }); } catch (e) { /* 깨진 값은 건너뜀 */ } }
+  // 예전 버전(회사 하나)으로 저장한 정보가 있으면 첫 회사로 보여줌
+  if (!S.sups.length && (S.conf.bizno || S.conf.name)) S.sups.push({ id: 'main', label: S.conf.name || '우리 회사', bizno: S.conf.bizno, name: S.conf.name, ceo: S.conf.ceo, addr: S.conf.addr, tel: S.conf.tel, type: S.conf.type, item: S.conf.item, manager: S.conf.manager, bank: S.conf.bank, holder: S.conf.holder, seal: S.conf.seal });
+  S.sups.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
   S.quotes = d.quotes || [];
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
@@ -1984,7 +1999,8 @@ function nextQuoteNo(date) {
 }
 function newQuote() {
   const date = today();
-  S.q = { no: nextQuoteNo(date), date, valid: '발행일로부터 7일', to: '', person: '', manager: S.conf.manager || '', note: '', items: [newQItem(), newQItem(), newQItem()], saved: false };
+  const sup = defaultSupId();
+  S.q = { sup, no: nextQuoteNo(date), date, valid: '발행일로부터 7일', to: '', person: '', manager: supOf(sup).manager || '', note: '', items: [newQItem(), newQItem(), newQItem()], saved: false };
   fillQuoteForm();
 }
 function fillQuoteForm() {
@@ -2031,7 +2047,7 @@ function quotePrice(code, partner) {
   return s.wholesale || s.retail || '';
 }
 function renderPaper() {
-  const q = S.q, c = S.conf, t = quoteTotals(q);
+  const q = S.q, c = supOf(q.sup), t = quoteTotals(q);
   const rows = Math.max(20, q.items.length);
   const items = [...q.items]; while (items.length < rows) items.push(null);
   const who = [q.to, q.person].filter(Boolean).join(' ');
@@ -2087,25 +2103,23 @@ window.addEventListener('resize', () => { if (!$('v-quote').hidden) fitPaper(); 
 function renderQuoteSide() {
   if (!S.q) newQuote();
   $('qt-partners').innerHTML = [...S.partners.values()].map((p) => `<option value="${esc(p.name)}"></option>`).join('');
-  const c = S.conf;
+  $('qt-sup').innerHTML = S.sups.length ? S.sups.map((x) => `<option value="${esc(x.id)}"${x.id === S.q.sup ? ' selected' : ''}>${esc(x.label || x.name || x.id)}</option>`).join('') : '<option value="">회사 정보를 먼저 저장하세요</option>';
   const box = $('qt-conf-box');
   if (!box.contains(document.activeElement)) {
-    $('cf-bizno').value = c.bizno || ''; $('cf-name').value = c.name || ''; $('cf-ceo').value = c.ceo || ''; $('cf-addr').value = c.addr || ''; $('cf-tel').value = c.tel || '';
-    $('cf-type').value = c.type || ''; $('cf-item').value = c.item || ''; $('cf-manager').value = c.manager || ''; $('cf-bank').value = c.bank || ''; $('cf-holder').value = c.holder || '';
-    const seal = S.sealDraft !== null ? S.sealDraft : c.seal || '';
-    $('cf-seal-preview').hidden = !seal; if (seal) $('cf-seal-preview').src = seal; $('cf-seal-clear').hidden = !seal;
+    if (S.supEdit === null || (S.supEdit && !S.sups.some((x) => x.id === S.supEdit))) S.supEdit = S.sups.length ? (S.q.sup || S.sups[0].id) : '';
+    fillSupForm();
   }
-  if (!c.bizno && !c.name) box.open = true;
+  if (!S.sups.length) box.open = true;
   $('qt-list').innerHTML = !S.quotes.length ? '<tr><td class="empty">아직 저장한 견적서가 없어요.</td></tr>' :
-    '<thead><tr><th>견적번호</th><th>견적일</th><th>받는 곳</th><th class="n">합계</th><th></th></tr></thead><tbody>' +
-    [...S.quotes].sort((a, b) => b.no.localeCompare(a.no)).map((x) => `<tr><td class="code">${esc(x.no)}</td><td>${esc(x.date)}</td><td>${esc(x.to)}</td><td class="n">${fmt(x.total)}</td>
+    '<thead><tr><th>견적번호</th><th>견적일</th><th>공급자</th><th>받는 곳</th><th class="n">합계</th><th></th></tr></thead><tbody>' +
+    [...S.quotes].sort((a, b) => b.no.localeCompare(a.no)).map((x) => `<tr><td class="code">${esc(x.no)}</td><td>${esc(x.date)}</td><td>${esc(quoteSupLabel(x))}</td><td>${esc(x.to)}</td><td class="n">${fmt(x.total)}</td>
       <td><button class="ghost" data-qopen="${esc(x.no)}">열기</button><button class="ghost" data-qcopy="${esc(x.no)}">복사</button>${S.canWrite ? `<button class="ghost" data-qremove="${esc(x.no)}">삭제</button>` : ''}</td></tr>`).join('') + '</tbody>';
   renderPaper();
 }
 function loadQuote(no, asCopy) {
   const x = S.quotes.find((q) => q.no === no); if (!x) return;
   let body = {}; try { body = JSON.parse(x.body || '{}'); } catch (e) { body = {}; }
-  S.q = { no: x.no, date: x.date, valid: body.valid || '발행일로부터 7일', to: body.to !== undefined ? body.to : x.to, person: body.person || '', manager: body.manager || '', note: body.note || '', items: (body.items && body.items.length ? body.items : [newQItem()]), saved: true };
+  S.q = { sup: body.sup && supOf(body.sup).id ? body.sup : defaultSupId(), no: x.no, date: x.date, valid: body.valid || '발행일로부터 7일', to: body.to !== undefined ? body.to : x.to, person: body.person || '', manager: body.manager || '', note: body.note || '', items: (body.items && body.items.length ? body.items : [newQItem()]), saved: true };
   if (asCopy) { S.q.date = today(); S.q.no = nextQuoteNo(S.q.date); S.q.saved = false; }
   fillQuoteForm();
   toast(asCopy ? '복사한 새 견적서입니다. 고친 뒤 저장하세요' : `${no} 견적서를 열었습니다`);
@@ -2117,7 +2131,7 @@ async function saveQuote() {
   const items = q.items.filter((it) => it.name || toNum(it.qty));
   if (!items.length) { toast('품목을 하나 이상 입력해 주세요'); return; }
   try {
-    applyData(await api('saveQuote', { no: q.no, date: q.date, to: [q.to, q.person].filter(Boolean).join(' '), total: t.total, supply: t.supply, vat: t.vat, body: { to: q.to, valid: q.valid, person: q.person, manager: q.manager, note: q.note, items } }));
+    applyData(await api('saveQuote', { no: q.no, date: q.date, to: [q.to, q.person].filter(Boolean).join(' '), total: t.total, supply: t.supply, vat: t.vat, body: { sup: q.sup, supLabel: supOf(q.sup).label || '', to: q.to, valid: q.valid, person: q.person, manager: q.manager, note: q.note, items } }));
     q.saved = true; $('qt-title').textContent = `견적서 ${q.no}`; toast('견적서를 저장했습니다');
   } catch (e) { writeFail(e); }
 }
@@ -2205,12 +2219,54 @@ $('cf-seal').addEventListener('change', (e) => {
   rd.readAsDataURL(f);
 });
 $('cf-seal-clear').addEventListener('click', () => { S.sealDraft = ''; $('cf-seal-preview').hidden = true; $('cf-seal-clear').hidden = true; $('cf-seal').value = ''; });
+function supOf(id) { return S.sups.find((x) => x.id === id) || S.sups[0] || {}; }
+function defaultSupId() { let v = ''; try { v = localStorage.getItem('inv-qsup') || ''; } catch (e) { /* 무시 */ } return S.sups.some((x) => x.id === v) ? v : (S.sups[0] ? S.sups[0].id : ''); }
+function quoteSupLabel(x) { try { const b = JSON.parse(x.body || '{}'); return (b.sup && (S.sups.find((s2) => s2.id === b.sup) || {}).label) || b.supLabel || ''; } catch (e) { return ''; } }
+function fillSupForm() {
+  const c = S.supEdit ? S.sups.find((x) => x.id === S.supEdit) || {} : {};
+  $('cf-pick').innerHTML = S.sups.map((x) => `<option value="${esc(x.id)}"${x.id === S.supEdit ? ' selected' : ''}>${esc(x.label || x.name || x.id)}</option>`).join('') + `<option value=""${!S.supEdit ? ' selected' : ''}>+ 새 회사 추가</option>`;
+  $('cf-label').value = c.label || ''; $('cf-bizno').value = c.bizno || ''; $('cf-name').value = c.name || ''; $('cf-ceo').value = c.ceo || ''; $('cf-addr').value = c.addr || ''; $('cf-tel').value = c.tel || '';
+  $('cf-type').value = c.type || ''; $('cf-item').value = c.item || ''; $('cf-manager').value = c.manager || ''; $('cf-bank').value = c.bank || ''; $('cf-holder').value = c.holder || '';
+  S.sealDraft = null; $('cf-seal').value = '';
+  const seal = c.seal || '';
+  $('cf-seal-preview').hidden = !seal; if (seal) $('cf-seal-preview').src = seal; $('cf-seal-clear').hidden = !seal;
+  $('cf-del').hidden = !S.supEdit;
+  $('cf-save').textContent = S.supEdit ? '회사 정보 저장' : '새 회사 추가';
+}
+$('cf-pick').addEventListener('change', () => { S.supEdit = $('cf-pick').value; fillSupForm(); });
+$('qt-sup').addEventListener('change', () => {
+  S.q.sup = $('qt-sup').value; try { localStorage.setItem('inv-qsup', S.q.sup); } catch (e) { /* 무시 */ }
+  const m = supOf(S.q.sup).manager; if (m && !norm($('qt-manager').value)) { S.q.manager = m; $('qt-manager').value = m; }
+  renderPaper();
+});
 $('cf-save').addEventListener('click', async () => {
   if (!guard()) return;
   const v = (id) => norm($(id).value);
-  const obj = { bizno: v('cf-bizno'), name: v('cf-name'), ceo: v('cf-ceo'), addr: v('cf-addr'), tel: v('cf-tel'), type: v('cf-type'), item: v('cf-item'), manager: v('cf-manager'), bank: v('cf-bank'), holder: v('cf-holder') };
-  if (S.sealDraft !== null) obj.seal = S.sealDraft;
-  try { applyData(await api('saveConf', obj)); S.sealDraft = null; if (S.q && !S.q.manager) { S.q.manager = obj.manager; $('qt-manager').value = obj.manager; } renderPaper(); toast('회사 정보를 저장했습니다'); } catch (e) { writeFail(e); }
+  const obj = { label: v('cf-label') || v('cf-name'), bizno: v('cf-bizno'), name: v('cf-name'), ceo: v('cf-ceo'), addr: v('cf-addr'), tel: v('cf-tel'), type: v('cf-type'), item: v('cf-item'), manager: v('cf-manager'), bank: v('cf-bank'), holder: v('cf-holder') };
+  if (!obj.label) { toast('회사 구분 이름이나 상호를 적어 주세요'); return; }
+  const prev = S.sups.find((x) => x.id === S.supEdit) || {};
+  obj.seal = S.sealDraft !== null ? S.sealDraft : prev.seal || '';
+  const id = S.supEdit || ('s' + Date.now().toString(36));
+  try {
+    applyData(await api('saveConf', { ['sup:' + id]: JSON.stringify(obj) }));
+    S.supEdit = id; S.sealDraft = null;
+    if (S.q && !S.q.sup) S.q.sup = id;
+    fillSupForm(); renderQuoteSide(); toast(`'${obj.label}' 회사 정보를 저장했습니다`);
+  } catch (e) { writeFail(e); }
+});
+$('cf-del').addEventListener('click', async (e) => {
+  if (!guard() || !S.supEdit) return;
+  const btn = e.currentTarget;
+  if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = '정말 삭제'; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = '이 회사 삭제'; }, 3000); return; }
+  btn.dataset.armed = ''; btn.textContent = '이 회사 삭제';
+  const id = S.supEdit;
+  try {
+    // 예전 버전 정보로 보이던 회사(main)는 예전 항목도 같이 비움
+    if (id === 'main') await api('saveConf', { bizno: '', name: '', ceo: '', addr: '', tel: '', type: '', item: '', manager: '', bank: '', holder: '', seal: '' });
+    applyData(await api('deleteConf', 'sup:' + id));
+    S.supEdit = null; if (S.q && S.q.sup === id) S.q.sup = defaultSupId();
+    renderQuoteSide(); toast('회사를 삭제했습니다 (저장한 견적서는 그대로 남습니다)');
+  } catch (err) { writeFail(err); }
 });
 
 

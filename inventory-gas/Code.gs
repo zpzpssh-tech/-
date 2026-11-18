@@ -260,6 +260,15 @@ function saveConf(obj) {
     return getData();
   });
 }
+/** 설정 항목 지우기 (예: 공급자 회사 삭제) */
+function deleteConf(key) {
+  return withLock_(() => {
+    const sh = tab_(book_(), TABS.CONF);
+    const vals = rows_(TABS.CONF);
+    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === key) sh.deleteRow(i + 2);
+    return getData();
+  });
+}
 /** 견적서 저장 (같은 번호면 고쳐 쓰기) */
 function saveQuote(q) {
   return withLock_(() => {
