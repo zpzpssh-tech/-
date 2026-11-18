@@ -295,7 +295,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 위젯판</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -792,7 +792,7 @@ function dailySeries(days) {
 function niceMax(v) { if (v <= 0) return 10; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p; return 10 * p; }
 function chartSVG(series) {
   const W = 640, H = 210, L = 40, R = 12, T = 12, B = 26, w = W - L - R, h = H - T - B;
-  const max = niceMax(Math.max(1, ...series.map((d) => Math.max(d.out, d.inb))));
+  const max = niceMax(Math.max(20, ...series.map((d) => Math.max(d.out, d.inb))));
   const x = (i) => L + (series.length === 1 ? w / 2 : (i * w) / (series.length - 1));
   const y = (v) => T + h - (v / max) * h;
   const line = (k) => series.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join('');
@@ -811,16 +811,11 @@ function renderHome() {
     `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>엑셀 입출고</b><span>주문서 출고 · 입고 내역 입고</span></button>`;
   const dash = $('hm-dash');
   if (!ready()) { $('hm-status').innerHTML = ''; dash.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
-  if (!S.skus.size) {
-    $('hm-sub').textContent = '처음 시작하시나요? 아래 순서대로 하면 됩니다.';
-    $('hm-status').innerHTML = '';
-    dash.innerHTML = widget('처음 시작하기', '', `<div class="kv"><div><span>① 상품 등록 — 기존 재고 엑셀을 올리거나 하나씩 추가</span><a href="#excel">엑셀로 올리기 ›</a></div>
+  const startGuide = S.skus.size ? '' : widget('처음 시작하기', '', `<div class="kv"><div><span>① 상품 등록 — 기존 재고 엑셀을 올리거나 하나씩 추가</span><a href="#excel">엑셀로 올리기 ›</a></div>
       <div><span>② 지금 재고 넣기 — 창고에서 세어본 수량 입력</span><a href="#record" data-gogroup="count">재고 실사 ›</a></div>
       <div><span>③ 매일 기록 — 들어오고 나갈 때마다 위 버튼으로</span><span></span></div></div>`, { span: true });
-    return;
-  }
   const c = statusCounts(), lg = ledger(stockWin());
-  $('hm-sub').textContent = `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.nostock ? ` · 재고를 아직 안 넣은 상품 ${c.nostock}개 (재고 실사로 넣어 주세요)` : '') + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
+  $('hm-sub').textContent = !S.skus.size ? '처음 시작하시나요? 아래 \'처음 시작하기\' 순서대로 하면 됩니다.' : `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.nostock ? ` · 재고를 아직 안 넣은 상품 ${c.nostock}개 (재고 실사로 넣어 주세요)` : '') + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
   $('hm-status').innerHTML = `
     <button type="button" class="stile bad" data-stfilter="bad"><b>${fmt(c.bad)}</b><span class="t">지금 주문하세요</span><span class="d">공장 주문이 늦으면 품절돼요</span></button>
     <button type="button" class="stile warn" data-stfilter="warn"><b>${fmt(c.warn)}</b><span class="t">곧 주문하세요</span><span class="d">주문 시점이 가까워요</span></button>
@@ -889,7 +884,7 @@ function renderHome() {
     ? `<table class="mini"><thead><tr><th>날짜</th><th>구분</th><th>상품</th><th class="n">수량</th><th>기록자</th></tr></thead><tbody>${recent.map((m) => { const sk = S.skus.get(m.sku) || {}; return `<tr data-sku="${esc(m.sku)}"><td>${esc(m.date.slice(5).replace('-', '/'))}</td><td>${esc(MOVE[m.type] || m.type)}${m.partner ? ` <span class="muted">${esc(m.partner)}</span>` : ''}</td><td>${esc(sk.name || m.sku)} <span class="muted">${esc(sk.option || '')}</span></td><td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td><td class="muted small">${esc((m.by || '').split('@')[0])}</td></tr>`; }).join('')}</tbody></table>`
     : '<div class="empty">아직 기록이 없어요.</div>', { span: true, flush: !!recent.length, more: 'history' });
 
-  dash.innerHTML = wStock + wPend + wMonth + wNeed + wChart + wMemo + wRecent;
+  dash.innerHTML = startGuide + wStock + wPend + wMonth + wNeed + wChart + wMemo + wRecent;
   if (memoFocused) { const t = $('hm-memo'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
 }
 
