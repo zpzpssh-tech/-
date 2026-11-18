@@ -1141,6 +1141,8 @@ function renderForm() {
   $('rc-partner-wrap').hidden = f.price !== 'sell';
   $('rc-cur-wrap').hidden = f.price !== 'buy'; $('rc-cur').value = buyCur();
   $('rc-fx-wrap').hidden = f.price !== 'buy' || buyCur() !== 'USD'; if (!$('rc-fx').value && S.fx) $('rc-fx').value = S.fx;
+  // 저장된 환율이 없으면 처음 한 번 오늘 환율을 자동으로 가져옴
+  if (f.price === 'buy' && buyCur() === 'USD' && !curFx() && !S.fxTried && ready()) { S.fxTried = true; setTimeout(() => $('rc-fx-get').click(), 0); }
   if (f.price === 'sell') { $('rc-partner').value = ''; renderPartnerSelect(); if (f.partner && S.partners.has(f.partner)) $('rc-partner').value = f.partner; }
   $('rc-step3').textContent = f.mode === 'count' ? '실사 수량' : '수량';
   $('rc-save').textContent = f.mode === 'count' ? '재고 맞추기' : `${SUBLABEL[S.form]} 기록하기`;
@@ -1214,7 +1216,7 @@ function openProduct(key) {
   const first = $('ln-q-0'); if (first && window.matchMedia('(min-width: 700px)').matches) first.focus();
 }
 function closeProduct() { $('pmodal').hidden = true; S.pmKey = null; S.lines = []; }
-function buyCur() { try { return localStorage.getItem('inv-buycur') || 'USD'; } catch (e) { return 'USD'; } }
+function buyCur() { if (S.buyCurMem) return S.buyCurMem; try { return localStorage.getItem('inv-buycur') || 'USD'; } catch (e) { return 'USD'; } }
 const fxFmt = (n) => Number(n || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
 function curFx() { const v = toNum(($('rc-fx') || {}).value); return v > 0 ? v : S.fx || 0; }
 function lastBuyPrice(code) { return S.lastBuy.get(code) || null; }
@@ -1984,7 +1986,7 @@ $('skumodal').addEventListener('click', (e) => {
 });
 $('rc-loc').addEventListener('change', updateHints);
 $('rc-cur').addEventListener('change', () => {
-  try { localStorage.setItem('inv-buycur', $('rc-cur').value); } catch (e) { /* 무시 */ }
+  S.buyCurMem = $('rc-cur').value; try { localStorage.setItem('inv-buycur', $('rc-cur').value); } catch (e) { /* 무시 */ }
   S.lines.forEach((ln) => { ln.p = ''; ln.src = ''; }); renderForm();
 });
 $('rc-fx').addEventListener('input', () => { S.lines.forEach((ln, i) => { if (ln.src !== '직접' && (!ln.p || (ln.src || '').includes('환산'))) { ln.src = ''; fillPrice(i, false); syncLine(i); } }); updateHints(); });
