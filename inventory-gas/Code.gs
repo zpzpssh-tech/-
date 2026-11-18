@@ -22,7 +22,7 @@ function setup() {
 const TABS = {
   SKU: { name: 'SKU', head: ['코드', '상품명', '부위', '옵션', '안전재고', '리드타임(일)', '사용', '수정일', '기준원가', '소매가', '도매가'] },
   PARTNER: { name: '거래처', head: ['이름', '기본 단가', '메모', '수정일'] },
-  MOVE: { name: '기록', head: ['ID', '날짜', '종류', '위치', 'SKU', '수량', '메모', '묶음ID', '묶음이름', '기록시각', '기록자', '거래처', '단가'] },
+  MOVE: { name: '기록', head: ['ID', '날짜', '종류', '위치', 'SKU', '수량', '메모', '묶음ID', '묶음이름', '기록시각', '기록자', '거래처', '단가', '외화단가(USD)', '환율'] },
   MAP: { name: '연결표', head: ['ID', '주문서 상품명·옵션', 'SKU', '배수', '수정일'] },
   RULE: { name: '매칭규칙', head: ['ID', '상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모', '수정일'] },
   MEMO: { name: '메모', head: ['내용', '수정시각', '수정자'] },
@@ -124,7 +124,7 @@ function getData() {
   const moves = rows_(TABS.MOVE).filter((r) => str_(r[0])).map((r) => ({
     id: str_(r[0]), date: str_(r[1]), type: MOVE_CODE[str_(r[2])] || str_(r[2]), loc: LOC_CODE[str_(r[3])] || str_(r[3]),
     sku: str_(r[4]), qty: num_(r[5]), memo: str_(r[6]), batch: str_(r[7]) || str_(r[0]), batchLabel: str_(r[8]),
-    at: str_(r[9]), by: str_(r[10]), partner: str_(r[11]), price: num_(r[12]),
+    at: str_(r[9]), by: str_(r[10]), partner: str_(r[11]), price: num_(r[12]), usd: num_(r[13]), fx: num_(r[14]),
   }));
   const maps = rows_(TABS.MAP).filter((r) => str_(r[0])).map((r) => ({ id: str_(r[0]), key: str_(r[1]), sku: str_(r[2]), mult: num_(r[3]) || 1 }));
   const uploads = rows_(TABS.UPLOAD).filter((r) => str_(r[0])).map((r) => ({ sig: str_(r[0]), file: str_(r[1]), units: num_(r[2]), at: str_(r[3]) }));
@@ -144,7 +144,7 @@ function moveRows_(list, batchLabel) {
   const batch = Utilities.getUuid().slice(0, 13), at = now_(), by = me_();
   return list.map((m) => [
     Utilities.getUuid().slice(0, 13), m.date, MOVE_LABEL[m.type] || m.type, LOC_LABEL[m.loc] || m.loc,
-    m.sku, Number(m.qty), m.memo || '', batch, batchLabel || '', at, by, m.partner || '', Number(m.price) || '',
+    m.sku, Number(m.qty), m.memo || '', batch, batchLabel || '', at, by, m.partner || '', Number(m.price) || '', Number(m.usd) || '', Number(m.fx) || '',
   ]);
 }
 function addMoves(list, batchLabel) {
@@ -281,6 +281,18 @@ function deletePhoto(key) {
     for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === key) sh.deleteRow(i + 2);
     return getData();
   });
+}
+/** 오늘 달러 환율 (구글 파이낸스): 설정 탭 빈 칸에 잠깐 수식을 넣어 읽고 지움 */
+function getFx() {
+  const sh = tab_(book_(), TABS.CONF);
+  const cell = sh.getRange('F1');
+  cell.setFormula('=GOOGLEFINANCE("CURRENCY:USDKRW")');
+  SpreadsheetApp.flush();
+  let v = Number(cell.getValue());
+  for (let k = 0; k < 3 && !(v > 0); k++) { Utilities.sleep(800); SpreadsheetApp.flush(); v = Number(cell.getValue()); }
+  cell.clearContent();
+  if (!(v > 0)) throw new Error('오늘 환율을 가져오지 못했습니다. 환율 칸에 직접 입력해 주세요.');
+  return Math.round(v * 100) / 100;
 }
 /** 설정 항목 지우기 (예: 공급자 회사 삭제) */
 function deleteConf(key) {
