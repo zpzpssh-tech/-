@@ -26,6 +26,7 @@ const TABS = {
   MAP: { name: '연결표', head: ['ID', '주문서 상품명·옵션', 'SKU', '배수', '수정일'] },
   RULE: { name: '매칭규칙', head: ['ID', '상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모', '수정일'] },
   MEMO: { name: '메모', head: ['내용', '수정시각', '수정자'] },
+  PHOTO: { name: '상품사진', head: ['상품키', '상품명', '사진', '수정시각'] },
   CONF: { name: '설정', head: ['항목', '값', '수정시각'] },
   QUOTE: { name: '견적서', head: ['견적번호', '견적일', '받는 곳', '합계(부가세포함)', '공급가액', '부가세', '내용(JSON)', '작성자', '작성시각'] },
   UPLOAD: { name: '업로드', head: ['서명', '파일명', '차감수량', '기록시각', '기록자'] },
@@ -130,10 +131,12 @@ function getData() {
   const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ id: str_(r[0]), name: str_(r[1]), opt: str_(r[2]), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1, memo: str_(r[5]) }));
   const mr = rows_(TABS.MEMO)[0] || [];
   const memo = { text: str_(mr[0]), at: str_(mr[1]), by: str_(mr[2]) };
+  const photos = {};
+  rows_(TABS.PHOTO).forEach((r) => { if (str_(r[0]) && r[2]) photos[str_(r[0])] = String(r[2]); });
   const conf = {};
   rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
   const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
-  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -257,6 +260,25 @@ function saveConf(obj) {
       if (idx.has(k)) putRow_(TABS.CONF, idx.get(k), [k, v, at]); else add.push([k, v, at]);
     });
     append_(TABS.CONF, add);
+    return getData();
+  });
+}
+/** 상품 사진 저장 (상품 하나에 한 장, 화면에서 작게 줄여서 보냄) */
+function savePhoto(key, name, data) {
+  return withLock_(() => {
+    if (String(data || '').length > 49000) throw new Error('사진이 너무 큽니다. 다른 사진으로 다시 시도해 주세요.');
+    const vals = rows_(TABS.PHOTO);
+    const i = vals.findIndex((r) => str_(r[0]) === key);
+    const row = [key, name || '', data || '', now_()];
+    if (i >= 0) putRow_(TABS.PHOTO, i, row); else append_(TABS.PHOTO, [row]);
+    return getData();
+  });
+}
+function deletePhoto(key) {
+  return withLock_(() => {
+    const sh = tab_(book_(), TABS.PHOTO);
+    const vals = rows_(TABS.PHOTO);
+    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === key) sh.deleteRow(i + 2);
     return getData();
   });
 }

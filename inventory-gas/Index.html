@@ -344,13 +344,46 @@ table.mini tr[data-sku] { cursor: pointer; }
   .paperscale { transform: none !important; }
   @page { size: A4; margin: 0; }
 }
+/* ===== 상품 카드 입출고 ===== */
+.pcat { display: grid; gap: 10px; }
+.pcat + .pcat { margin-top: 18px; }
+.pcat h3 { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.pcat h3 span { font-size: 12px; font-weight: 500; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.pcard { height: auto; padding: 0; border-radius: 12px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; text-align: left; border: 1px solid var(--line); background: var(--surface); font-weight: 400; }
+.pcard:hover { box-shadow: var(--shadow); background: var(--surface); border-color: var(--accent); }
+.pthumb { aspect-ratio: 1 / 1; background: var(--sunken); display: grid; place-items: center; overflow: hidden; position: relative; max-width: 100%; }
+.pthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pthumb .ph { font-size: 34px; font-weight: 800; color: var(--line-strong); }
+.pthumb .pstat { position: absolute; top: 8px; left: 8px; }
+.pinfo { padding: 10px 12px 12px; display: grid; gap: 3px; }
+.pinfo b { font-size: 14px; line-height: 1.35; }
+.pinfo .po { font-size: 12px; color: var(--muted); }
+.pinfo .pq { font-size: 13px; }
+.pinfo .pq b { font-size: 17px; font-weight: 800; }
+.modal.pm { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding-bottom: 0; }
+.modal.pm .savebar { padding-bottom: 16px; z-index: 2; }
+.pmhead { display: flex; gap: 14px; align-items: flex-start; }
+.pmphoto { width: 86px; height: 86px; border-radius: 10px; background: var(--sunken); overflow: hidden; display: grid; place-items: center; flex: none; }
+.pmphoto img { width: 100%; height: 100%; object-fit: cover; }
+.pmphoto .ph { font-size: 30px; font-weight: 800; color: var(--line-strong); }
+.pm h3 { text-align: left; font-size: 18px; }
+.sm-file span { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; background: var(--surface); }
+.tiles.compact { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.tiles.compact .tile { min-height: 0; padding: 8px 6px; justify-items: center; text-align: center; gap: 2px; }
+.tiles.compact .tile svg { width: 20px; height: 20px; }
+.tiles.compact .tile b { font-size: 13px; }
+.tiles.compact .tile span { display: none; }
+.thumb-s { width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex: none; }
+#modal { z-index: 45; }
+@media (max-width: 600px) { .pgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .tiles.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pmphoto { width: 64px; height: 64px; } }
 @media (prefers-reduced-motion: no-preference) { button, nav.tabs a { transition: background .12s, color .12s, border-color .12s; } }
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 견적서2</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 상품카드</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -419,33 +452,15 @@ table.mini tr[data-sku] { cursor: pointer; }
     </div>
   </section>
 
-  <!-- 입출고 하기 -->
+  <!-- 입출고 하기: 카테고리 → 상품 카드 -->
   <section id="v-record" class="view" hidden>
     <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고 하기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
-      <div class="step"><span class="stepno">1</span><h2>구분</h2></div>
-      <div class="tiles" id="rc-groups"></div>
-      <div class="seg sub" id="rc-sub" hidden></div>
-      <div class="explain" id="rc-explain"></div>
-      <div class="row">
-        <label class="f">날짜<input type="date" id="rc-date"></label>
-        <label class="f" id="rc-loc-wrap" hidden>창고<select id="rc-loc"></select></label>
-        <label class="f" id="rc-partner-wrap" hidden>거래처<select id="rc-partner"></select></label>
-        <label class="f grow">메모 (선택)<input id="rc-memo" placeholder="예: 쿠팡 PO 140927859, 중국 11월 발주분"></label>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="step"><span class="stepno">2</span><h2>상품 선택</h2><span class="muted small">눌러서 선택</span></div>
-      <input id="pk-q" placeholder="상품 이름, 옵션, 코드로 찾기">
+      <div class="row"><h2 class="grow">상품을 눌러서 입고·출고하세요</h2><input id="pk-q" placeholder="상품 찾기" style="width:220px"></div>
       <div class="chips" id="pk-parts"></div>
-      <div class="picklist" id="pk-list"></div>
+      <p class="small muted" id="pk-mode" style="margin:0"></p>
+      <div id="pk-list"></div>
     </div>
-    <div class="panel">
-      <div class="step"><span class="stepno">3</span><h2 id="rc-step3">수량</h2></div>
-      <div class="lines" id="rc-lines"></div>
-      <div class="savebar"><div class="totals" id="rc-totals"></div><button class="primary big" id="rc-save">기록하기</button></div>
-    </div>
-    <datalist id="sku-list"></datalist>
   </section>
 
   <!-- 주문서 업로드 -->
@@ -505,7 +520,7 @@ table.mini tr[data-sku] { cursor: pointer; }
       <div class="row">
         <label class="f">코드<input id="it-code" placeholder="KNEE-BK-L" style="width:140px"></label>
         <label class="f grow">상품명<input id="it-name" placeholder="슬개건 무릎보호대"></label>
-        <label class="f">부위<input id="it-part" list="part-list" placeholder="무릎" style="width:96px"></label>
+        <label class="f">카테고리<input id="it-part" list="part-list" placeholder="무릎" style="width:96px"></label>
         <label class="f">옵션(색상/사이즈)<input id="it-opt" placeholder="블랙 / L" style="width:120px"></label>
       </div>
       <div class="row">
@@ -671,6 +686,35 @@ table.mini tr[data-sku] { cursor: pointer; }
     <div class="md-btns" id="md-btns"></div>
   </div>
 </div>
+<div class="modal-bg" id="pmodal" hidden>
+  <div class="modal wide pm" role="dialog" aria-modal="true" aria-labelledby="pm-title">
+    <div class="pmhead">
+      <div class="pmphoto" id="pm-photo-box"></div>
+      <div style="min-width:0;flex:1">
+        <div class="small muted" id="pm-cat"></div>
+        <h3 id="pm-title"></h3>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <label class="sm-file"><input type="file" id="pm-photo" accept="image/*" hidden><span id="pm-photo-btn">사진 넣기</span></label>
+          <button class="ghost sm" id="pm-photo-del" hidden>사진 지우기</button>
+        </div>
+      </div>
+      <button class="ghost" id="pm-close" aria-label="닫기">닫기 ✕</button>
+    </div>
+    <div class="tiles compact" id="rc-groups"></div>
+    <div class="seg sub" id="rc-sub" hidden></div>
+    <div class="explain small" id="rc-explain"></div>
+    <div class="row">
+      <label class="f">날짜<input type="date" id="rc-date"></label>
+      <label class="f" id="rc-loc-wrap" hidden>창고<select id="rc-loc"></select></label>
+      <label class="f" id="rc-partner-wrap" hidden>거래처<select id="rc-partner"></select></label>
+      <label class="f grow">메모 (선택)<input id="rc-memo" placeholder="예: 쿠팡 PO 번호, 중국 11월 발주분"></label>
+    </div>
+    <h3 id="rc-step3" style="font-size:14px">수량</h3>
+    <div class="lines" id="rc-lines"></div>
+    <div class="savebar"><div class="totals" id="rc-totals"></div><button class="primary big" id="rc-save">기록하기</button></div>
+  </div>
+</div>
+<datalist id="sku-list"></datalist>
 <div class="modal-bg" id="skumodal" hidden>
   <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="sk-title">
     <div class="row"><h3 id="sk-title" class="grow"></h3><button class="ghost" id="sk-close" aria-label="닫기">닫기 ✕</button></div>
@@ -748,7 +792,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, sups: [], supEdit: null, up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, sups: [], supEdit: null, photos: {}, pmKey: null, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -876,7 +920,7 @@ function stockCard({ code, s, r }) {
   const pct = r.have <= 0 ? 2 : r.days === Infinity ? 100 : Math.max(4, Math.min(100, (r.days / (lead * 2)) * 100));
   return `<button type="button" class="card st-${r.status}" data-sku="${esc(code)}">
     <div class="ctop"><span class="pill ${STATUS[r.status][0]}">${STATUS[r.status][1]}</span><span class="code">${esc(code)}</span></div>
-    <div class="cname"><b>${esc(s.name)}</b> <span class="muted">${esc(s.option || '')}</span></div>
+    <div class="cname" style="display:flex;gap:8px;align-items:center">${photoOf(productKeyOf(s)) ? `<img class="thumb-s" src="${photoOf(productKeyOf(s))}" alt="">` : ''}<span><b>${esc(s.name)}</b> <span class="muted">${esc(s.option || '')}</span></span></div>
     <div class="cbig"><b>${fmt(r.have)}</b>개 있어요</div>
     <div class="gauge" aria-hidden="true"><i style="width:${pct}%"></i></div>
     <div class="cdays">${daysWord(r)}</div>
@@ -1050,10 +1094,15 @@ function openSku(code) {
 }
 function closeSku() { $('skumodal').hidden = true; }
 function startRecord(form, code, qty) {
-  S.form = form; S.lines = [];
-  location.hash = '#record';
-  renderForm();
-  if (code) { addToCart(code); if (qty) { S.lines[0].q = String(qty); renderLines(); } }
+  S.form = form;
+  if (location.hash !== '#record') location.hash = '#record';
+  renderPicker();
+  if (code) {
+    const s0 = S.skus.get(code); if (!s0) return;
+    openProduct(productKeyOf(s0));
+    const i = S.lines.findIndex((ln) => parseSku(ln.v) === code);
+    if (i >= 0 && qty) { S.lines[i].q = String(qty); renderLines(); }
+  } else toast(`'${SUBLABEL[form]}'을(를) 고르셨어요. 상품을 눌러 주세요`);
 }
 
 /* ---------- 입출고 기록 ---------- */
@@ -1068,7 +1117,6 @@ function curPartner() { return FORMS[S.form].price === 'sell' ? $('rc-partner').
 function setupRecord() {
   $('rc-date').value = today();
   S.lines = [];
-  renderForm();
 }
 function renderPartnerSelect() {
   const f = FORMS[S.form], sel = $('rc-partner');
@@ -1093,37 +1141,72 @@ function renderForm() {
   if (S.prevMode !== f.mode) { const st = ready() ? ledger(stockWin()) : new Map(); S.lines.forEach((ln) => { ln.q = f.mode === 'count' ? String(Math.max(0, (st.get(parseSku(ln.v)) || {})[formLoc()] || 0)) : '1'; }); S.prevMode = f.mode; }
   S.lines.forEach((ln) => { ln.p = ''; ln.src = ''; });
   S.lines.forEach((_, i) => fillPrice(i, false));
-  renderLines(); renderPicker();
+  renderLines(); if ($('pmodal').hidden) renderPicker(); else $('pk-mode').innerHTML = `지금 고른 구분: <b>${esc(SUBLABEL[S.form])}</b> · 상품 창에서 바꿀 수 있어요`;
+}
+/* 상품 = 같은 카테고리 + 같은 상품명 (색상·사이즈 옵션은 카드 안에 묶음) */
+const productKeyOf = (x) => `${x.part || '기타'}|${x.name}`;
+const photoKey = (key) => 'p' + hash(key);
+function productMap() {
+  const m = new Map();
+  for (const x of S.skus.values()) {
+    if (x.active === false) continue;
+    const k = productKeyOf(x);
+    if (!m.has(k)) m.set(k, { key: k, name: x.name, part: x.part || '기타', codes: [] });
+    m.get(k).codes.push(x.code);
+  }
+  for (const p of m.values()) p.codes.sort((a, b) => (S.skus.get(a).option || '').localeCompare(S.skus.get(b).option || '', 'ko', { numeric: true }));
+  return m;
+}
+const photoOf = (key) => S.photos[photoKey(key)] || '';
+const phLetter = (name) => esc(String(name || '?').replace(/^\s+/, '').charAt(0));
+function productCard(p, lg) {
+  let have = 0, worst = 'ok';
+  const rank = { bad: 0, warn: 1, nostock: 2, ok: 3, none: 4 };
+  for (const c of p.codes) { const r = lg.get(c) || {}; have += r.have || 0; if (rank[r.status] < rank[worst]) worst = r.status; }
+  const ph = photoOf(p.key), opts = p.codes.map((c) => S.skus.get(c).option).filter(Boolean);
+  const badge = worst === 'bad' || worst === 'warn' || worst === 'nostock' ? `<span class="pill ${STATUS[worst][0]} pstat">${worst === 'bad' ? '주문 필요' : worst === 'warn' ? '곧 주문' : '재고 미입력'}</span>` : '';
+  return `<button type="button" class="pcard" data-prod="${esc(p.key)}">
+    <div class="pthumb">${ph ? `<img src="${ph}" alt="">` : `<span class="ph">${phLetter(p.name)}</span>`}${badge}</div>
+    <div class="pinfo"><b>${esc(p.name)}</b><span class="po">${opts.length ? esc(opts.slice(0, 5).join(' · ')) + (opts.length > 5 ? ` 외 ${opts.length - 5}` : '') : '옵션 없음'}</span><span class="pq"><b>${fmt(have)}</b>개 있어요</span></div>
+  </button>`;
 }
 function renderPicker() {
   const list = $('pk-list');
+  $('pk-mode').innerHTML = `지금 고른 구분: <b>${esc(SUBLABEL[S.form])}</b> · 상품 창에서 바꿀 수 있어요`;
   if (!ready()) { list.innerHTML = '<div class="empty">불러오는 중…</div>'; return; }
-  const active = [...S.skus.values()].filter((x) => x.active !== false);
-  if (!active.length) { list.innerHTML = '<div class="empty"><b>등록된 상품이 없어요</b><a href="#items">상품·거래처</a>나 <a href="#excel">엑셀 불러오기</a>에서 먼저 추가해 주세요.</div>'; $('pk-parts').innerHTML = ''; return; }
-  const parts = [...new Set(active.map((x) => x.part).filter(Boolean))].sort();
-  $('pk-parts').innerHTML = parts.length ? ['', ...parts].map((p) => `<button type="button" class="chip" data-pkpart="${esc(p)}" aria-pressed="${p === S.pkPart}">${p ? esc(p) : '전체'}</button>`).join('') : '';
-  const q = norm($('pk-q').value).toLowerCase(), st = ledger(stockWin()), loc = formLoc();
-  const inCart = new Map(S.lines.map((ln) => [parseSku(ln.v), ln]));
-  const found = active.filter((x) => (!S.pkPart || x.part === S.pkPart) && (!q || `${x.code} ${x.name} ${x.option || ''}`.toLowerCase().includes(q)))
-    .sort((a, b) => (a.part || '').localeCompare(b.part || '') || a.name.localeCompare(b.name) || (a.option || '').localeCompare(b.option || ''));
-  list.innerHTML = found.length ? found.slice(0, 80).map((x) => {
-    const r = st.get(x.code) || {}, c = inCart.get(x.code);
-    return `<button type="button" class="pick${c ? ' on' : ''}" data-add="${esc(x.code)}"><span class="pname">${esc(x.name)}</span><span class="popt">${esc(x.option || '옵션 없음')}</span><span class="pstock">${LOC[loc]}에 ${fmt(r[loc] || 0)}개</span>${c ? `<span class="pin">담김 ✓</span>` : ''}</button>`;
-  }).join('') + (found.length > 80 ? `<div class="empty">${found.length - 80}개 더 있어요. 검색어로 좁혀 주세요.</div>` : '')
-    : '<div class="empty">찾는 상품이 없어요. 다른 이름으로 찾아보세요.</div>';
+  const pm = productMap();
+  if (!pm.size) { list.innerHTML = '<div class="empty"><b>등록된 상품이 없어요</b><a href="#items">상품·거래처</a>나 <a href="#excel">엑셀 불러오기</a>에서 먼저 추가해 주세요.</div>'; $('pk-parts').innerHTML = ''; return; }
+  const cats = [...new Set([...pm.values()].map((p) => p.part))].sort((a, b) => a.localeCompare(b, 'ko'));
+  if (S.pkPart && !cats.includes(S.pkPart)) S.pkPart = '';
+  $('pk-parts').innerHTML = ['', ...cats].map((c) => `<button type="button" class="chip" data-pkpart="${esc(c)}" aria-pressed="${c === S.pkPart}">${c ? esc(c) : '전체'}</button>`).join('');
+  const q = norm($('pk-q').value).toLowerCase(), lg = ledger(stockWin());
+  const match = (p) => !q || `${p.name} ${p.part} ${p.codes.join(' ')} ${p.codes.map((c) => S.skus.get(c).option || '').join(' ')}`.toLowerCase().includes(q);
+  const shown = cats.filter((c) => !S.pkPart || c === S.pkPart).map((c) => [c, [...pm.values()].filter((p) => p.part === c && match(p)).sort((a, b) => a.name.localeCompare(b.name, 'ko'))]).filter(([, ps]) => ps.length);
+  list.innerHTML = shown.length ? shown.map(([c, ps]) => `<div class="pcat"><h3>${esc(c)} <span>${ps.length}개 상품</span></h3><div class="pgrid">${ps.map((p) => productCard(p, lg)).join('')}</div></div>`).join('')
+    : '<div class="empty">찾는 상품이 없어요.</div>';
 }
-function addToCart(code) {
-  const f = FORMS[S.form];
-  let i = S.lines.findIndex((ln) => parseSku(ln.v) === code);
-  if (i >= 0) { if (f.mode !== 'count') S.lines[i].q = String(toNum(S.lines[i].q) + 1); }
-  else {
-    const cur = ready() ? (ledger(stockWin()).get(code) || {})[formLoc()] || 0 : 0;
-    S.lines.push({ v: skuLabel(code), q: f.mode === 'count' ? String(Math.max(0, cur)) : '1', p: '', src: '' });
-    i = S.lines.length - 1;
-    fillPrice(i, true);
-  }
-  renderLines(); renderPicker();
+function renderPmHead() {
+  const p = productMap().get(S.pmKey); if (!p) return;
+  const ph = photoOf(p.key);
+  $('pm-cat').textContent = `${p.part} · 옵션 ${p.codes.length}개`;
+  $('pm-title').textContent = p.name;
+  $('pm-photo-box').innerHTML = ph ? `<img src="${ph}" alt="">` : `<span class="ph">${phLetter(p.name)}</span>`;
+  $('pm-photo-btn').textContent = ph ? '사진 바꾸기' : '사진 넣기';
+  $('pm-photo-del').hidden = !ph;
 }
+function openProduct(key) {
+  const p = productMap().get(key); if (!p) return;
+  S.pmKey = key;
+  const f = FORMS[S.form], lg = ledger(stockWin());
+  S.prevMode = f.mode;
+  S.lines = p.codes.map((c) => ({ v: skuLabel(c), q: f.mode === 'count' ? String(Math.max(0, (lg.get(c) || {})[formLoc()] || 0)) : '', p: '', src: '' }));
+  if (!$('rc-date').value) $('rc-date').value = today();
+  renderPmHead();
+  $('pmodal').hidden = false;
+  renderForm();
+  const first = $('ln-q-0'); if (first && window.matchMedia('(min-width: 700px)').matches) first.focus();
+}
+function closeProduct() { $('pmodal').hidden = true; S.pmKey = null; S.lines = []; }
 function lastBuyPrice(code) { return S.lastBuy.get(code) || null; }
 function fillPrice(i, interactive) {
   const f = FORMS[S.form], ln = S.lines[i], code = parseSku(ln.v);
@@ -1161,14 +1244,13 @@ function lineHint(ln, st, loc) {
 function renderLines() {
   const f = FORMS[S.form];
   const st = ready() ? ledger(stockWin()) : new Map(), loc = formLoc();
-  if (!S.lines.length) { $('rc-lines').innerHTML = '<div class="empty"><b>아직 담은 상품이 없어요</b>위 목록에서 상품을 누르면 여기에 담겨요.</div>'; renderTotals(); return; }
+  if (!S.lines.length) { $('rc-lines').innerHTML = '<div class="empty">상품을 눌러 주세요.</div>'; renderTotals(); return; }
   $('rc-lines').innerHTML = S.lines.map((ln, i) => {
     const code = parseSku(ln.v), sk = S.skus.get(code) || {};
     return `<div class="line cart" data-i="${i}">
-      <div class="cname"><b>${esc(sk.name || ln.v)}</b> <span class="muted">${esc(sk.option || '')}</span><div class="hint" id="ln-h-${i}">${lineHint(ln, st, loc)}</div></div>
+      <div class="cname"><b>${esc(sk.option || sk.name || ln.v)}</b> <span class="muted small">${esc(sk.code || '')}</span><div class="hint" id="ln-h-${i}">${lineHint(ln, st, loc)}</div></div>
       <div class="stepper"><button type="button" data-step="-1" aria-label="하나 빼기">−</button><input type="number" min="0" inputmode="numeric" placeholder="${f.mode === 'count' ? '센 수량' : '수량'}" value="${esc(ln.q)}" data-k="q" id="ln-q-${i}" aria-label="수량"><button type="button" data-step="1" aria-label="하나 더하기">+</button></div>
       ${f.price ? `<label class="f">${f.price === 'sell' ? '개당 판매가' : '개당 매입가'}<span style="display:flex;gap:6px;align-items:center"><input class="money" type="number" min="0" placeholder="원" value="${esc(ln.p)}" data-k="p" id="ln-p-${i}"><span class="tag" id="ln-t-${i}" ${ln.src ? '' : 'hidden'}>${esc(ln.src)}</span></span></label>` : ''}
-      <button class="ghost" data-del="${i}" aria-label="빼기">✕</button>
     </div>`;
   }).join('');
   renderTotals();
@@ -1193,7 +1275,7 @@ function renderTotals() {
     const r = st.get(code); if (f.price === 'sell' && p && r) profit += (p - r.unit) * q;
   }
   const el = $('rc-totals');
-  if (!n) { el.innerHTML = '<span>상품을 담아 주세요</span>'; return; }
+  if (!n) { el.innerHTML = '<span>옵션별 수량을 입력해 주세요</span>'; return; }
   if (f.mode === 'count') { el.innerHTML = `<span>상품 <b>${n}</b>개를 실사 수량으로 맞춥니다</span>`; return; }
   el.innerHTML = `<span>상품 <b>${n}</b>개 · 모두 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b></span>` : '') +
     (f.price === 'sell' && amt ? `<span>예상 이익 <b>${won(profit)}</b> (평균원가 기준)</span>` : '');
@@ -1205,7 +1287,7 @@ function buildMoves() {
   const out = [], errs = [];
   if (f.price === 'sell' && !partner) errs.push('거래처를 골라 주세요');
   S.lines.forEach((ln, i) => {
-    if (!ln.v && ln.q === '') return;
+    if (!ln.v || ln.q === '' || (f.mode === 'qty' && Number(ln.q) === 0)) return;
     const code = parseSku(ln.v), q = Number(ln.q), price = toNum(ln.p);
     if (!code) { errs.push(`${i + 1}번째 줄: SKU를 목록에서 골라 주세요`); return; }
     if (ln.q === '' || !Number.isFinite(q) || q < 0 || (f.mode === 'qty' && q === 0)) { errs.push(`${i + 1}번째 줄: 수량을 확인해 주세요`); return; }
@@ -1235,7 +1317,7 @@ async function saveRecord() {
   try {
     applyData(await api('addMoves', out, FORMS[S.form].label));
     S.lines = []; $('rc-memo').value = '';
-    renderLines(); renderPicker();
+    closeProduct(); renderPicker();
     toast(FORMS[S.form].mode === 'count' ? '실사 수량으로 재고를 맞췄습니다' : `${SUBLABEL[S.form]} 기록했습니다`);
   } catch (e) { writeFail(e); }
   finally { btn.disabled = !S.canWrite; }
@@ -1801,6 +1883,7 @@ function applyData(d) {
   if (!S.sups.length && (S.conf.bizno || S.conf.name)) S.sups.push({ id: 'main', label: S.conf.name || '우리 회사', bizno: S.conf.bizno, name: S.conf.name, ceo: S.conf.ceo, addr: S.conf.addr, tel: S.conf.tel, type: S.conf.type, item: S.conf.item, manager: S.conf.manager, bank: S.conf.bank, holder: S.conf.holder, seal: S.conf.seal });
   S.sups.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
   S.quotes = d.quotes || [];
+  S.photos = d.photos || {};
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
     if (!m.price) continue;
@@ -1828,7 +1911,24 @@ $('rc-groups').addEventListener('click', (e) => { const b = e.target.closest('[d
 $('rc-sub').addEventListener('click', (e) => { const b = e.target.closest('[data-form]'); if (!b) return; S.form = b.dataset.form; renderForm(); });
 $('pk-q').addEventListener('input', renderPicker);
 $('pk-parts').addEventListener('click', (e) => { const b = e.target.closest('[data-pkpart]'); if (!b) return; S.pkPart = b.dataset.pkpart; renderPicker(); });
-$('pk-list').addEventListener('click', (e) => { const b = e.target.closest('[data-add]'); if (b) addToCart(b.dataset.add); });
+$('pk-list').addEventListener('click', (e) => { const b = e.target.closest('[data-prod]'); if (b) openProduct(b.dataset.prod); });
+$('pm-close').addEventListener('click', closeProduct);
+$('pmodal').addEventListener('click', (e) => { if (e.target.id === 'pmodal') closeProduct(); });
+$('pm-photo').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0]; if (!f || !S.pmKey) return;
+  if (!guard()) return;
+  const img = new Image(), rd = new FileReader(), p = productMap().get(S.pmKey);
+  rd.onload = () => { img.onload = async () => {
+    // 가운데를 정사각형으로 잘라 360px JPEG로 줄임 (시트 한 칸에 들어가도록)
+    const side = Math.min(img.width, img.height), cv = document.createElement('canvas'); cv.width = cv.height = 360;
+    cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 360, 360);
+    let data = cv.toDataURL('image/jpeg', 0.8); if (data.length > 45000) data = cv.toDataURL('image/jpeg', 0.6);
+    try { applyData(await api('savePhoto', photoKey(S.pmKey), p ? p.name : '', data)); renderPmHead(); toast('사진을 넣었습니다'); } catch (err) { writeFail(err); }
+    $('pm-photo').value = '';
+  }; img.src = rd.result; };
+  rd.readAsDataURL(f);
+});
+$('pm-photo-del').addEventListener('click', async () => { if (!guard() || !S.pmKey) return; try { applyData(await api('deletePhoto', photoKey(S.pmKey))); renderPmHead(); toast('사진을 지웠습니다'); } catch (err) { writeFail(err); } });
 $('hm-actions').addEventListener('click', (e) => {
   const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
   if (g) startRecord(GROUPS[g.dataset.gogroup].forms[0]);
@@ -1875,7 +1975,7 @@ $('rc-lines').addEventListener('click', (e) => {
 $('rc-save').addEventListener('click', saveRecord);
 $('md-btns').addEventListener('click', (e) => { const b = e.target.closest('button[data-price]'); if (b) closeModal(b.dataset.price); });
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(''); });
-document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('skumodal').hidden) closeSku(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); });
 
 $('up-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readOrders(f); });
 $('up-body').addEventListener('change', (e) => {
@@ -2283,7 +2383,7 @@ try {
 } catch (e) { /* 무시 */ }
 load();
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
-setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden) load(true); }, 120000);
+setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden) load(true); }, 120000);
 })();
 </script>
 </body>
