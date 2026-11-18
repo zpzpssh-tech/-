@@ -383,7 +383,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 상품카드</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 상품카드2</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -811,11 +811,14 @@ function ledger(win) {
     return r;
   };
   for (const code of S.skus.keys()) get(code);
-  const seen = new Set();
+  const seen = new Set(), counted = new Set();
   for (const mv of [...S.moves].sort(cmpMove)) {
     const r = get(mv.sku), q = mv.qty, inWin = mv.date >= from;
     // 기초재고: 그 SKU·창고에 처음으로 들어온 플러스 수량 (출고를 먼저 적고 나중에 재고를 넣어도 손익으로 잡지 않음)
     const key = mv.sku + '|' + mv.loc, first = q > 0 && !seen.has(key); if (q > 0) seen.add(key);
+    // 그 SKU·창고의 첫 재고 실사 = 기초재고 맞추기 (입고·출고를 먼저 적고 나중에 창고 재고를 세어 넣어도 손익으로 잡지 않음)
+    const firstCount = mv.type === 'adjust' && !counted.has(key); if (mv.type === 'adjust') counted.add(key);
+    const opening = first || firstCount;
     if (mv.loc === 'pending') { r.pending += q; continue; }
     if (mv.type === 'fassto_out' || mv.type === 'fassto_in') { if (r[mv.loc] !== undefined) r[mv.loc] += q; continue; }
     const held = Math.max(r.hq + r.fassto, 0);
@@ -824,13 +827,13 @@ function ledger(win) {
       const unit = mv.type === 'inbound' && mv.price > 0 ? mv.price : cur;
       r.avg = (held * cur + q * unit) / (held + q);
       // 처음 들어온 재고(기초재고)는 손익이 아니라 시작점
-      if (mv.type === 'adjust' && inWin && !first) r.adj += q * unit;
+      if (mv.type === 'adjust' && inWin && !opening) r.adj += q * unit;
       if (mv.type === 'inbound' && inWin) { r.inQty += q; r.inAmt += q * unit; }
     } else if (q < 0) {
       const out = -q;
       if (SALES.has(mv.type)) {
         if (inWin) { r.sold += out; r.cogs += out * cur; if (mv.price > 0) { r.sales += out * mv.price; r.pcogs += out * cur; } }
-      } else if ((mv.type === 'adjust' || mv.type === 'loss') && inWin) r.adj -= out * cur;
+      } else if (((mv.type === 'adjust' && !opening) || mv.type === 'loss') && inWin) r.adj -= out * cur;
       if (!r.avg) r.avg = cur;
     }
     if (r[mv.loc] !== undefined) r[mv.loc] += q;
