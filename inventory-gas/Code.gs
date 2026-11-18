@@ -26,6 +26,8 @@ const TABS = {
   MAP: { name: '연결표', head: ['ID', '주문서 상품명·옵션', 'SKU', '배수', '수정일'] },
   RULE: { name: '매칭규칙', head: ['ID', '상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모', '수정일'] },
   MEMO: { name: '메모', head: ['내용', '수정시각', '수정자'] },
+  CONF: { name: '설정', head: ['항목', '값', '수정시각'] },
+  QUOTE: { name: '견적서', head: ['견적번호', '견적일', '받는 곳', '합계(부가세포함)', '공급가액', '부가세', '내용(JSON)', '작성자', '작성시각'] },
   UPLOAD: { name: '업로드', head: ['서명', '파일명', '차감수량', '기록시각', '기록자'] },
 };
 // 시트에는 사람이 읽기 쉬운 한글로 저장하고, 프로그램 안에서는 코드로 씁니다.
@@ -128,7 +130,10 @@ function getData() {
   const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ id: str_(r[0]), name: str_(r[1]), opt: str_(r[2]), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1, memo: str_(r[5]) }));
   const mr = rows_(TABS.MEMO)[0] || [];
   const memo = { text: str_(mr[0]), at: str_(mr[1]), by: str_(mr[2]) };
-  return { skus, partners, moves, maps, uploads, rules, memo, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  const conf = {};
+  rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
+  const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -240,6 +245,47 @@ function deleteRule(id) {
   });
 }
 /** 홈 화면 메모 (모두가 같이 보는 메모 한 장) */
+/** 설정(회사 정보·도장 등) 저장: 항목별로 고쳐 쓰기 */
+function saveConf(obj) {
+  return withLock_(() => {
+    const vals = rows_(TABS.CONF);
+    const idx = new Map(vals.map((r, i) => [str_(r[0]), i]));
+    const add = [], at = now_();
+    Object.keys(obj || {}).forEach((k) => {
+      const v = String(obj[k] === null || obj[k] === undefined ? '' : obj[k]);
+      if (v.length > 49000) throw new Error('도장 이미지가 너무 큽니다. 200KB 이하의 작은 이미지로 올려 주세요.');
+      if (idx.has(k)) putRow_(TABS.CONF, idx.get(k), [k, v, at]); else add.push([k, v, at]);
+    });
+    append_(TABS.CONF, add);
+    return getData();
+  });
+}
+/** 견적서 저장 (같은 번호면 고쳐 쓰기) */
+function saveQuote(q) {
+  return withLock_(() => {
+    const vals = rows_(TABS.QUOTE);
+    const i = vals.findIndex((r) => str_(r[0]) === q.no);
+    const row = [q.no, q.date, q.to, num_(q.total), num_(q.supply), num_(q.vat), JSON.stringify(q.body || {}), me_(), now_()];
+    if (i >= 0) putRow_(TABS.QUOTE, i, row); else append_(TABS.QUOTE, [row]);
+    return getData();
+  });
+}
+function deleteQuote(no) {
+  return withLock_(() => {
+    const sh = tab_(book_(), TABS.QUOTE);
+    const vals = rows_(TABS.QUOTE);
+    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === no) sh.deleteRow(i + 2);
+    return getData();
+  });
+}
+/** 견적서 PDF를 구글 드라이브 '올투게더나우 견적서' 폴더에 저장하고 주소를 돌려줌 */
+function savePdf(base64, filename) {
+  const name = '올투게더나우 견적서';
+  const it = DriveApp.getFoldersByName(name);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(name);
+  const blob = Utilities.newBlob(Utilities.base64Decode(base64), 'application/pdf', filename);
+  return folder.createFile(blob).getUrl();
+}
 function saveMemo(text) {
   return withLock_(() => { putRow_(TABS.MEMO, 0, [String(text || '').slice(0, 5000), now_(), me_()]); return getData(); });
 }
