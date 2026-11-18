@@ -251,6 +251,44 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
 .locgrid span { font-size: 12px; color: var(--muted); }
 .qbtns { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 600px) { .status3 { grid-template-columns: 1fr; } .stile b { font-size: 24px; } .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .picklist { grid-template-columns: 1fr; } }
+/* ===== 홈 위젯 대시보드 ===== */
+.dash { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.widget { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: flex; flex-direction: column; min-width: 0; }
+.widget.span2 { grid-column: span 2; }
+.whead { display: flex; align-items: center; gap: 6px; padding: 10px 12px 10px 14px; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 13.5px; }
+.whead .tip { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--muted); font-size: 10.5px; display: inline-grid; place-items: center; font-weight: 700; cursor: help; }
+.whead .wact { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.whead .wact a { font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; padding: 2px 6px; }
+.whead .wact a:hover { color: var(--accent); }
+.whead .wact button { height: 24px; width: 24px; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 14px; }
+.wbody { padding: 12px 14px; min-width: 0; flex: 1; }
+.wbody.flush { padding: 0; }
+.kv { display: grid; }
+.kv div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.kv div:last-child { border-bottom: 0; }
+.kv b { font-size: 15px; font-weight: 800; }
+.kv .bad b { color: var(--bad); } .kv .warn b { color: var(--warn); } .kv .mut b { color: var(--muted); }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 74px minmax(0, 1fr) 64px; align-items: center; gap: 10px; font-size: 13px; }
+.bar .track { height: 8px; border-radius: 99px; background: var(--sunken); overflow: hidden; }
+.bar .track i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.bar .track i.in { background: var(--ok); } .bar .track i.loss { background: var(--bad); } .bar .track i.mv { background: var(--warn); }
+.bar b { text-align: right; font-weight: 700; }
+table.mini { font-size: 12.5px; }
+table.mini th { position: static; font-size: 11.5px; }
+table.mini td, table.mini th { padding: 6px 10px; }
+table.mini tr[data-sku] { cursor: pointer; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); padding: 10px 14px 0; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--font-body); }
+.memo textarea { width: 100%; min-height: 150px; height: 100%; resize: vertical; font-family: var(--font-body); font-size: 13px; line-height: 1.6; border-radius: 8px; padding: 10px; }
+.memo .row { margin-top: 8px; align-items: center; }
+.overdue { color: var(--bad); font-weight: 700; }
+@media (max-width: 1240px) { .dash { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .dash { grid-template-columns: minmax(0, 1fr); } .widget.span2 { grid-column: auto; } }
+.work.split .dash { grid-template-columns: minmax(0, 1fr); }
+.work.split .widget.span2 { grid-column: auto; }
 @media (prefers-reduced-motion: no-preference) { button, nav.tabs a { transition: background .12s, color .12s, border-color .12s; } }
 </style>
 </head>
@@ -299,10 +337,7 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
       <h2>입출고 등록</h2>
       <div class="tiles" id="hm-actions"></div>
     </div>
-    <div class="panel">
-      <div class="row"><h2 class="grow" id="hm-list-title">주문이 필요한 상품</h2><a href="#stock" class="small">전체 재고 보기 →</a></div>
-      <div class="cards" id="hm-list"></div>
-    </div>
+    <div class="dash" id="hm-dash"></div>
   </section>
 
   <!-- 재고 보기 -->
@@ -575,7 +610,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -738,28 +773,124 @@ function renderStock() {
 }
 
 /* ---------- 홈 ---------- */
+function widget(title, tip, body, opts = {}) {
+  return `<div class="widget${opts.span ? ' span2' : ''}${opts.cls ? ' ' + opts.cls : ''}">
+    <div class="whead">${title}${tip ? `<span class="tip" title="${esc(tip)}">i</span>` : ''}<span class="wact">${opts.more ? `<a href="#${opts.more}">더보기 ›</a>` : ''}<button type="button" data-reload title="새로고침" aria-label="새로고침">↻</button></span></div>
+    ${opts.legend || ''}<div class="wbody${opts.flush ? ' flush' : ''}">${body}</div></div>`;
+}
+const addDays = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return ymd(x); };
+function dailySeries(days) {
+  const start = daysAgo(days - 1), map = new Map();
+  for (let k = 0; k < days; k++) map.set(addDays(start, k), { out: 0, inb: 0, rocket: 0, b2b: 0 });
+  for (const m of S.moves) {
+    const d = map.get(m.date); if (!d) continue;
+    if (SALES.has(m.type) && m.qty < 0) { d.out += -m.qty; if (m.type === 'rocket') d.rocket += -m.qty; if (m.type === 'b2b') d.b2b += -m.qty; }
+    if (m.type === 'inbound' && m.qty > 0 && m.loc !== 'pending') d.inb += m.qty;
+  }
+  return [...map].map(([date, v]) => ({ date, ...v }));
+}
+function niceMax(v) { if (v <= 0) return 10; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p; return 10 * p; }
+function chartSVG(series) {
+  const W = 640, H = 210, L = 40, R = 12, T = 12, B = 26, w = W - L - R, h = H - T - B;
+  const max = niceMax(Math.max(1, ...series.map((d) => Math.max(d.out, d.inb))));
+  const x = (i) => L + (series.length === 1 ? w / 2 : (i * w) / (series.length - 1));
+  const y = (v) => T + h - (v / max) * h;
+  const line = (k) => series.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join('');
+  let g = '';
+  for (let t = 0; t <= 4; t++) { const v = (max / 4) * t, yy = y(v).toFixed(1); g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${(+yy + 4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`; }
+  series.forEach((d, i) => { if (i % 7 === (series.length - 1) % 7) g += `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${i === series.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}">${d.date.slice(5).replace('-', '/')}</text>`; });
+  const last = series.length - 1;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${series.length}일 출고·입고 추이">${g}
+    <path d="${line('out')}L${x(last).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z" fill="var(--accent)" fill-opacity=".10"/>
+    <path d="${line('out')}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="${line('inb')}" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 4" stroke-linejoin="round"/>
+    <circle cx="${x(last).toFixed(1)}" cy="${y(series[last].out).toFixed(1)}" r="3.5" fill="var(--accent)"/></svg>`;
+}
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
     `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>엑셀 입출고</b><span>주문서 출고 · 입고 내역 입고</span></button>`;
-  if (!ready()) { $('hm-status').innerHTML = ''; $('hm-list').innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
+  const dash = $('hm-dash');
+  if (!ready()) { $('hm-status').innerHTML = ''; dash.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
   if (!S.skus.size) {
     $('hm-sub').textContent = '처음 시작하시나요? 아래 순서대로 하면 됩니다.';
     $('hm-status').innerHTML = '';
-    $('hm-list-title').textContent = '처음 시작하기';
-    $('hm-list').innerHTML = `<div class="card"><b>① 상품 등록</b><span class="muted small">기존 재고 엑셀을 올리거나 상품을 하나씩 추가</span><a href="#excel">엑셀로 올리기 →</a><a href="#items">하나씩 추가 →</a></div>
-      <div class="card"><b>② 지금 재고 넣기</b><span class="muted small">창고에서 세어본 수량을 입력</span><a href="#record" data-gogroup="count">재고 실사로 넣기 →</a></div>
-      <div class="card"><b>③ 매일 기록</b><span class="muted small">들어오고 나갈 때마다 큰 버튼으로 기록</span></div>`;
+    dash.innerHTML = widget('처음 시작하기', '', `<div class="kv"><div><span>① 상품 등록 — 기존 재고 엑셀을 올리거나 하나씩 추가</span><a href="#excel">엑셀로 올리기 ›</a></div>
+      <div><span>② 지금 재고 넣기 — 창고에서 세어본 수량 입력</span><a href="#record" data-gogroup="count">재고 실사 ›</a></div>
+      <div><span>③ 매일 기록 — 들어오고 나갈 때마다 위 버튼으로</span><span></span></div></div>`, { span: true });
     return;
   }
-  const c = statusCounts();
+  const c = statusCounts(), lg = ledger(stockWin());
   $('hm-sub').textContent = `상품 ${fmt(c.all)}개를 관리하고 있어요` + (c.nostock ? ` · 재고를 아직 안 넣은 상품 ${c.nostock}개 (재고 실사로 넣어 주세요)` : '') + (c.neg ? ` · 재고가 마이너스인 상품 ${c.neg}개는 빠진 기록이 있는지 확인해 주세요` : '');
   $('hm-status').innerHTML = `
     <button type="button" class="stile bad" data-stfilter="bad"><b>${fmt(c.bad)}</b><span class="t">지금 주문하세요</span><span class="d">공장 주문이 늦으면 품절돼요</span></button>
     <button type="button" class="stile warn" data-stfilter="warn"><b>${fmt(c.warn)}</b><span class="t">곧 주문하세요</span><span class="d">주문 시점이 가까워요</span></button>
     <button type="button" class="stile ok" data-stfilter="ok"><b>${fmt(c.ok)}</b><span class="t">충분해요</span><span class="d">당분간 걱정 없어요</span></button>`;
-  const need = stockRows('', '', '').filter((x) => x.r.status === 'bad' || x.r.status === 'warn').slice(0, 9);
-  $('hm-list-title').textContent = need.length ? '주문이 필요한 상품' : '주문이 필요한 상품이 없어요';
-  $('hm-list').innerHTML = need.length ? need.map(stockCard).join('') : '<div class="empty">모든 상품이 충분해요. 들어오고 나갈 때 위 버튼으로 기록만 해 주세요.</div>';
+
+  // 1) 재고 현황
+  let have = 0, value = 0, pend = 0;
+  for (const r of lg.values()) { have += Math.max(r.have, 0); value += r.value; pend += r.pending; }
+  const wStock = widget('재고 현황', '본사창고 + 파스토 기준. 로켓 센터 재고는 쿠팡 소유라 넣지 않습니다.', `<div class="kv">
+    <div><span>관리 중인 상품</span><b>${fmt(c.all)}개</b></div>
+    <div class="bad"><span>지금 주문하세요</span><b>${fmt(c.bad)}개</b></div>
+    <div class="warn"><span>곧 주문하세요</span><b>${fmt(c.warn)}개</b></div>
+    <div class="${c.nostock ? 'mut' : ''}"><span>재고 미입력</span><b>${fmt(c.nostock)}개</b></div>
+    <div class="${c.neg ? 'bad' : ''}"><span>마이너스 재고</span><b>${fmt(c.neg)}개</b></div>
+    <div><span>총 보유 수량</span><b>${fmt(have)}개</b></div>
+    <div><span>재고금액</span><b>${won(value)}</b></div></div>`, { more: 'stock' });
+
+  // 2) 입고 예정 (공장에 주문해 두고 아직 안 온 것)
+  const lastOrder = new Map();
+  for (const m of [...S.moves].sort(cmpMove)) if (m.type === 'order') lastOrder.set(m.sku, m.date);
+  const pendRows = [...lg].filter(([, r]) => r.pending > 0).map(([code, r]) => {
+    const sk = S.skus.get(code) || {}, od = lastOrder.get(code) || '';
+    return { code, sk, qty: r.pending, eta: od ? addDays(od, Number(sk.lead) || 50) : '' };
+  }).sort((a, b) => (a.eta || '9').localeCompare(b.eta || '9'));
+  const td = today();
+  const wPend = widget('입고 예정', '공장에 발주 등록했지만 아직 입고되지 않은 수량. 예정일 = 발주일 + 리드타임.', pendRows.length
+    ? `<table class="mini"><thead><tr><th>예정일</th><th>상품</th><th class="n">수량</th></tr></thead><tbody>${pendRows.slice(0, 7).map((x) => `<tr data-sku="${esc(x.code)}"><td class="${x.eta && x.eta < td ? 'overdue' : ''}">${x.eta ? x.eta.slice(5).replace('-', '/') : '—'}${x.eta && x.eta < td ? ' 지연' : ''}</td><td>${esc(x.sk.name || x.code)} <span class="muted">${esc(x.sk.option || '')}</span></td><td class="n">${fmt(x.qty)}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">입고 예정이 없어요.<br><span class="small">공장에 주문하면 입출고 하기 → 기타 → 발주 등록</span></div>', { flush: !!pendRows.length, more: 'stock' });
+
+  // 3) 이번 달 입출고
+  const mo = td.slice(0, 7), sum = { in: 0, out: 0, rocket: 0, mv: 0, ret: 0, loss: 0 };
+  for (const m of S.moves) {
+    if (!m.date.startsWith(mo)) continue;
+    if (m.type === 'inbound' && m.qty > 0 && m.loc !== 'pending') sum.in += m.qty;
+    if (SALES.has(m.type) && m.qty < 0) { sum.out += -m.qty; if (m.type === 'rocket') sum.rocket += -m.qty; }
+    if (m.type === 'fassto_in') sum.mv += m.qty;
+    if (m.type === 'return') sum.ret += m.qty;
+    if ((m.type === 'loss' || m.type === 'adjust') && m.qty < 0) sum.loss += -m.qty;
+  }
+  const bmax = Math.max(1, ...Object.values(sum));
+  const bar = (label, v, cls) => `<div class="bar"><span>${label}</span><span class="track"><i class="${cls || ''}" style="width:${Math.max(v ? 3 : 0, (v / bmax) * 100)}%"></i></span><b>${fmt(v)}</b></div>`;
+  const wMonth = widget(`이번 달 입출고 <span class="muted small" style="font-weight:500">${Number(mo.slice(5))}월</span>`, '이번 달 1일부터 오늘까지 기록된 수량', `<div class="bars">
+    ${bar('입고', sum.in, 'in')}${bar('출고 전체', sum.out)}${bar('└ 로켓', sum.rocket)}${bar('파스토 이동', sum.mv, 'mv')}${bar('반품 입고', sum.ret, 'in')}${bar('불량·부족', sum.loss, 'loss')}</div>`, { more: 'history' });
+
+  // 4) 주문 필요 상품
+  const need = stockRows('', '', '').filter((x) => x.r.status === 'bad' || x.r.status === 'warn').slice(0, 8);
+  const wNeed = widget('주문 필요 상품', '보유 + 오는 중 수량이 주문 시점 아래로 내려간 상품', need.length
+    ? `<table class="mini"><thead><tr><th>상품</th><th class="n">보유</th><th class="n">버틸 날</th><th class="n">추천</th></tr></thead><tbody>${need.map(({ code, s: sk, r }) => `<tr data-sku="${esc(code)}"><td><span class="pill ${STATUS[r.status][0]}" style="margin-right:4px">${r.status === 'bad' ? '지금' : '곧'}</span>${esc(sk.name)} <span class="muted">${esc(sk.option || '')}</span></td><td class="n">${fmt(r.have)}</td><td class="n">${r.days === Infinity ? '—' : fmt(r.days) + '일'}</td><td class="n"><b>${fmt(r.suggest)}</b></td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">주문이 필요한 상품이 없어요.</div>', { flush: !!need.length, more: 'stock' });
+
+  // 5) 입출고 추이 (30일) + 최근 7일 표
+  const ser = dailySeries(30), last7 = ser.slice(-7).reverse();
+  const wChart = widget('입출고 추이 <span class="muted small" style="font-weight:500">최근 30일</span>', '하루 출고(주문서·로켓·거래처·N배송)와 입고 수량', `<div class="chart">${chartSVG(ser)}</div>
+    <table class="mini"><thead><tr><th>날짜</th><th class="n">출고</th><th class="n">└ 로켓</th><th class="n">└ 거래처</th><th class="n">입고</th></tr></thead><tbody>${last7.map((d) => `<tr><td>${d.date.slice(5).replace('-', '/')}</td><td class="n">${fmt(d.out)}</td><td class="n">${fmt(d.rocket)}</td><td class="n">${fmt(d.b2b)}</td><td class="n">${fmt(d.inb)}</td></tr>`).join('')}</tbody></table>`,
+    { span: true, flush: true, more: 'history', legend: '<div class="legend"><span><i style="background:var(--accent)"></i>출고</span><span><i style="background:var(--ok)"></i>입고</span></div>' });
+
+  // 6) 메모
+  const memoFocused = document.activeElement && document.activeElement.id === 'hm-memo';
+  const curText = memoFocused || S.memoDirty ? ($('hm-memo') || {}).value ?? S.memo.text : S.memo.text;
+  const wMemo = widget('메모', '같이 쓰는 사람 모두에게 보이는 메모입니다', `<div class="memo"><textarea id="hm-memo" placeholder="예: 12/5 로켓 발주 500개 예정, 춘절 전 BK-004 추가 발주">${esc(curText)}</textarea>
+    <div class="row"><span class="muted small grow">${S.memo.at ? `${esc(S.memo.at.slice(5, 16))} · ${esc((S.memo.by || '').split('@')[0])}` : '아직 메모가 없어요'}</span><button class="sm primary" id="hm-memo-save">저장</button></div></div>`);
+
+  // 7) 최근 기록
+  const recent = S.moves.filter((m) => m.type !== 'fassto_in').sort((a, b) => -cmpMove(a, b)).slice(0, 8);
+  const wRecent = widget('최근 기록', '', recent.length
+    ? `<table class="mini"><thead><tr><th>날짜</th><th>구분</th><th>상품</th><th class="n">수량</th><th>기록자</th></tr></thead><tbody>${recent.map((m) => { const sk = S.skus.get(m.sku) || {}; return `<tr data-sku="${esc(m.sku)}"><td>${esc(m.date.slice(5).replace('-', '/'))}</td><td>${esc(MOVE[m.type] || m.type)}${m.partner ? ` <span class="muted">${esc(m.partner)}</span>` : ''}</td><td>${esc(sk.name || m.sku)} <span class="muted">${esc(sk.option || '')}</span></td><td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td><td class="muted small">${esc((m.by || '').split('@')[0])}</td></tr>`; }).join('')}</tbody></table>`
+    : '<div class="empty">아직 기록이 없어요.</div>', { span: true, flush: !!recent.length, more: 'history' });
+
+  dash.innerHTML = wStock + wPend + wMonth + wNeed + wChart + wMemo + wRecent;
+  if (memoFocused) { const t = $('hm-memo'); t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
 }
 
 /* ---------- 상품 상세 ---------- */
@@ -1528,6 +1659,7 @@ function applyData(d) {
   S.maps = new Map(d.maps.map((x) => [x.id, x]));
   S.uploads = new Map(d.uploads.map((x) => [x.sig, x]));
   S.rules = d.rules || [];
+  S.memo = d.memo || { text: '', at: '', by: '' };
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
     if (!m.price) continue;
@@ -1562,7 +1694,18 @@ $('hm-actions').addEventListener('click', (e) => {
   if (v) location.hash = '#' + v.dataset.goview;
 });
 $('hm-status').addEventListener('click', (e) => { const b = e.target.closest('[data-stfilter]'); if (!b) return; S.stStatus = b.dataset.stfilter; S.stPart = ''; location.hash = '#stock'; renderStock(); });
-$('hm-list').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) { openSku(c.dataset.sku); return; } const g = e.target.closest('[data-gogroup]'); if (g) { e.preventDefault(); startRecord(GROUPS[g.dataset.gogroup].forms[0]); } });
+$('hm-dash').addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-sku]'); if (c) { openSku(c.dataset.sku); return; }
+  const g = e.target.closest('[data-gogroup]'); if (g) { e.preventDefault(); startRecord(GROUPS[g.dataset.gogroup].forms[0]); return; }
+  if (e.target.closest('[data-reload]')) { await load(); toast('최신 내용으로 불러왔습니다'); return; }
+  if (e.target.id === 'hm-memo-save') {
+    if (!guard()) return;
+    e.target.disabled = true;
+    try { S.memoDirty = false; applyData(await api('saveMemo', $('hm-memo').value)); toast('메모를 저장했습니다'); } catch (err) { writeFail(err); S.memoDirty = true; }
+    finally { const b = $('hm-memo-save'); if (b) b.disabled = false; }
+  }
+});
+$('hm-dash').addEventListener('input', (e) => { if (e.target.id === 'hm-memo') S.memoDirty = true; });
 $('st-status').addEventListener('click', (e) => { const b = e.target.closest('[data-ststatus]'); if (!b) return; S.stStatus = b.dataset.ststatus; renderStock(); });
 $('st-part').addEventListener('click', (e) => { const b = e.target.closest('[data-stpart]'); if (!b) return; S.stPart = b.dataset.stpart; renderStock(); });
 document.querySelectorAll('[data-stmode]').forEach((b) => b.addEventListener('click', () => { S.stMode = b.dataset.stmode; try { localStorage.setItem('inv-stmode', S.stMode); } catch (err) { /* 무시 */ } renderStock(); }));
