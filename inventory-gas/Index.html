@@ -383,7 +383,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 수입원가</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 수입원가2</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -2440,35 +2440,71 @@ $('cf-del').addEventListener('click', async (e) => {
 
 
 /* ---------- 수입 원가 계산 (공장 인보이스) ---------- */
+const LD_FIELDS = { code: '코드(MARKS)', desc: '품명(DESCRIPTION)', qty: '수량(QTY)', unit: '단가(UNIT USD)', amt: '금액(AMOUNT)' };
+const ldNum = (v) => Number(String(v ?? '').replace(/[^\d.]/g, '')) || 0;
 function readInvoice(file) {
   readSheet(file, (aoa) => {
     const up = (v) => norm(v).toUpperCase();
+    // 1) 제목줄 찾기: DESCRIPTION/품명 + QTY/UNIT 이 같이 있는 줄 (없으면 글자가 가장 많은 줄)
     let hi = -1;
-    for (let i = 0; i < Math.min(aoa.length, 40); i++) { const r = aoa[i].map(up); if (r.some((c) => c.includes('DESCRIPTION') || c === '품명' || c === '품목') && r.some((c) => c.includes('QTY') || c.includes('UNIT') || c.includes('수량') || c.includes('단가'))) { hi = i; break; } }
-    if (hi < 0) { $('ld-body').innerHTML = '<div class="banner">인보이스의 제목줄(DESCRIPTION OF GOODS, QTY, UNIT)을 찾지 못했습니다. 열 이름을 확인해 주세요.</div>'; return; }
-    const head = aoa[hi].map(up), head2 = (aoa[hi + 1] || []).map(up);
-    const find = (...keys) => { for (const k of keys) { const i = head.findIndex((c) => c.includes(k)); if (i >= 0) return i; } return -1; };
-    const col = { code: find('MARKS', '코드', '모델'), desc: find('DESCRIPTION', '품명', '품목'), ctn: find('PACKAGE', 'CTN', '박스'), qty: find('QTY', '수량'), unit: find('UNIT', '단가'), amt: find('AMOUNT', '금액') };
-    // UNIT 칸이 'UNIT PRICE' 처럼 두 칸에 걸쳐 있으면 아래 줄 (USD) 위치로 보정
-    if (col.unit >= 0 && head2[col.unit] === '' && head2[col.unit + 1] && head2[col.unit + 1].includes('USD')) col.unit += 1;
-    const rows = [];
-    for (let i = hi + 1; i < aoa.length; i++) {
-      const r = aoa[i], txt = r.map(up).join(' ');
-      if (/TOTAL|합계|SUB ?TOTAL/.test(txt) && rows.length) break;
-      const desc = col.desc >= 0 ? norm(r[col.desc]) : '';
-      const qty = col.qty >= 0 ? toNum(r[col.qty]) : 0;
-      let unit = col.unit >= 0 ? Number(String(r[col.unit] ?? '').replace(/[^\d.]/g, '')) || 0 : 0;
-      const amt = col.amt >= 0 ? Number(String(r[col.amt] ?? '').replace(/[^\d.]/g, '')) || 0 : 0;
-      if (!unit && amt && qty) unit = amt / qty;
-      if (!desc || !qty || !unit) continue;
-      const code = col.code >= 0 ? norm(r[col.code]) : '';
-      rows.push({ code, desc, ctn: col.ctn >= 0 ? toNum(r[col.ctn]) : 0, qty, unit, amt: amt || qty * unit, key: code ? `${desc} ¦ ${code}` : desc });
+    for (let i = 0; i < Math.min(aoa.length, 60); i++) { const r = aoa[i].map(up); if (r.some((c) => c.includes('DESCRIPTION') || c === '품명' || c === '품목' || c.includes('상품명')) && r.some((c) => c.includes('QTY') || c.includes('UNIT') || c.includes('수량') || c.includes('단가'))) { hi = i; break; } }
+    const width = Math.max(...aoa.slice(0, 200).map((r) => r.length), 0);
+    const col = { code: -1, desc: -1, qty: -1, unit: -1, amt: -1 };
+    if (hi >= 0) {
+      const head = Array.from({ length: width }, (_, k) => `${up(aoa[hi][k])} ${up((aoa[hi + 1] || [])[k])}`.trim());
+      const starts = head.map((h, k) => (h ? k : -1)).filter((k) => k >= 0);
+      const range = (k) => { const n = starts.find((x) => x > k); return [k, n === undefined ? Math.min(width - 1, k + 3) : n - 1]; };
+      const findHead = (...keys) => { for (const key of keys) { const k = head.findIndex((h) => h.includes(key)); if (k >= 0) return k; } return -1; };
+      const data = aoa.slice(hi + 1, hi + 80);
+      // 제목이 있는 칸부터 다음 제목 전까지 중에서 실제 값이 가장 많은 열을 고름 (병합 셀 대비)
+      const used = new Set();
+      const count = (c, numeric) => data.filter((r) => { const v = norm(r[c]); return numeric ? ldNum(v) > 0 && /\d/.test(v) && !/[가-힣A-Za-z]{2,}/.test(v.replace(/USD|PCS|EA|CTNS?/gi, '')) : v && !/^[\d.,\s$]+$/.test(v); }).length;
+      // 제목 칸을 먼저 보고, 비어 있으면 그 제목 범위(병합 셀) 안에서 값이 가장 많은 열. 이미 쓴 열은 건너뜀
+      const best = (k, numeric) => {
+        if (k < 0) return -1;
+        const [a, b] = range(k);
+        const cands = [k]; for (let c = a; c <= b; c++) if (c !== k) cands.push(c); if (k - 1 >= 0) cands.push(k - 1);
+        let pick = -1, top = 0;
+        for (const c of cands) { if (used.has(c)) continue; const n = count(c, numeric); if (n > top) { top = n; pick = c; } }
+        if (pick >= 0) used.add(pick);
+        return pick;
+      };
+      col.desc = best(findHead('DESCRIPTION', '품명', '품목', '상품명'), false);
+      col.code = best(findHead('MARKS', '코드', '모델', 'MODEL', 'ITEM NO'), false);
+      col.qty = best(findHead('QTY', 'QUANTITY', '수량'), true);
+      col.unit = best(findHead('UNIT', 'PRICE', '단가'), true);
+      col.amt = best(findHead('AMOUNT', '금액'), true);
+      if (col.code === col.desc) col.code = -1;
     }
-    if (!rows.length) { $('ld-body').innerHTML = '<div class="banner">인보이스에서 수량·단가가 있는 줄을 찾지 못했습니다.</div>'; return; }
-    S.ld = { file: file.name, rows, pick: {}, mult: {} };
+    S.ld = { file: file.name, aoa, hi: Math.max(hi, 0), col, pick: {}, mult: {}, rows: [] };
+    ldParse();
     if (!$('ld-date').value) $('ld-date').value = today();
     renderLanded();
   }, (msg) => { S.ld = null; $('ld-body').innerHTML = `<div class="banner">${msg}</div>`; });
+}
+function ldParse() {
+  const L = S.ld, c = L.col, rows = [], up = (v) => norm(v).toUpperCase();
+  for (let i = L.hi + 1; i < L.aoa.length; i++) {
+    const r = L.aoa[i], txt = r.map(up).join(' ');
+    if (/(^|\s)(TOTAL|SUB ?TOTAL|합계|총계)(\s|$|:)/.test(txt) && rows.length) break;
+    const desc = c.desc >= 0 ? norm(r[c.desc]) : '';
+    const qty = c.qty >= 0 ? ldNum(r[c.qty]) : 0;
+    const amt = c.amt >= 0 ? ldNum(r[c.amt]) : 0;
+    let unit = c.unit >= 0 ? ldNum(r[c.unit]) : 0;
+    if (!unit && amt && qty) unit = amt / qty;
+    if (!desc || !qty || !unit) continue;
+    const code = c.code >= 0 ? norm(r[c.code]) : '';
+    rows.push({ code, desc, qty, unit, amt: amt || qty * unit, key: code ? `${desc} ¦ ${code}` : desc });
+  }
+  L.rows = rows;
+}
+function ldColumnPicker() {
+  const L = S.ld, width = Math.max(...L.aoa.slice(0, 200).map((r) => r.length), 0);
+  const letter = (k) => { let s2 = ''; k++; while (k) { const m = (k - 1) % 26; s2 = String.fromCharCode(65 + m) + s2; k = Math.floor((k - 1) / 26); } return s2; };
+  const sel = (f) => `<label class="f">${LD_FIELDS[f]}<select data-ldcol="${f}"><option value="-1">(없음)</option>${Array.from({ length: width }, (_, k) => `<option value="${k}"${k === L.col[f] ? ' selected' : ''}>${letter(k)}열</option>`).join('')}</select></label>`;
+  const preview = L.aoa.slice(L.hi, L.hi + 8).map((r) => `<tr>${Array.from({ length: width }, (_, k) => `<td>${esc(norm(r[k])).slice(0, 18)}</td>`).join('')}</tr>`).join('');
+  return `<div class="row">${Object.keys(LD_FIELDS).map(sel).join('')}<label class="f">제목줄 위치<input type="number" min="1" data-ldhi value="${L.hi + 1}" style="width:70px"></label></div>
+    <div class="tablebox" style="max-height:240px"><table><thead><tr>${Array.from({ length: width }, (_, k) => `<th>${letter(k)}</th>`).join('')}</tr></thead><tbody>${preview}</tbody></table></div>`;
 }
 // 인보이스 줄 → SKU (연결표 → SKU 코드 → 매칭 규칙 → 직접 선택). 'P:상품키' = 그 상품의 모든 옵션
 function ldResolve(row) {
@@ -2499,6 +2535,10 @@ function ldTargetCodes(sku) {
 }
 function renderLanded() {
   const L = S.ld, body = $('ld-body'); if (!L) return;
+  if (!L.rows.length) {
+    body.innerHTML = `<div class="banner">인보이스에서 수량·단가가 있는 줄을 찾지 못했습니다. 아래에서 <b>어느 열이 무엇인지</b> 골라 주세요. (엑셀 윗부분을 그대로 보여드립니다)</div>${ldColumnPicker()}`;
+    return;
+  }
   const c = ldCalc();
   const pm = [...productMap().values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   const opts = (sel) => '<option value="">— 연결할 상품 —</option><option value="__skip"' + (sel === '__skip' ? ' selected' : '') + '>연결 안 함</option>' +
@@ -2507,6 +2547,7 @@ function renderLanded() {
   const w = (n) => (c.fx ? fmt(n) : '<span class="muted">환율 필요</span>');
   const unresolved = c.rows.filter((r) => !r.sku).length;
   body.innerHTML = `
+    <details id="ld-cols"${L.pickerOpen ? ' open' : ''}><summary class="small">읽은 열 확인 · 직접 고르기</summary>${ldColumnPicker()}</details>
     <p class="small muted" style="margin:0"><b>${esc(L.file)}</b> · ${c.rows.length}줄 · 합계 <b>$${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</b>${c.fx ? ` → <b>${won(c.totalKrw)}</b> (관세·부대비용 포함)` : ''}</p>
     <div class="tablebox"><table>
       <thead><tr><th>코드</th><th>품명</th><th class="n">수량</th><th class="n">단가($)</th><th class="n">금액($)</th><th class="n">단가 환산(원)</th><th class="n">관세</th><th class="n">부대비용/개</th><th class="n">개당 원가(원)</th><th class="n">금액(원)</th><th>연결 상품</th><th class="n">배수</th></tr></thead>
@@ -2569,6 +2610,8 @@ $('ld-fx-get').addEventListener('click', async () => {
 });
 $('ld-body').addEventListener('change', (e) => {
   const el = e.target, L = S.ld; if (!L) return;
+  if (el.dataset.ldcol !== undefined) { L.pickerOpen = true; L.col[el.dataset.ldcol] = Number(el.value); ldParse(); renderLanded(); return; }
+  if (el.dataset.ldhi !== undefined) { L.pickerOpen = true; L.hi = Math.max(0, toNum(el.value) - 1); ldParse(); renderLanded(); return; }
   if (el.dataset.ldpick !== undefined) L.pick[el.dataset.ldpick] = el.value;
   else if (el.dataset.ldmult !== undefined) L.mult[el.dataset.ldmult] = Math.max(1, toNum(el.value) || 1);
   else return;
