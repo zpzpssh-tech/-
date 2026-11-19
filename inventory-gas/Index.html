@@ -74,7 +74,10 @@ header.top > .locs { flex: 1 1 360px; justify-content: flex-end; }
 .hdr-actions { display: grid; gap: 4px; align-content: center; }
 
 /* 창 */
-.work { display: grid; gap: 16px; align-items: start; }
+.work { display: grid; gap: 16px; align-items: start; grid-template-columns: minmax(0, 1fr); }
+.view, .view > * { min-width: 0; }
+.main { grid-template-columns: minmax(0, 1fr); }
+.panel, .view { grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 1240px) { .work.split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .view { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); min-width: 0; display: grid; gap: 14px; padding-bottom: 16px; overflow: hidden; }
 .view > :not(.vhead) { margin: 0 16px; }
@@ -383,7 +386,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 원가환산</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 SET계산</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -2525,14 +2528,16 @@ function ldColumnPicker() {
     <div class="tablebox" style="max-height:240px"><table><thead><tr>${Array.from({ length: width }, (_, k) => `<th>${letter(k)}</th>`).join('')}</tr></thead><tbody>${preview}</tbody></table></div>`;
 }
 // 인보이스 줄 → SKU (연결표 → SKU 코드 → 매칭 규칙 → 직접 선택). 'P:상품키' = 그 상품의 모든 옵션
+const ldSetPcs = (row) => (/(^|[^A-Z])SET([^A-Z]|$)|세트/i.test(row.desc) ? 2 : 1);
 function ldResolve(row) {
   const L = S.ld, mapped = S.maps.get(hash(row.key));
   let auto = mapped ? { sku: mapped.sku, mult: mapped.mult } : null;
-  if (!auto) { const hit = (`${row.code} ${row.desc}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)); if (hit) auto = { sku: hit, mult: 1 }; }
-  if (!auto && row.code) { const pk = [...productMap().values()].find((p) => p.codes.some((c) => c.startsWith(row.code.toUpperCase() + '-'))); if (pk) auto = { sku: 'P:' + pk.key, mult: 1 }; }
-  if (!auto) { const rule = matchRule(row.desc, row.code); if (rule) auto = { sku: rule.sku, mult: rule.mult }; }
+  const setPcs = ldSetPcs(row);
+  if (!auto) { const hit = (`${row.code} ${row.desc}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)); if (hit) auto = { sku: hit, mult: setPcs }; }
+  if (!auto && row.code) { const pk = [...productMap().values()].find((p) => p.codes.some((c) => c.startsWith(row.code.toUpperCase() + '-'))); if (pk) auto = { sku: 'P:' + pk.key, mult: setPcs }; }
+  if (!auto) { const rule = matchRule(row.desc, row.code); if (rule) auto = { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : setPcs }; }
   const sku = L.pick[row.key] ?? (auto ? auto.sku : '');
-  const mult = Number(L.mult[row.key] ?? (auto ? auto.mult : 1)) || 1;
+  const mult = Number(L.mult[row.key] ?? (auto ? auto.mult : setPcs)) || 1;
   return { sku, mult, auto: !!auto && L.pick[row.key] === undefined };
 }
 function ldCalc() {
@@ -2568,16 +2573,18 @@ function renderLanded() {
     <details id="ld-cols"${L.pickerOpen ? ' open' : ''}><summary class="small">읽은 열 확인 · 직접 고르기</summary>${ldColumnPicker()}</details>
     <p class="small muted" style="margin:0"><b>${esc(L.file)}</b> · ${c.rows.length}줄 · 합계 <b>$${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</b>${c.fx ? ` → <b>${won(c.totalKrw)}</b> (관세·부대비용 포함)` : ''}</p>
     <div class="tablebox"><table>
-      <thead><tr><th>코드</th><th>품명</th><th class="n">수량</th><th class="n">단가($)</th><th class="n">금액($)</th><th class="n">단가 환산(원)</th><th class="n">관세</th><th class="n">부대비용/개</th><th class="n">개당 원가(원)</th><th class="n">금액(원)</th><th>연결 상품</th><th class="n">배수</th></tr></thead>
+      <thead><tr><th>코드</th><th>품명</th><th class="n">구성</th><th class="n">인보이스 수량</th><th class="n">실제 개수</th><th class="n">단가($)</th><th class="n">금액($)</th><th class="n">단가 환산(원)</th><th class="n">관세</th><th class="n">부대비용</th><th class="n">단위 원가(원)</th><th class="n">1개당 원가(원)</th><th class="n">금액(원)</th><th>연결 상품</th></tr></thead>
       <tbody>${c.rows.map((r) => `<tr>
-        <td class="code">${esc(r.code)}</td><td>${esc(r.desc)}</td><td class="n">${fmt(r.qty)}</td><td class="n">${r.unit}</td><td class="n">${r.amt.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+        <td class="code">${esc(r.code)}</td><td>${esc(r.desc)}</td>
+        <td class="n"><span style="display:inline-flex;align-items:center;gap:4px">${r.mult > 1 ? '<span class="pill warn">SET</span>' : '<span class="pill mute">낱개</span>'}<input type="number" min="1" style="width:46px;height:28px" data-ldmult="${esc(r.key)}" value="${r.mult}" title="인보이스 1단위에 실물이 몇 개인지 (SET = 2)">개</span></td>
+        <td class="n">${fmt(r.qty)}</td><td class="n"><b>${fmt(r.qty * r.mult)}</b></td>
+        <td class="n">${r.unit}${r.mult > 1 ? `<div class="muted small">1개 $${Math.round((r.unit / r.mult) * 10000) / 10000}</div>` : ''}</td><td class="n">${r.amt.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
         <td class="n">${w(r.base)}</td><td class="n">${c.fx && c.duty ? fmt(r.dutyW) : '<span class="muted">—</span>'}</td><td class="n">${c.extra ? fmt(r.extraW) : '<span class="muted">—</span>'}</td>
-        <td class="n"><b>${w(r.perUnit)}</b>${r.mult > 1 && c.fx ? `<div class="muted small">1개당 ${fmt(r.perPiece)}</div>` : ''}</td><td class="n">${w(r.krw)}</td>
-        <td><select data-ldpick="${esc(r.key)}" style="max-width:260px">${opts(r.sku)}</select>${r.auto ? ' <span class="pill ok">자동</span>' : ''}</td>
-        <td class="n"><input type="number" min="1" style="width:56px" data-ldmult="${esc(r.key)}" value="${r.mult}" title="SET처럼 한 단위에 실물이 여러 개면 그 개수"></td></tr>`).join('')}</tbody>
-      <tfoot><tr><td colspan="4">합계</td><td class="n">${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td><td colspan="4"></td><td class="n">${c.fx ? fmt(c.totalKrw) : ''}</td><td colspan="2"></td></tr></tfoot>
+        <td class="n">${w(r.perUnit)}</td><td class="n"><b>${w(r.perPiece)}</b></td><td class="n">${w(r.krw)}</td>
+        <td><select data-ldpick="${esc(r.key)}" style="max-width:240px">${opts(r.sku)}</select>${r.auto ? ' <span class="pill ok">자동</span>' : ''}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="3">합계</td><td class="n">${fmt(c.rows.reduce((a, r) => a + r.qty, 0))}</td><td class="n">${fmt(c.rows.reduce((a, r) => a + r.qty * r.mult, 0))}개</td><td></td><td class="n">${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td><td colspan="5"></td><td class="n">${c.fx ? fmt(c.totalKrw) : ''}</td><td></td></tr></tfoot>
     </table></div>
-    <p class="small muted" style="margin:0"><b>배수</b> = 인보이스 1단위에 실물이 몇 개인지 (예: "SET"이 2개 묶음이면 2). 원가와 입고 수량을 개수 기준으로 나눠 계산합니다.
+    <p class="small muted" style="margin:0"><b>구성</b>: 품명에 <b>SET</b>가 있으면 2개, 없으면 1개로 자동 계산합니다 (다르면 숫자를 고치세요). <b>실제 개수</b> = 인보이스 수량 × 구성, <b>1개당 원가</b> = 단위 원가 ÷ 구성. 기준원가 저장과 입고는 <b>1개 기준</b>으로 합니다.
       ${unresolved ? `<b style="color:var(--warn)">연결 안 된 줄 ${unresolved}개</b>는 기준원가 저장·입고에서 빠집니다.` : ''}</p>
     <div class="row"><button id="ld-xl" class="sm">엑셀로 받기</button><span class="grow"></span>
       <button id="ld-cost" ${c.fx && S.canWrite ? '' : 'disabled'}>기준원가로 저장</button>
@@ -2640,8 +2647,8 @@ $('ld-body').addEventListener('click', (e) => {
   if (e.target.id === 'ld-in') ldInbound();
   if (e.target.id === 'ld-xl') {
     const c = ldCalc();
-    xlsxDownload(`수입원가_${today()}.xlsx`, '수입원가', [['코드', '품명', '수량', '단가(USD)', '금액(USD)', '환율', '단가 환산(원)', '관세(원)', '부대비용/개(원)', '개당 원가(원)', '배수', '1개당 원가(원)', '금액(원)', '연결 상품'],
-      ...c.rows.map((r) => [r.code, r.desc, r.qty, r.unit, Math.round(r.amt * 100) / 100, c.fx, Math.round(r.base), Math.round(r.dutyW), Math.round(r.extraW), Math.round(r.perUnit), r.mult, Math.round(r.perPiece), Math.round(r.krw), r.sku.startsWith('P:') ? r.sku.slice(2).split('|')[1] + ' (모든 옵션)' : r.sku])]);
+    xlsxDownload(`수입원가_${today()}.xlsx`, '수입원가', [['코드', '품명', '구성(개)', '인보이스 수량', '실제 개수', '단가(USD)', '1개 단가(USD)', '금액(USD)', '환율', '단가 환산(원)', '관세(원)', '부대비용(원)', '단위 원가(원)', '1개당 원가(원)', '금액(원)', '연결 상품'],
+      ...c.rows.map((r) => [r.code, r.desc, r.mult, r.qty, r.qty * r.mult, r.unit, Math.round((r.unit / r.mult) * 10000) / 10000, Math.round(r.amt * 100) / 100, c.fx, Math.round(r.base), Math.round(r.dutyW), Math.round(r.extraW), Math.round(r.perUnit), Math.round(r.perPiece), Math.round(r.krw), r.sku.startsWith('P:') ? r.sku.slice(2).split('|')[1] + ' (모든 옵션)' : r.sku])]);
   }
 });
 
