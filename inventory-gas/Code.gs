@@ -369,6 +369,19 @@ function readNaverSheet(url, from, to) {
  *   주문일시로 날짜 거르기 · 취소/반품/교환 제외 · 이미 뺀 주문(주문열쇠) 제외 · 연결표 → SKU 코드 → 매칭 규칙 순으로 SKU 찾기
  * 연결 못 한 주문은 빼지 않고 '확인 필요'로 남깁니다 (화면에서 한 번 연결하면 다음부터 자동).
  */
+/** 옵션 글자로 실제 개수 짐작: 한쪽·한팔·1p = 1개 · 1쌍·양쪽·양팔 = 2개 · 2쌍 = 4개 · 3p/3개 = 3개 (연결표에 저장된 배수가 있으면 그게 우선) */
+function packMult(name, opt) {
+  const f = (t) => {
+    t = String(t || ''); let m = t.match(/(\d+)\s*쌍/);
+    if (m && Number(m[1])) return Number(m[1]) * 2;
+    if (/양쪽|양팔|양발|양손|한\s*쌍/.test(t)) return 2;
+    if (/한쪽|한팔|한발|한손|외발/.test(t)) return 1;
+    m = t.match(/(\d+)\s*(?:p|pcs|ea|개입|개)(?![a-z])/i);
+    if (m && Number(m[1]) >= 1 && Number(m[1]) <= 10) return Number(m[1]);
+    return 0;
+  };
+  return f(opt) || (String(name || '').length <= 20 ? f(name) : 0) || 1;
+}
 const HASH_ = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 const NORM_ = (s) => String(s === null || s === undefined ? '' : s).replace(/\s+/g, ' ').trim();
 function dayOf_(v) {
@@ -415,8 +428,8 @@ function autoNaverShip_(opt) {
     if (!name || !qty) continue;
     const mkey = op ? `${name} ¦ ${op}` : name;
     let hit = maps.get(HASH_(mkey));
-    if (!hit) { const t = (`${name} ${op}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((x) => skus.has(x)); if (t) hit = { sku: t, mult: 1 }; }
-    if (!hit) { const n = name.toLowerCase(), o = op.toLowerCase(); const rule = rules.find((x) => skus.has(x.sku) && (x.name || x.opt) && words(x.name).every((w) => n.indexOf(w) >= 0) && words(x.opt).every((w) => o.indexOf(w) >= 0)); if (rule) hit = { sku: rule.sku, mult: rule.mult }; }
+    if (!hit) { const t = (`${name} ${op}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((x) => skus.has(x)); if (t) hit = { sku: t, mult: packMult(name, op) }; }
+    if (!hit) { const n = name.toLowerCase(), o = op.toLowerCase(); const rule = rules.find((x) => skus.has(x.sku) && (x.name || x.opt) && words(x.name).every((w) => n.indexOf(w) >= 0) && words(x.opt).every((w) => o.indexOf(w) >= 0)); if (rule) hit = { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : packMult(name, op) }; }
     if (!hit || !hit.sku) { pending.push({ day: d, name, opt: op, qty }); continue; }
     rowsUsed++;
     if (key) orderNos.push({ no: key, day: d });
