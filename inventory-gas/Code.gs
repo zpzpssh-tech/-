@@ -332,6 +332,10 @@ function savePdf(base64, filename) {
 function saveMemo(text) {
   return withLock_(() => { putRow_(TABS.MEMO, 0, [String(text || '').slice(0, 5000), now_(), me_()]); return getData(); });
 }
+/** 연결표 여러 개 저장 (인보이스 원가 계산 등에서 고른 연결 기억) */
+function saveMaps(list) {
+  return withLock_(() => { upsertMaps_(list, now_()); return getData(); });
+}
 function deleteMap(id) {
   return withLock_(() => {
     const sh = tab_(book_(), TABS.MAP);

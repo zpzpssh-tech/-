@@ -383,7 +383,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-18 달러원가</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 수입원가</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -394,6 +394,7 @@ table.mini tr[data-sku] { cursor: pointer; }
       <div class="grp">관리</div>
       <a href="#cost" data-view="cost">원가·재고금액</a>
       <a href="#items" data-view="items">상품·거래처</a>
+      <a href="#landed" data-view="landed">수입 원가 계산</a>
       <a href="#quote" data-view="quote">견적서</a>
       <a href="#excel" data-view="excel">엑셀 불러오기/내보내기</a>
     </nav>
@@ -572,6 +573,26 @@ table.mini tr[data-sku] { cursor: pointer; }
         <p class="small muted" style="margin:0">주문서의 "상품명 · 옵션"이 어떤 SKU 몇 개인지 기억해 둔 목록입니다. 잘못 연결했다면 지우고 다음 업로드 때 다시 고르세요.</p>
         <div class="tablebox"><table id="mp-table"></table></div>
       </div>
+    </div>
+  </section>
+
+  <!-- 수입 원가 계산 -->
+  <section id="v-landed" class="view" hidden>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>수입 원가 계산</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div class="panel">
+      <h2>공장 인보이스로 원가 계산</h2>
+      <p class="small muted" style="margin:0">공장에서 받은 인보이스 엑셀(코드 · 품명 · <b>QTY(PCS)</b> · <b>UNIT(USD)</b>)을 올리면 상품마다 <b>개당 원가(원)</b>를 계산합니다.
+        개당 원가 = 단가(USD) × 환율 + 관세 + 부대비용(운임·통관·내륙운송 등을 금액 비율로 나눔).</p>
+      <div class="row">
+        <label class="f grow">인보이스 엑셀<input type="file" id="ld-file" accept=".xlsx,.xls,.csv"></label>
+      </div>
+      <div class="row">
+        <label class="f">환율 (원/$)<span style="display:flex;gap:6px"><input type="number" id="ld-fx" step="0.01" min="0" style="width:100px"><button type="button" class="sm" id="ld-fx-get">오늘 환율</button></span></label>
+        <label class="f">관세율 (%)<input type="number" id="ld-duty" step="0.1" min="0" value="0" style="width:80px" title="예: 8 (보호대 일반 관세율은 품목에 따라 다르니 통관 서류를 확인하세요)"></label>
+        <label class="f">부대비용 합계 (원)<input type="number" id="ld-extra" step="1" min="0" value="0" style="width:130px" title="해상운임, 통관수수료, 창고 입고 운송비 등 이번 건 전체 비용"></label>
+        <label class="f">입고일<input type="date" id="ld-date"></label>
+      </div>
+      <div id="ld-body"><div class="empty">인보이스 엑셀을 올려 주세요.</div></div>
     </div>
   </section>
 
@@ -768,7 +789,7 @@ const FORMS = {
   loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>. 평균원가 기준 금액이 조정손익(손실)으로 잡힙니다.' },
   count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록하고, 차이 금액을 조정손익에 반영합니다. <b>처음 시작할 때 시작 재고</b>도 여기서(또는 엑셀 탭에서) 넣으세요.' },
 };
-const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', landed: '수입 원가 계산', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
 const ICON = {
   in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
@@ -794,7 +815,7 @@ const S = {
   lastSale: new Map(), lastBuy: new Map(),
   loaded: false, failed: false,
   view: 'home', side: '', stMode: 'card', stStatus: '', stPart: '', pkPart: '', prevMode: 'qty', form: 'inbound', partner: '', lines: [], histLimit: 200, confirmBatch: null,
-  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, sups: [], supEdit: null, photos: {}, pmKey: null, up: null, imp: null, modalLine: null,
+  editing: null, editingPartner: null, confirmSku: null, rules: [], upMode: 'out', ld: null, memo: { text: '', at: '', by: '' }, memoDirty: false, conf: {}, quotes: [], q: null, sealDraft: null, sups: [], supEdit: null, photos: {}, pmKey: null, up: null, imp: null, modalLine: null,
 };
 const ready = () => S.loaded;
 const newLine = () => ({ v: '', q: '', p: '', src: '' });
@@ -1888,6 +1909,7 @@ function refresh() {
     if (v === 'cost') renderCost();
     if (v === 'items') renderItems();
     if (v === 'quote') renderQuoteSide();
+    if (v === 'landed') { if (!$('ld-fx').value && S.fx) $('ld-fx').value = S.fx; if (S.ld && !$('ld-body').contains(document.activeElement)) renderLanded(); }
     if (v === 'excel') { renderExcel(); if (S.imp && !$('im-body').contains(document.activeElement)) renderImport(); }
   }
 }
@@ -2416,6 +2438,151 @@ $('cf-del').addEventListener('click', async (e) => {
   } catch (err) { writeFail(err); }
 });
 
+
+/* ---------- 수입 원가 계산 (공장 인보이스) ---------- */
+function readInvoice(file) {
+  readSheet(file, (aoa) => {
+    const up = (v) => norm(v).toUpperCase();
+    let hi = -1;
+    for (let i = 0; i < Math.min(aoa.length, 40); i++) { const r = aoa[i].map(up); if (r.some((c) => c.includes('DESCRIPTION') || c === '품명' || c === '품목') && r.some((c) => c.includes('QTY') || c.includes('UNIT') || c.includes('수량') || c.includes('단가'))) { hi = i; break; } }
+    if (hi < 0) { $('ld-body').innerHTML = '<div class="banner">인보이스의 제목줄(DESCRIPTION OF GOODS, QTY, UNIT)을 찾지 못했습니다. 열 이름을 확인해 주세요.</div>'; return; }
+    const head = aoa[hi].map(up), head2 = (aoa[hi + 1] || []).map(up);
+    const find = (...keys) => { for (const k of keys) { const i = head.findIndex((c) => c.includes(k)); if (i >= 0) return i; } return -1; };
+    const col = { code: find('MARKS', '코드', '모델'), desc: find('DESCRIPTION', '품명', '품목'), ctn: find('PACKAGE', 'CTN', '박스'), qty: find('QTY', '수량'), unit: find('UNIT', '단가'), amt: find('AMOUNT', '금액') };
+    // UNIT 칸이 'UNIT PRICE' 처럼 두 칸에 걸쳐 있으면 아래 줄 (USD) 위치로 보정
+    if (col.unit >= 0 && head2[col.unit] === '' && head2[col.unit + 1] && head2[col.unit + 1].includes('USD')) col.unit += 1;
+    const rows = [];
+    for (let i = hi + 1; i < aoa.length; i++) {
+      const r = aoa[i], txt = r.map(up).join(' ');
+      if (/TOTAL|합계|SUB ?TOTAL/.test(txt) && rows.length) break;
+      const desc = col.desc >= 0 ? norm(r[col.desc]) : '';
+      const qty = col.qty >= 0 ? toNum(r[col.qty]) : 0;
+      let unit = col.unit >= 0 ? Number(String(r[col.unit] ?? '').replace(/[^\d.]/g, '')) || 0 : 0;
+      const amt = col.amt >= 0 ? Number(String(r[col.amt] ?? '').replace(/[^\d.]/g, '')) || 0 : 0;
+      if (!unit && amt && qty) unit = amt / qty;
+      if (!desc || !qty || !unit) continue;
+      const code = col.code >= 0 ? norm(r[col.code]) : '';
+      rows.push({ code, desc, ctn: col.ctn >= 0 ? toNum(r[col.ctn]) : 0, qty, unit, amt: amt || qty * unit, key: code ? `${desc} ¦ ${code}` : desc });
+    }
+    if (!rows.length) { $('ld-body').innerHTML = '<div class="banner">인보이스에서 수량·단가가 있는 줄을 찾지 못했습니다.</div>'; return; }
+    S.ld = { file: file.name, rows, pick: {}, mult: {} };
+    if (!$('ld-date').value) $('ld-date').value = today();
+    renderLanded();
+  }, (msg) => { S.ld = null; $('ld-body').innerHTML = `<div class="banner">${msg}</div>`; });
+}
+// 인보이스 줄 → SKU (연결표 → SKU 코드 → 매칭 규칙 → 직접 선택). 'P:상품키' = 그 상품의 모든 옵션
+function ldResolve(row) {
+  const L = S.ld, mapped = S.maps.get(hash(row.key));
+  let auto = mapped ? { sku: mapped.sku, mult: mapped.mult } : null;
+  if (!auto) { const hit = (`${row.code} ${row.desc}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)); if (hit) auto = { sku: hit, mult: 1 }; }
+  if (!auto && row.code) { const pk = [...productMap().values()].find((p) => p.codes.some((c) => c.startsWith(row.code.toUpperCase() + '-'))); if (pk) auto = { sku: 'P:' + pk.key, mult: 1 }; }
+  if (!auto) { const rule = matchRule(row.desc, row.code); if (rule) auto = { sku: rule.sku, mult: rule.mult }; }
+  const sku = L.pick[row.key] ?? (auto ? auto.sku : '');
+  const mult = Number(L.mult[row.key] ?? (auto ? auto.mult : 1)) || 1;
+  return { sku, mult, auto: !!auto && L.pick[row.key] === undefined };
+}
+function ldCalc() {
+  const L = S.ld, fx = toNum($('ld-fx').value), duty = toNum($('ld-duty').value) / 100, extra = toNum($('ld-extra').value);
+  const totalUsd = L.rows.reduce((a, r) => a + r.amt, 0);
+  const rows = L.rows.map((r) => {
+    const res = ldResolve(r), base = r.unit * fx, dutyW = base * duty;
+    const extraW = totalUsd ? (extra * (r.amt / totalUsd)) / r.qty : 0;
+    const perUnit = base + dutyW + extraW;                // 인보이스 1단위(PCS/SET)당 원가
+    return { ...r, ...res, base, dutyW, extraW, perUnit, perPiece: perUnit / res.mult, krw: perUnit * r.qty };
+  });
+  return { fx, duty, extra, totalUsd, rows, totalKrw: rows.reduce((a, r) => a + r.krw, 0) };
+}
+function ldTargetCodes(sku) {
+  if (!sku || sku === '__skip') return [];
+  if (sku.startsWith('P:')) { const p = productMap().get(sku.slice(2)); return p ? p.codes : []; }
+  return S.skus.has(sku) ? [sku] : [];
+}
+function renderLanded() {
+  const L = S.ld, body = $('ld-body'); if (!L) return;
+  const c = ldCalc();
+  const pm = [...productMap().values()].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const opts = (sel) => '<option value="">— 연결할 상품 —</option><option value="__skip"' + (sel === '__skip' ? ' selected' : '') + '>연결 안 함</option>' +
+    '<optgroup label="상품 전체 (모든 옵션에 같은 원가)">' + pm.filter((p) => p.codes.length > 1).map((p) => `<option value="P:${esc(p.key)}"${sel === 'P:' + p.key ? ' selected' : ''}>${esc(p.name)} (옵션 ${p.codes.length}개 모두)</option>`).join('') + '</optgroup>' +
+    '<optgroup label="SKU 하나">' + [...S.skus.values()].sort((a, b) => a.code.localeCompare(b.code)).map((x) => `<option value="${esc(x.code)}"${x.code === sel ? ' selected' : ''}>${esc(skuLabel(x.code))}</option>`).join('') + '</optgroup>';
+  const w = (n) => (c.fx ? fmt(n) : '<span class="muted">환율 필요</span>');
+  const unresolved = c.rows.filter((r) => !r.sku).length;
+  body.innerHTML = `
+    <p class="small muted" style="margin:0"><b>${esc(L.file)}</b> · ${c.rows.length}줄 · 합계 <b>$${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</b>${c.fx ? ` → <b>${won(c.totalKrw)}</b> (관세·부대비용 포함)` : ''}</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>코드</th><th>품명</th><th class="n">수량</th><th class="n">단가($)</th><th class="n">금액($)</th><th class="n">단가 환산(원)</th><th class="n">관세</th><th class="n">부대비용/개</th><th class="n">개당 원가(원)</th><th class="n">금액(원)</th><th>연결 상품</th><th class="n">배수</th></tr></thead>
+      <tbody>${c.rows.map((r) => `<tr>
+        <td class="code">${esc(r.code)}</td><td>${esc(r.desc)}</td><td class="n">${fmt(r.qty)}</td><td class="n">${r.unit}</td><td class="n">${r.amt.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+        <td class="n">${w(r.base)}</td><td class="n">${c.fx && c.duty ? fmt(r.dutyW) : '<span class="muted">—</span>'}</td><td class="n">${c.extra ? fmt(r.extraW) : '<span class="muted">—</span>'}</td>
+        <td class="n"><b>${w(r.perUnit)}</b>${r.mult > 1 && c.fx ? `<div class="muted small">1개당 ${fmt(r.perPiece)}</div>` : ''}</td><td class="n">${w(r.krw)}</td>
+        <td><select data-ldpick="${esc(r.key)}" style="max-width:260px">${opts(r.sku)}</select>${r.auto ? ' <span class="pill ok">자동</span>' : ''}</td>
+        <td class="n"><input type="number" min="1" style="width:56px" data-ldmult="${esc(r.key)}" value="${r.mult}" title="SET처럼 한 단위에 실물이 여러 개면 그 개수"></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="4">합계</td><td class="n">${c.totalUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td><td colspan="4"></td><td class="n">${c.fx ? fmt(c.totalKrw) : ''}</td><td colspan="2"></td></tr></tfoot>
+    </table></div>
+    <p class="small muted" style="margin:0"><b>배수</b> = 인보이스 1단위에 실물이 몇 개인지 (예: "SET"이 2개 묶음이면 2). 원가와 입고 수량을 개수 기준으로 나눠 계산합니다.
+      ${unresolved ? `<b style="color:var(--warn)">연결 안 된 줄 ${unresolved}개</b>는 기준원가 저장·입고에서 빠집니다.` : ''}</p>
+    <div class="row"><button id="ld-xl" class="sm">엑셀로 받기</button><span class="grow"></span>
+      <button id="ld-cost" ${c.fx && S.canWrite ? '' : 'disabled'}>기준원가로 저장</button>
+      <button id="ld-in" class="primary" ${c.fx && S.canWrite ? '' : 'disabled'}>이 내역으로 입고</button></div>`;
+}
+async function ldSaveCost() {
+  if (!guard()) return;
+  const c = ldCalc(), list = new Map();
+  // 같은 SKU로 여러 줄이 연결되면 수량(개수) 기준 가중평균
+  const acc = new Map();
+  for (const r of c.rows) for (const code of ldTargetCodes(r.sku)) { const v = acc.get(code) || { amt: 0, pcs: 0 }; const pcs = r.qty * r.mult; v.amt += r.perPiece * pcs; v.pcs += pcs; acc.set(code, v); }
+  for (const [code, v] of acc) list.set(code, { ...S.skus.get(code), cost: Math.round(v.amt / v.pcs) });
+  if (!list.size) { toast('연결된 상품이 없습니다'); return; }
+  try { applyData(await api('saveSkus', [...list.values()])); await ldRemember(); toast(`SKU ${list.size}개의 기준원가를 저장했습니다`); renderLanded(); } catch (e) { writeFail(e); }
+}
+async function ldRemember() {
+  const L = S.ld, maps = [];
+  for (const r of L.rows) { if (L.pick[r.key] === undefined && L.mult[r.key] === undefined) continue; const res = ldResolve(r); if (res.sku && !res.sku.startsWith('P:')) maps.push({ id: hash(r.key), key: r.key, sku: res.sku, mult: res.mult }); }
+  if (maps.length) { try { applyData(await api('saveMaps', maps)); } catch (e) { /* 연결 기억 실패는 무시 */ } }
+}
+async function ldInbound() {
+  if (!guard()) return;
+  const c = ldCalc(), date = $('ld-date').value || today(), lg = ledger(stockWin()), list = [], skipped = [];
+  for (const r of c.rows) {
+    if (!r.sku || r.sku === '__skip') continue;
+    if (r.sku.startsWith('P:')) { skipped.push(r.desc); continue; }   // 옵션을 모르면 수량을 나눌 수 없음
+    const qty = Math.round(r.qty * r.mult), price = Math.round(r.perPiece);
+    list.push({ sku: r.sku, loc: 'hq', qty, type: 'inbound', date, memo: `${S.ld.file} · ${r.desc}`, price, usd: Math.round((r.unit / r.mult) * 1000) / 1000, fx: c.fx });
+    const pend = (lg.get(r.sku) || {}).pending || 0;
+    if (pend > 0) list.push({ sku: r.sku, loc: 'pending', qty: -Math.min(qty, pend), type: 'inbound', date, memo: S.ld.file, price, usd: '', fx: '' });
+  }
+  if (!list.length) { toast(skipped.length ? '옵션(색상·사이즈)까지 정해야 입고할 수 있습니다. 연결 상품을 SKU 하나로 골라 주세요' : '입고할 줄이 없습니다'); return; }
+  const sig = hash('ld|' + S.ld.file + '|' + S.ld.rows.map((r) => r.key + ':' + r.qty).join('|'));
+  if (S.uploads.get(sig) && !S.ld.dupOk) { S.ld.dupOk = true; toast('이 인보이스는 이미 입고한 적이 있습니다. 그래도 입고하려면 한 번 더 누르세요'); return; }
+  const maps = S.ld.rows.map((r) => ({ r, res: ldResolve(r) })).filter(({ r, res }) => (S.ld.pick[r.key] !== undefined || S.ld.mult[r.key] !== undefined) && res.sku && !res.sku.startsWith('P:')).map(({ r, res }) => ({ id: hash(r.key), key: r.key, sku: res.sku, mult: res.mult }));
+  try {
+    applyData(await api('applyUpload', list, maps, sig, S.ld.file, '수입 입고'));
+    toast(`${fmt(list.filter((m) => m.loc === 'hq').reduce((a, m) => a + m.qty, 0))}개를 개당 원가(원)로 입고했습니다` + (skipped.length ? ` · 옵션 미지정 ${skipped.length}줄은 빠짐` : ''));
+  } catch (e) { writeFail(e); }
+}
+$('ld-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readInvoice(f); });
+['ld-fx', 'ld-duty', 'ld-extra'].forEach((id) => $(id).addEventListener('input', () => { if (S.ld) renderLanded(); }));
+$('ld-fx').addEventListener('change', async () => { const v = toNum($('ld-fx').value); if (v > 0 && v !== S.fx && S.canWrite) { try { applyData(await api('saveConf', { fx: String(v), fxAt: today() })); } catch (e) { /* 무시 */ } } });
+$('ld-fx-get').addEventListener('click', async () => {
+  const b = $('ld-fx-get'); b.disabled = true;
+  try { const v = await api('getFx'); $('ld-fx').value = v; if (S.canWrite) applyData(await api('saveConf', { fx: String(v), fxAt: today() })); if (S.ld) renderLanded(); toast(`오늘 환율 ${fxFmt(v)}원/$`); }
+  catch (e) { writeFail(e); } finally { b.disabled = false; }
+});
+$('ld-body').addEventListener('change', (e) => {
+  const el = e.target, L = S.ld; if (!L) return;
+  if (el.dataset.ldpick !== undefined) L.pick[el.dataset.ldpick] = el.value;
+  else if (el.dataset.ldmult !== undefined) L.mult[el.dataset.ldmult] = Math.max(1, toNum(el.value) || 1);
+  else return;
+  renderLanded();
+});
+$('ld-body').addEventListener('click', (e) => {
+  if (e.target.id === 'ld-cost') ldSaveCost();
+  if (e.target.id === 'ld-in') ldInbound();
+  if (e.target.id === 'ld-xl') {
+    const c = ldCalc();
+    xlsxDownload(`수입원가_${today()}.xlsx`, '수입원가', [['코드', '품명', '수량', '단가(USD)', '금액(USD)', '환율', '단가 환산(원)', '관세(원)', '부대비용/개(원)', '개당 원가(원)', '배수', '1개당 원가(원)', '금액(원)', '연결 상품'],
+      ...c.rows.map((r) => [r.code, r.desc, r.qty, r.unit, Math.round(r.amt * 100) / 100, c.fx, Math.round(r.base), Math.round(r.dutyW), Math.round(r.extraW), Math.round(r.perUnit), r.mult, Math.round(r.perPiece), Math.round(r.krw), r.sku.startsWith('P:') ? r.sku.slice(2).split('|')[1] + ' (모든 옵션)' : r.sku])]);
+  }
+});
 
 setupRecord();
 fillPartnerForm(null);
