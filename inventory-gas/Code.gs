@@ -29,6 +29,7 @@ const TABS = {
   PHOTO: { name: '상품사진', head: ['상품키', '상품명', '사진', '수정시각'] },
   CONF: { name: '설정', head: ['항목', '값', '수정시각'] },
   QUOTE: { name: '견적서', head: ['견적번호', '견적일', '받는 곳', '합계(부가세포함)', '공급가액', '부가세', '내용(JSON)', '작성자', '작성시각'] },
+  ORDER: { name: '처리주문', head: ['상품주문번호', '출고일', '파일', '기록시각'] },
   UPLOAD: { name: '업로드', head: ['서명', '파일명', '차감수량', '기록시각', '기록자'] },
 };
 // 시트에는 사람이 읽기 쉬운 한글로 저장하고, 프로그램 안에서는 코드로 씁니다.
@@ -136,7 +137,9 @@ function getData() {
   const conf = {};
   rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
   const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
-  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  // 이미 재고에서 뺀 주문번호 (최근 것만 보내도 충분: 최대 2만 건)
+  const orderDone = rows_(TABS.ORDER).slice(-20000).map((r) => str_(r[0])).filter(Boolean);
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, orderDone, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -345,9 +348,10 @@ function deleteMap(id) {
   });
 }
 /** 주문서 차감: 기록 + 새 연결 + 중복 방지용 서명을 한 번에 저장 */
-function applyUpload(list, newMaps, sig, file, label) {
+function applyUpload(list, newMaps, sig, file, label, orderNos, orderDay) {
   return withLock_(() => {
     const at = now_();
+    if (orderNos && orderNos.length) append_(TABS.ORDER, orderNos.map((n) => [n, orderDay || '', file, at]));
     append_(TABS.MOVE, moveRows_(list, label || '주문서 차감'));
     append_(TABS.UPLOAD, [[sig, file, list.filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(Number(m.qty)), 0), at, me_()]]);
     upsertMaps_(newMaps, at);
