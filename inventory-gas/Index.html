@@ -386,7 +386,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 시트출고</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 날짜별출고</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -480,10 +480,11 @@ table.mini tr[data-sku] { cursor: pointer; }
         <b>구글 시트에서 바로 가져오기 (네이버 원가 관리)</b>
         <div class="row">
           <label class="f grow">시트 주소<input id="up-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
-          <label class="f">주문일<input type="date" id="up-sheet-day"></label>
+          <label class="f">주문일 (시작 ~ 끝)<span style="display:flex;gap:4px;align-items:center"><input type="date" id="up-sheet-day">~<input type="date" id="up-sheet-day2"></span></label>
           <button class="primary" id="up-sheet-go">시트에서 가져오기</button>
         </div>
-        <span class="small">그 달 탭(예: 202611월)에서 <b>고른 날 주문만</b> 읽어 옵니다. 취소·반품은 빼고, 이미 뺀 주문은 건너뜁니다.</span>
+        <div class="chips" id="up-sheet-quick"></div>
+        <span class="small">달마다 있는 탭(예: 202611월)에서 <b>주문일시가 고른 날짜인 주문만</b> 읽어 옵니다. 기간이 두 달에 걸치면 두 탭을 모두 읽습니다. 취소·반품은 빼고, 이미 뺀 주문은 건너뜁니다. 기록은 주문일별로 남습니다.</span>
       </div>
       <div class="row"><label class="f grow">또는 엑셀 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
       <div id="up-body"></div>
@@ -1031,7 +1032,7 @@ function chartSVG(series) {
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
     `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>엑셀 입출고</b><span>주문서 출고 · 입고 내역 입고</span></button>` +
-    `<button type="button" class="tile" data-naver="1">${ICON.out}<b>네이버 어제 출고</b><span>원가 관리 시트에서 어제 주문 빼기</span></button>`;
+    `<button type="button" class="tile" data-naver="1">${ICON.out}<b>네이버 날짜별 출고</b><span>원가 관리 시트에서 고른 날 주문 빼기</span></button>`;
   const dash = $('hm-dash');
   if (!ready()) { $('hm-status').innerHTML = ''; dash.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
   const startGuide = S.skus.size ? '' : widget('처음 시작하기', '', `<div class="kv"><div><span>① 상품 등록 — 기존 재고 엑셀을 올리거나 하나씩 추가</span><a href="#excel">엑셀로 올리기 ›</a></div>
@@ -1461,7 +1462,9 @@ function findHeader(aoa, lists) {
   return hi;
 }
 // 시트에서 가져온 표(첫 줄 제목)를 주문서 출고 화면에 올림. 주문번호가 없으면 '주문일시·상품번호·옵션·수량'으로 주문 열쇠를 만들어 중복 차감을 막음
-function upFromTable(name, aoa, day, source) {
+const md = (d) => (d ? d.slice(5).replace('-', '/') : '');
+const rangeLabel = (u) => (u.day2 && u.day2 !== u.day ? `${md(u.day)}~${md(u.day2)}` : md(u.day));
+function upFromTable(name, aoa, day, source, day2) {
   const header = (aoa[0] || []).map((x, i) => norm(x) || `열 ${i + 1}`);
   let rows = aoa.slice(1).filter((r) => r.some((c) => norm(c)));
   const cNo0 = guessCol(header, KW.orderNo);
@@ -1474,18 +1477,18 @@ function upFromTable(name, aoa, day, source) {
   S.up = { file: name, source, header, rows,
     cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: -1,
     cDate: guessCol(header, KW.date), cStatus: guessCol(header, KW.status), cClaim: guessCol(header, KW.claim), cNo: cNo0 >= 0 ? cNo0 : header.length - 1, cAttr: guessCol(header, KW.attr),
-    day, noCancel: true, splitN: true, mode: 'out', cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
+    day, day2: day2 || day, noCancel: true, splitN: true, mode: 'out', cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
   renderUpload();
 }
 async function loadNaverSheet() {
-  const url = norm($('up-sheet-url').value), day = $('up-sheet-day').value || daysAgo(1);
+  const url = norm($('up-sheet-url').value), day = $('up-sheet-day').value || daysAgo(1), day2 = $('up-sheet-day2').value && $('up-sheet-day2').value >= day ? $('up-sheet-day2').value : day;
   if (!url) { toast('시트 주소를 넣어 주세요'); return; }
   const b = $('up-sheet-go'); b.disabled = true; b.textContent = '가져오는 중…';
   try {
-    const r = await api('readNaverSheet', url, day);
+    const r = await api('readNaverSheet', url, day, day2);
     if (S.canWrite && url !== (S.conf || {}).naverSheet) api('saveConf', { naverSheet: url }).then(applyData).catch(() => {});
-    upFromTable(`${r.title} · ${r.tab}`, r.values, day, `${r.title} › ${r.tab}`);
-    toast(`'${r.tab}' 탭을 읽었습니다`);
+    upFromTable(`${r.title} · ${r.tab}`, r.values, day, `${r.title} › ${r.tab}`, day2);
+    toast(`'${r.tab}' 탭을 읽었습니다` + (r.missing && r.missing.length ? ` (없는 탭: ${r.missing.join(', ')}월)` : ''));
   } catch (e) { writeFail(e); }
   finally { b.disabled = false; b.textContent = '시트에서 가져오기'; }
 }
@@ -1496,7 +1499,7 @@ function readOrders(file) {
     S.up = { file: file.name, header, rows: aoa.slice(hi + 1).filter((r) => r.some((c) => norm(c))),
       cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: guessCol(header, KW.price),
       cDate: guessCol(header, KW.date), cStatus: guessCol(header, KW.status), cClaim: guessCol(header, KW.claim), cNo: guessCol(header, KW.orderNo), cAttr: guessCol(header, KW.attr),
-      day: daysAgo(1), noCancel: true, splitN: true,
+      day: daysAgo(1), day2: daysAgo(1), noCancel: true, splitN: true,
       mode: S.upMode, cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
     renderUpload();
   }, (msg) => { S.up = null; $('up-body').innerHTML = `<div class="banner">${msg}</div>`; });
@@ -1515,11 +1518,12 @@ function upRows() {
   const filt = u.mode === 'out';
   for (const r of u.rows) {
     if (u.cName < 0 || !norm(r[u.cName])) continue;
-    if (filt && u.cDate >= 0) { const d = dayOf(r[u.cDate]); if (!d) { st.noDate++; continue; } if (d !== u.day) { st.otherDay++; continue; } }
+    let rowDay = '';
+    if (filt && u.cDate >= 0) { const d = dayOf(r[u.cDate]); if (!d) { st.noDate++; continue; } const to = u.day2 || u.day; if (d < u.day || d > to) { st.otherDay++; continue; } rowDay = d; }
     if (filt && u.noCancel && /취소|반품|교환|환불/.test(`${u.cStatus >= 0 ? r[u.cStatus] : ''} ${u.cClaim >= 0 ? r[u.cClaim] : ''}`)) { st.cancel++; continue; }
     const no = u.cNo >= 0 ? norm(r[u.cNo]) : '';
     if (filt && no && S.orderDone.has(no)) { st.done++; continue; }
-    out.push({ r, no, loc: filt && u.splitN && u.cAttr >= 0 && isNdelivery(r[u.cAttr]) ? 'fassto' : u.loc });
+    out.push({ r, no, day: rowDay, loc: filt && u.splitN && u.cAttr >= 0 && isNdelivery(r[u.cAttr]) ? 'fassto' : u.loc });
   }
   u.stats = st;
   return out;
@@ -1527,13 +1531,13 @@ function upRows() {
 function upGroups() {
   const u = S.up, g = new Map();
   if (u.cName < 0 || u.cQty < 0) return [];
-  for (const { r, loc } of upRows()) {
+  for (const { r, loc, day } of upRows()) {
     const name = norm(r[u.cName]); if (!name) continue;
     const opt = u.cOpt >= 0 ? norm(r[u.cOpt]) : '';
     const q = toNum(r[u.cQty]), pr = u.cPrice >= 0 ? toNum(r[u.cPrice]) : 0;
     const key = opt ? `${name} ¦ ${opt}` : name;
     const e = g.get(key) || { key, name, opt, qty: 0, rows: 0, amt: 0, pq: 0, locQty: {} };
-    e.qty += q; e.rows++; e.locQty[loc] = (e.locQty[loc] || 0) + q; if (pr > 0) { e.amt += pr * q; e.pq += q; } g.set(key, e);
+    e.qty += q; e.rows++; e.locQty[loc + '|' + (day || '')] = (e.locQty[loc + '|' + (day || '')] || 0) + q; if (pr > 0) { e.amt += pr * q; e.pq += q; } g.set(key, e);
   }
   return [...g.values()].sort((a, b) => b.qty - a.qty);
 }
@@ -1561,7 +1565,7 @@ function upSummary() {
     else if (r.sku !== '__skip') per.set(r.sku, (per.get(r.sku) || 0) + e.qty * r.mult);
   }
   const total = [...per.values()].reduce((a, b) => a + b, 0);
-  const sig = hash(u.mode + '|' + (u.cDate >= 0 && u.mode === 'out' ? u.day : '') + '|' + u.file + '|' + groups.map((e) => e.key + ':' + e.qty).join('|'));
+  const sig = hash(u.mode + '|' + (u.cDate >= 0 && u.mode === 'out' ? u.day + '~' + (u.day2 || u.day) : '') + '|' + u.file + '|' + groups.map((e) => e.key + ':' + e.qty).join('|'));
   return { groups, unresolved, per, total, sig, dup: S.uploads.get(sig) };
 }
 function updateUpload() {
@@ -1576,7 +1580,7 @@ function updateUpload() {
     const st = u.stats || {}, used = st.total - (st.otherDay || 0) - (st.cancel || 0) - (st.done || 0) - (st.noDate || 0);
     const fa = m.groups.reduce((x, e) => x + ((e.locQty || {}).fassto || 0), 0);
     sb.innerHTML = u.cDate >= 0
-      ? `${u.source ? `<b>${esc(u.source)}</b> · ` : ''}주문 ${fmt(st.total)}줄 중 ` + (used ? `<b>${u.day.slice(5).replace('-', '/')} ${/주문|결제/.test(u.header[u.cDate] || '') ? '주문' : '발송'} ${fmt(used)}줄</b>만 뺍니다` : `<b>${u.day.slice(5).replace('-', '/')}에 새로 뺄 주문이 없습니다</b>`) + (st.otherDay ? ` · 다른 날 ${fmt(st.otherDay)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '') + (st.done ? ` · <b>이미 뺀 주문 ${fmt(st.done)}줄 제외</b>` : '') + (st.noDate ? ` · 발송일 없음(미발송) ${fmt(st.noDate)}줄 제외` : '') + (fa ? ` · N배송 ${fmt(fa)}개는 파스토에서` : '')
+      ? `${u.source ? `<b>${esc(u.source)}</b> · ` : ''}주문 ${fmt(st.total)}줄 중 ` + (used ? `<b>${rangeLabel(u)} ${/주문|결제/.test(u.header[u.cDate] || '') ? '주문' : '발송'} ${fmt(used)}줄</b>만 뺍니다 (날짜별로 기록)` : `<b>${rangeLabel(u)}에 새로 뺄 주문이 없습니다</b>`) + (st.otherDay ? ` · 다른 날 ${fmt(st.otherDay)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '') + (st.done ? ` · <b>이미 뺀 주문 ${fmt(st.done)}줄 제외</b>` : '') + (st.noDate ? ` · 발송일 없음(미발송) ${fmt(st.noDate)}줄 제외` : '') + (fa ? ` · N배송 ${fmt(fa)}개는 파스토에서` : '')
       : `발송일 열을 찾지 못해 <b>모든 줄</b>을 뺍니다` + (st.done ? ` · 이미 뺀 주문 ${fmt(st.done)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '');
   }
   $('up-unres').innerHTML = m.unresolved ? `<b style="color:var(--bad)">아직 연결 안 된 ${m.unresolved}종류</b>의 SKU를 골라 주세요.` : '모두 연결됐습니다.';
@@ -1601,7 +1605,7 @@ function renderUpload() {
       <label class="f">출고일<input type="date" id="up-date" value="${esc(u.date)}"></label>
       ${u.mode === 'in' ? `<label class="f">단가 열 (있으면)${colSel('up-cprice', u.cPrice, true)}</label><label class="f">단가 통화<select id="up-cur"><option value="USD"${u.cur === 'USD' ? ' selected' : ''}>달러 (USD)</option><option value="KRW"${u.cur === 'KRW' ? ' selected' : ''}>원 (KRW)</option></select></label>${u.cur === 'USD' ? `<label class="f">환율 (원/$)<input type="number" id="up-fx" step="0.01" style="width:96px" value="${esc(u.fx || '')}"></label>` : ''}` : ''}
       ${u.mode === 'out' && u.cDate >= 0 ? `<label class="f">발송일 열<select id="up-cdate">${u.header.map((h, i) => `<option value="${i}"${i === u.cDate ? ' selected' : ''}>${esc(h)}</option>`).join('')}</select></label>
-        <label class="f">${/주문|결제/.test(u.header[u.cDate] || '') ? '이 날 주문만' : '이 날 발송된 주문만'}<input type="date" id="up-day" value="${esc(u.day)}"></label>` : ''}
+        <label class="f">${/주문|결제/.test(u.header[u.cDate] || '') ? '이 날 주문만' : '이 날 발송된 주문만'}<span style="display:flex;gap:4px;align-items:center"><input type="date" id="up-day" value="${esc(u.day)}">~<input type="date" id="up-day2" value="${esc(u.day2 || u.day)}"></span></label>` : ''}
       ${u.mode === 'out' && (u.cStatus >= 0 || u.cClaim >= 0) ? `<label class="f"><span><input type="checkbox" id="up-nocancel"${u.noCancel ? ' checked' : ''}> 취소·반품 주문 빼기</span></label>` : ''}
       ${u.mode === 'out' && u.cAttr >= 0 ? `<label class="f"><span><input type="checkbox" id="up-splitn"${u.splitN ? ' checked' : ''}> N배송 주문은 파스토에서 빼기</span></label>` : ''}
       <label class="f">${u.mode === 'in' ? '어느 창고로 들어왔나요?' : u.cAttr >= 0 && u.splitN ? '그 밖의 주문은 어디서?' : '어디서 나갔나요?'}<select id="up-loc"><option value="hq"${u.loc === 'hq' ? ' selected' : ''}>본사창고${u.mode === 'in' ? '' : ' (자사 발송)'}</option><option value="fassto"${u.loc === 'fassto' ? ' selected' : ''}>파스토${u.mode === 'in' ? ' (공장에서 바로)' : ' (N배송 주문)'}</option></select></label>
@@ -1662,14 +1666,15 @@ async function applyUpload() {
     }
   } else {
     list = [];
-    for (const [sku, p] of per) for (const [l, q] of Object.entries(p.locQty)) if (q > 0) list.push({ sku, loc: l, qty: -q, type: l === 'fassto' ? 'nsale' : 'ship', date, memo: memo(p) + (dayMode ? ` · ${u.day.slice(5)} 발송분` : '') });
+    for (const [sku, p] of per) for (const [lk, q] of Object.entries(p.locQty)) { if (q <= 0) continue; const [l, dd] = lk.split('|'); list.push({ sku, loc: l, qty: -q, type: l === 'fassto' ? 'nsale' : 'ship', date: dd || date, memo: memo(p) + (dd ? ` · ${dd.slice(5)} 주문분` : '') }); }
+    list.sort((a, b) => a.date.localeCompare(b.date));
     if (!list.length) { toast(dayMode ? '고른 날짜에 발송된 주문이 없습니다' : '뺄 수량이 없습니다'); return; }
   }
   const btn = $('up-apply'); btn.disabled = true;
   const units = list.filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(m.qty), 0);
   try {
-    const orderNos = u.mode === 'out' ? [...new Set(upRows().map((x) => x.no).filter(Boolean))] : [];
-    applyData(await api('applyUpload', list, newMaps, $('up-body').dataset.sig, u.file, u.mode === 'in' ? '엑셀 입고' : dayMode ? '주문서 출고 (발송일 ' + u.day + ')' : '주문서 출고', orderNos, dayMode ? u.day : date));
+    const orderNos = u.mode === 'out' ? [...new Map(upRows().filter((x) => x.no).map((x) => [x.no, { no: x.no, day: x.day || date }])).values()] : [];
+    applyData(await api('applyUpload', list, newMaps, $('up-body').dataset.sig, u.file, u.mode === 'in' ? '엑셀 입고' : dayMode ? '주문서 출고 (' + (u.day2 && u.day2 !== u.day ? u.day + '~' + u.day2 : u.day) + ')' : '주문서 출고', orderNos, dayMode ? u.day : date));
     toast(`${fmt(units)}개 ${u.mode === 'in' ? '입고' : '출고'}했습니다`);
     S.up = null; $('up-file').value = ''; renderUpload();
   } catch (e) { writeFail(e); btn.disabled = false; }
@@ -2025,6 +2030,8 @@ function applyData(d) {
   S.uploads = new Map(d.uploads.map((x) => [x.sig, x]));
   S.rules = d.rules || [];
   S.orderDone = new Set(d.orderDone || []);
+  S.orderDays = d.orderDays || {};
+  if (typeof renderSheetQuick === 'function') renderSheetQuick();
   S.memo = d.memo || { text: '', at: '', by: '' };
   S.conf = d.conf || {};
   S.fx = Number(S.conf.fx) || 0;
@@ -2085,7 +2092,7 @@ $('hm-actions').addEventListener('click', (e) => {
   const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
   if (g) startRecord(GROUPS[g.dataset.gogroup].forms[0]);
   if (v) location.hash = '#' + v.dataset.goview;
-  if (e.target.closest('[data-naver]')) { location.hash = '#upload'; setUpMode('out'); $('up-sheet-day').value = daysAgo(1); if ($('up-sheet-url').value) loadNaverSheet(); else toast('네이버 원가 관리 시트 주소를 한 번 넣어 주세요. 다음부터는 버튼 하나로 가져옵니다'); }
+  if (e.target.closest('[data-naver]')) { location.hash = '#upload'; setUpMode('out'); if ($('up-sheet-url').value) { toast('날짜를 고르고 [시트에서 가져오기]를 누르세요. 아래 날짜 버튼으로 바로 불러올 수도 있어요'); $('up-sheet-day').focus(); } else toast('네이버 원가 관리 시트 주소를 한 번 넣어 주세요. 다음부터는 버튼 하나로 가져옵니다'); }
 });
 $('hm-status').addEventListener('click', (e) => { const b = e.target.closest('[data-stfilter]'); if (!b) return; S.stStatus = b.dataset.stfilter; S.stPart = ''; location.hash = '#stock'; renderStock(); });
 $('hm-dash').addEventListener('click', async (e) => {
@@ -2150,6 +2157,21 @@ $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') close
 document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); });
 
 $('up-sheet-go').addEventListener('click', loadNaverSheet);
+function renderSheetQuick() {
+  const box = $('up-sheet-quick'); if (!box) return;
+  const days = S.orderDays || {}, chips = [];
+  chips.push(`<button type="button" class="chip" data-qr="1-1">어제</button><button type="button" class="chip" data-qr="7-1">최근 7일</button><button type="button" class="chip" data-qr="0-0">오늘</button>`);
+  for (let k = 14; k >= 1; k--) { const d = daysAgo(k), n = days[d] || 0; chips.push(`<button type="button" class="chip" data-qd="${d}" title="${n ? `${n}개 주문 처리됨` : '아직 처리 안 함'}" style="${n ? '' : 'border-color:var(--warn);color:var(--warn)'}">${md(d)} ${n ? '✓' : '미처리'}</button>`); }
+  box.innerHTML = chips.join('');
+}
+$('up-sheet-quick').addEventListener('click', (e) => {
+  const q = e.target.closest('[data-qr]'), d = e.target.closest('[data-qd]');
+  if (q) { const [a, b] = q.dataset.qr.split('-').map(Number); $('up-sheet-day').value = daysAgo(a); $('up-sheet-day2').value = daysAgo(b); }
+  else if (d) { $('up-sheet-day').value = d.dataset.qd; $('up-sheet-day2').value = d.dataset.qd; }
+  else return;
+  if ($('up-sheet-url').value) loadNaverSheet();
+});
+$('up-sheet-day').addEventListener('change', () => { if (!$('up-sheet-day2').value || $('up-sheet-day2').value < $('up-sheet-day').value) $('up-sheet-day2').value = $('up-sheet-day').value; });
 $('up-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readOrders(f); });
 $('up-body').addEventListener('change', (e) => {
   const u = S.up, el = e.target; if (!u) return;
@@ -2158,7 +2180,8 @@ $('up-body').addEventListener('change', (e) => {
   else if (el.id === 'up-cqty') u.cQty = Number(el.value);
   else if (el.id === 'up-cprice') u.cPrice = Number(el.value);
   else if (el.id === 'up-cdate') { u.cDate = Number(el.value); renderUpload(); return; }
-  else if (el.id === 'up-day') { u.day = el.value; renderUpload(); return; }
+  else if (el.id === 'up-day') { u.day = el.value; if (!u.day2 || u.day2 < u.day) u.day2 = u.day; renderUpload(); return; }
+  else if (el.id === 'up-day2') { u.day2 = el.value; if (u.day2 < u.day) u.day = u.day2; renderUpload(); return; }
   else if (el.id === 'up-nocancel') { u.noCancel = el.checked; renderUpload(); return; }
   else if (el.id === 'up-splitn') { u.splitN = el.checked; renderUpload(); return; }
   else if (el.id === 'up-cur') { u.cur = el.value; renderUpload(); return; }
@@ -2182,6 +2205,8 @@ function setUpMode(mode) {
   $('up-sheetbox').hidden = mode !== 'out';
   if (!$('up-sheet-url').value && S.conf && S.conf.naverSheet) $('up-sheet-url').value = S.conf.naverSheet;
   if (!$('up-sheet-day').value) $('up-sheet-day').value = daysAgo(1);
+  if (!$('up-sheet-day2').value) $('up-sheet-day2').value = $('up-sheet-day').value;
+  if (typeof renderSheetQuick === 'function') renderSheetQuick();
   if (S.up && S.up.mode !== mode) { S.up = null; $('up-file').value = ''; renderUpload(); }
 }
 $('up-mode').addEventListener('click', (e) => { const b = e.target.closest('[data-upmode]'); if (b) setUpMode(b.dataset.upmode); });

@@ -138,8 +138,10 @@ function getData() {
   rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
   const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
   // 이미 재고에서 뺀 주문번호 (최근 것만 보내도 충분: 최대 2만 건)
-  const orderDone = rows_(TABS.ORDER).slice(-20000).map((r) => str_(r[0])).filter(Boolean);
-  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, orderDone, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  const orderRows = rows_(TABS.ORDER).slice(-20000);
+  const orderDone = orderRows.map((r) => str_(r[0])).filter(Boolean);
+  const orderDays = {}; orderRows.forEach((r) => { const d = str_(r[1]); if (d) orderDays[d] = (orderDays[d] || 0) + 1; });
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, orderDone, orderDays, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -332,16 +334,32 @@ function savePdf(base64, filename) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), 'application/pdf', filename);
   return folder.createFile(blob).getUrl();
 }
-/** 네이버 원가 관리 시트에서 그 달 탭(예: '202611월')을 통째로 읽어 돌려줌 (날짜 거르기는 화면에서) */
-function readNaverSheet(url, day) {
+/** 네이버 원가 관리 시트에서 시작일~종료일이 걸친 달 탭(예: '202610월', '202611월')을 읽어 한 표로 합쳐 돌려줌 (날짜 거르기는 화면에서) */
+function readNaverSheet(url, from, to) {
   const id = (String(url || '').match(/[-\w]{25,}/) || [])[0];
   if (!id) throw new Error('구글 시트 주소를 확인해 주세요.');
   let ss;
   try { ss = SpreadsheetApp.openById(id); } catch (e) { throw new Error('시트를 열 수 없습니다. 주소와 공유 권한을 확인해 주세요.'); }
-  const ym = String(day || '').slice(0, 4) + String(day || '').slice(5, 7);
-  const sh = ss.getSheets().find((x) => x.getName().replace(/\s/g, '').indexOf(ym) === 0);
-  if (!sh) throw new Error(`'${ym}월' 탭을 찾지 못했습니다. 시트에 그 달 탭이 있는지 확인해 주세요.`);
-  return { title: ss.getName(), tab: sh.getName(), values: sh.getDataRange().getDisplayValues() };
+  to = to || from;
+  const months = [];
+  let y = Number(String(from).slice(0, 4)), m = Number(String(from).slice(5, 7));
+  const ey = Number(String(to).slice(0, 4)), em = Number(String(to).slice(5, 7));
+  for (let k = 0; k < 24 && (y < ey || (y === ey && m <= em)); k++) { months.push(String(y) + String(m).padStart(2, '0')); m++; if (m > 12) { m = 1; y++; } }
+  const sheets = ss.getSheets(), tabs = [], missing = [];
+  let base = null; const out = [];
+  months.forEach((ym) => {
+    const sh = sheets.find((x) => x.getName().replace(/\s/g, '').indexOf(ym) === 0);
+    if (!sh) { missing.push(ym); return; }
+    tabs.push(sh.getName());
+    const v = sh.getDataRange().getDisplayValues();
+    if (!v.length) return;
+    if (!base) { base = v[0].map((h) => String(h).trim()); out.push(base); }
+    // 달마다 열 순서가 달라도 제목 이름으로 맞춰 붙임
+    const idx = base.map((h) => v[0].map((x) => String(x).trim()).indexOf(h));
+    for (let r = 1; r < v.length; r++) out.push(idx.map((c) => (c >= 0 ? v[r][c] : '')));
+  });
+  if (!tabs.length) throw new Error(`${months.map((x) => x + '월').join(', ')} 탭을 찾지 못했습니다. 시트에 그 달 탭이 있는지 확인해 주세요.`);
+  return { title: ss.getName(), tab: tabs.join(' + '), missing: missing, values: out };
 }
 function saveMemo(text) {
   return withLock_(() => { putRow_(TABS.MEMO, 0, [String(text || '').slice(0, 5000), now_(), me_()]); return getData(); });
@@ -362,7 +380,7 @@ function deleteMap(id) {
 function applyUpload(list, newMaps, sig, file, label, orderNos, orderDay) {
   return withLock_(() => {
     const at = now_();
-    if (orderNos && orderNos.length) append_(TABS.ORDER, orderNos.map((n) => [n, orderDay || '', file, at]));
+    if (orderNos && orderNos.length) append_(TABS.ORDER, orderNos.map((n) => (typeof n === 'object' ? [n.no, n.day || orderDay || '', file, at] : [n, orderDay || '', file, at])));
     append_(TABS.MOVE, moveRows_(list, label || '주문서 차감'));
     append_(TABS.UPLOAD, [[sig, file, list.filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(Number(m.qty)), 0), at, me_()]]);
     upsertMaps_(newMaps, at);
