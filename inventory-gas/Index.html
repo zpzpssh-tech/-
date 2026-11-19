@@ -386,7 +386,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 날짜별출고</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 자동출고</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -424,6 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
   <!-- 홈 -->
   <section id="v-home" class="view" hidden>
     <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>홈</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div id="hm-auto" hidden></div>
     <div class="hero"><h2>오늘의 재고</h2><p class="muted small" id="hm-sub">재고를 불러오는 중…</p></div>
     <div class="status3" id="hm-status"></div>
     <div class="panel">
@@ -484,6 +485,7 @@ table.mini tr[data-sku] { cursor: pointer; }
           <button class="primary" id="up-sheet-go">시트에서 가져오기</button>
         </div>
         <div class="chips" id="up-sheet-quick"></div>
+        <div class="row" id="up-auto" style="align-items:center;border-top:1px dashed currentColor;padding-top:8px"></div>
         <span class="small">달마다 있는 탭(예: 202611월)에서 <b>주문일시가 고른 날짜인 주문만</b> 읽어 옵니다. 기간이 두 달에 걸치면 두 탭을 모두 읽습니다. 취소·반품은 빼고, 이미 뺀 주문은 건너뜁니다. 기록은 주문일별로 남습니다.</span>
       </div>
       <div class="row"><label class="f grow">또는 엑셀 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
@@ -1676,6 +1678,11 @@ async function applyUpload() {
     const orderNos = u.mode === 'out' ? [...new Map(upRows().filter((x) => x.no).map((x) => [x.no, { no: x.no, day: x.day || date }])).values()] : [];
     applyData(await api('applyUpload', list, newMaps, $('up-body').dataset.sig, u.file, u.mode === 'in' ? '엑셀 입고' : dayMode ? '주문서 출고 (' + (u.day2 && u.day2 !== u.day ? u.day + '~' + u.day2 : u.day) + ')' : '주문서 출고', orderNos, dayMode ? u.day : date));
     toast(`${fmt(units)}개 ${u.mode === 'in' ? '입고' : '출고'}했습니다`);
+    const L = S.autoLog;
+    if (u.mode === 'out' && u.source && L && L.pendingCount && !L.error) {
+      const to2 = u.day2 || u.day, rest = (L.pending || []).filter((x) => x.day < u.day || x.day > to2);
+      api('saveConf', { naverAutoLog: JSON.stringify({ ...L, pending: rest, pendingCount: rest.length }) }).then(applyData).catch(() => {});
+    }
     S.up = null; $('up-file').value = ''; renderUpload();
   } catch (e) { writeFail(e); btn.disabled = false; }
 }
@@ -2031,10 +2038,12 @@ function applyData(d) {
   S.rules = d.rules || [];
   S.orderDone = new Set(d.orderDone || []);
   S.orderDays = d.orderDays || {};
+  try { S.autoLog = JSON.parse((d.conf || {}).naverAutoLog || 'null'); } catch (e) { S.autoLog = null; }
   if (typeof renderSheetQuick === 'function') renderSheetQuick();
   S.memo = d.memo || { text: '', at: '', by: '' };
   S.conf = d.conf || {};
   S.fx = Number(S.conf.fx) || 0;
+  if (typeof renderAutoBox === 'function') setTimeout(renderAutoBox, 0);
   if ($('up-sheet-url') && !$('up-sheet-url').value && S.conf.naverSheet) $('up-sheet-url').value = S.conf.naverSheet;
   S.sups = [];
   for (const [k, v] of Object.entries(S.conf)) if (k.startsWith('sup:')) { try { S.sups.push({ ...JSON.parse(v), id: k.slice(4) }); } catch (e) { /* 깨진 값은 건너뜀 */ } }
@@ -2157,6 +2166,49 @@ $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') close
 document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); });
 
 $('up-sheet-go').addEventListener('click', loadNaverSheet);
+$('up-sheetbox').addEventListener('click', async (e) => {
+  if (e.target.id === 'up-auto-toggle') {
+    if (!guard()) return;
+    const on = (S.conf || {}).naverAuto !== 'on', hour = Number($('up-auto-hour').value) || 9;
+    if (on && !(S.conf || {}).naverSheet) { toast('먼저 시트 주소를 넣고 [시트에서 가져오기]를 한 번 해 주세요'); return; }
+    e.target.disabled = true;
+    try { applyData(await api('setAutoNaver', on, hour)); toast(on ? `매일 ${hour}시에 어제 주문을 자동으로 뺍니다` : '자동 출고를 껐습니다'); } catch (err) { writeFail(err); } finally { e.target.disabled = false; }
+  }
+  if (e.target.id === 'up-auto-run') {
+    if (!guard()) return;
+    e.target.disabled = true; e.target.textContent = '실행 중…';
+    try { const d = await api('runAutoNaver', '', ''); applyData(d); const R = d.autoResult || {}; toast(R.note || `${md(R.from)}${R.to !== R.from ? '~' + md(R.to) : ''} 주문 ${fmt(R.units || 0)}개 자동 출고` + (R.pendingCount ? ` · 확인 필요 ${R.pendingCount}건` : '')); } catch (err) { writeFail(err); } finally { e.target.disabled = false; e.target.textContent = '지금 실행'; }
+  }
+});
+$('up-sheetbox').addEventListener('change', async (e) => {
+  if (e.target.id !== 'up-auto-hour' || (S.conf || {}).naverAuto !== 'on' || !guard()) return;
+  try { applyData(await api('setAutoNaver', true, Number(e.target.value))); toast(`자동 출고 시각을 매일 ${e.target.value}시로 바꿨습니다`); } catch (err) { writeFail(err); }
+});
+$('hm-auto').addEventListener('click', (e) => {
+  if (e.target.id !== 'hm-auto-fix') return;
+  const L = S.autoLog || {}, days = (L.pending || []).map((x) => x.day).sort();
+  location.hash = '#upload'; setUpMode('out');
+  if (days.length) { $('up-sheet-day').value = days[0]; $('up-sheet-day2').value = days[days.length - 1]; loadNaverSheet(); }
+});
+function renderAutoBox() {
+  const c = S.conf || {}, on = c.naverAuto === 'on', hour = Number(c.naverAutoHour) || 9, L = S.autoLog;
+  const box = $('up-auto');
+  if (box) {
+    const last = L ? (L.error ? `<span style="color:var(--bad)">마지막 실행 실패: ${esc(L.error)}</span>` : `마지막 자동 실행 ${esc((L.at || '').slice(5, 16))} · ${md(L.from)}${L.to !== L.from ? '~' + md(L.to) : ''} 주문 <b>${fmt(L.units || 0)}개</b> 출고${L.pendingCount ? ` · <b style="color:var(--warn)">확인 필요 ${L.pendingCount}건</b>` : ''}`) : '아직 자동 실행 기록이 없습니다';
+    box.innerHTML = `<b>매일 자동 출고</b> <span class="pill ${on ? 'ok' : 'mute'}">${on ? `켜짐 · 매일 ${hour}시` : '꺼짐'}</span>
+      <select id="up-auto-hour" style="height:30px">${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((h) => `<option value="${h}"${h === hour ? ' selected' : ''}>매일 ${h}시</option>`).join('')}</select>
+      <button class="sm ${on ? '' : 'primary'}" id="up-auto-toggle">${on ? '자동 출고 끄기' : '매일 자동 출고 켜기'}</button>
+      <button class="sm" id="up-auto-run" title="마지막으로 처리한 날 다음날부터 어제까지 지금 바로 처리">지금 실행</button>
+      <span class="small grow">${last}</span>`;
+  }
+  const hb = $('hm-auto');
+  if (hb) {
+    const n = L && !L.error ? L.pendingCount || 0 : 0;
+    hb.hidden = !(n || (L && L.error));
+    hb.innerHTML = L && L.error ? `<div class="banner">네이버 자동 출고가 실패했습니다: ${esc(L.error)} <a href="#upload">확인하기</a></div>`
+      : n ? `<div class="banner">네이버 자동 출고에서 <b>상품을 연결하지 못한 주문 ${n}건</b>이 있어 빼지 않았습니다. <button class="sm" id="hm-auto-fix">연결하러 가기</button></div>` : '';
+  }
+}
 function renderSheetQuick() {
   const box = $('up-sheet-quick'); if (!box) return;
   const days = S.orderDays || {}, chips = [];
