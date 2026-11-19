@@ -348,7 +348,8 @@ function readNaverSheet(url, from, to) {
   const sheets = ss.getSheets(), tabs = [], missing = [];
   let base = null; const out = [];
   months.forEach((ym) => {
-    const sh = sheets.find((x) => x.getName().replace(/\s/g, '').indexOf(ym) === 0);
+    // 탭 이름 모양이 달라도 찾음: 202611월 · 2026/11월 · 2026-11 · 2026.11 · 2026년 11월
+    const sh = sheets.find((x) => { const m = x.getName().match(/^\s*(20\d{2})\s*[\/.\-_년]?\s*(\d{1,2})(?!\d)/); return m && m[1] + m[2].padStart(2, '0') === ym; });
     if (!sh) { missing.push(ym); return; }
     tabs.push(sh.getName());
     const v = sh.getDataRange().getDisplayValues();
@@ -358,7 +359,7 @@ function readNaverSheet(url, from, to) {
     const idx = base.map((h) => v[0].map((x) => String(x).trim()).indexOf(h));
     for (let r = 1; r < v.length; r++) out.push(idx.map((c) => (c >= 0 ? v[r][c] : '')));
   });
-  if (!tabs.length) throw new Error(`${months.map((x) => x + '월').join(', ')} 탭을 찾지 못했습니다. 시트에 그 달 탭이 있는지 확인해 주세요.`);
+  if (!tabs.length) throw new Error(`${months.map((x) => x.slice(0, 4) + '/' + x.slice(4) + '월').join(', ')} 탭을 찾지 못했습니다. 시트에 그 달 탭이 있는지 확인해 주세요.`);
   return { title: ss.getName(), tab: tabs.join(' + '), missing: missing, values: out };
 }
 
