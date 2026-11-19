@@ -332,6 +332,17 @@ function savePdf(base64, filename) {
   const blob = Utilities.newBlob(Utilities.base64Decode(base64), 'application/pdf', filename);
   return folder.createFile(blob).getUrl();
 }
+/** 네이버 원가 관리 시트에서 그 달 탭(예: '202611월')을 통째로 읽어 돌려줌 (날짜 거르기는 화면에서) */
+function readNaverSheet(url, day) {
+  const id = (String(url || '').match(/[-\w]{25,}/) || [])[0];
+  if (!id) throw new Error('구글 시트 주소를 확인해 주세요.');
+  let ss;
+  try { ss = SpreadsheetApp.openById(id); } catch (e) { throw new Error('시트를 열 수 없습니다. 주소와 공유 권한을 확인해 주세요.'); }
+  const ym = String(day || '').slice(0, 4) + String(day || '').slice(5, 7);
+  const sh = ss.getSheets().find((x) => x.getName().replace(/\s/g, '').indexOf(ym) === 0);
+  if (!sh) throw new Error(`'${ym}월' 탭을 찾지 못했습니다. 시트에 그 달 탭이 있는지 확인해 주세요.`);
+  return { title: ss.getName(), tab: sh.getName(), values: sh.getDataRange().getDisplayValues() };
+}
 function saveMemo(text) {
   return withLock_(() => { putRow_(TABS.MEMO, 0, [String(text || '').slice(0, 5000), now_(), me_()]); return getData(); });
 }

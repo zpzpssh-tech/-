@@ -386,7 +386,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 네이버출고</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 시트출고</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -476,7 +476,16 @@ table.mini tr[data-sku] { cursor: pointer; }
       <p class="small muted" style="margin:0" id="up-desc"></p>
       <p class="small muted" style="margin:0">상품명·옵션은 <b>매칭 규칙</b>과 <b>연결표</b>로 자동 연결됩니다. 처음 보는 상품만 SKU를 한 번 골라 주면 다음부터 자동입니다.
         네이버 엑셀에 비밀번호가 걸려 있으면 엑셀에서 <b>다른 이름으로 저장</b>(비밀번호 없이)한 뒤 올려 주세요.</p>
-      <div class="row"><label class="f grow">엑셀 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
+      <div class="banner info" id="up-sheetbox" style="display:grid;gap:8px">
+        <b>구글 시트에서 바로 가져오기 (네이버 원가 관리)</b>
+        <div class="row">
+          <label class="f grow">시트 주소<input id="up-sheet-url" placeholder="https://docs.google.com/spreadsheets/d/..."></label>
+          <label class="f">주문일<input type="date" id="up-sheet-day"></label>
+          <button class="primary" id="up-sheet-go">시트에서 가져오기</button>
+        </div>
+        <span class="small">그 달 탭(예: 202611월)에서 <b>고른 날 주문만</b> 읽어 옵니다. 취소·반품은 빼고, 이미 뺀 주문은 건너뜁니다.</span>
+      </div>
+      <div class="row"><label class="f grow">또는 엑셀 파일<input type="file" id="up-file" accept=".xlsx,.xls,.csv"></label></div>
       <div id="up-body"></div>
     </div>
   </section>
@@ -1022,7 +1031,7 @@ function chartSVG(series) {
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
     `<button type="button" class="tile" data-goview="upload">${ICON.sheet}<b>엑셀 입출고</b><span>주문서 출고 · 입고 내역 입고</span></button>` +
-    `<button type="button" class="tile" data-naver="1">${ICON.out}<b>네이버 어제 출고</b><span>주문 엑셀 → 어제 발송분만 빼기</span></button>`;
+    `<button type="button" class="tile" data-naver="1">${ICON.out}<b>네이버 어제 출고</b><span>원가 관리 시트에서 어제 주문 빼기</span></button>`;
   const dash = $('hm-dash');
   if (!ready()) { $('hm-status').innerHTML = ''; dash.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; return; }
   const startGuide = S.skus.size ? '' : widget('처음 시작하기', '', `<div class="kv"><div><span>① 상품 등록 — 기존 재고 엑셀을 올리거나 하나씩 추가</span><a href="#excel">엑셀로 올리기 ›</a></div>
@@ -1419,7 +1428,7 @@ const KW = {
   name: ['상품명', '노출상품명', '등록상품명', '노출상품명(옵션명)', '제품명', '품명'],
   opt: ['옵션정보', '등록옵션명', '노출옵션명', '옵션명', '옵션'],
   qty: ['수량', '구매수(수량)', '주문수량', '구매수량', '판매수량', '출고수량', '입고수량', '입고 수량', '발주수량'],
-  date: ['발송처리일', '발송일', '발송일시', '출고일', '배송시작일'],
+  date: ['발송처리일', '발송일', '발송일시', '출고일', '배송시작일', '주문일시', '주문일', '결제일'],
   status: ['상품주문상태', '주문상태', '배송상태'],
   claim: ['클레임상태', '클레임 상태'],
   orderNo: ['상품주문번호', '주문번호'],
@@ -1450,6 +1459,35 @@ function findHeader(aoa, lists) {
   let hi = 0, best = -1;
   aoa.slice(0, 10).forEach((row, i) => { const sc = lists.filter((l) => guessCol(row, l) >= 0).length; if (sc > best) { best = sc; hi = i; } });
   return hi;
+}
+// 시트에서 가져온 표(첫 줄 제목)를 주문서 출고 화면에 올림. 주문번호가 없으면 '주문일시·상품번호·옵션·수량'으로 주문 열쇠를 만들어 중복 차감을 막음
+function upFromTable(name, aoa, day, source) {
+  const header = (aoa[0] || []).map((x, i) => norm(x) || `열 ${i + 1}`);
+  let rows = aoa.slice(1).filter((r) => r.some((c) => norm(c)));
+  const cNo0 = guessCol(header, KW.orderNo);
+  if (cNo0 < 0) {
+    const ci = (k) => guessCol(header, k), cd = ci(KW.date), cp = ci(['상품번호']), cn = ci(KW.name), co = ci(KW.opt), cq = ci(KW.qty);
+    const seen = new Map();
+    rows = rows.map((r) => { const base = [cd, cp, cn, co, cq].map((c) => (c >= 0 ? norm(r[c]) : '')).join('|'); const k = (seen.get(base) || 0) + 1; seen.set(base, k); return [...r, 'S' + hash(base) + '-' + k]; });
+    header.push('주문열쇠');
+  }
+  S.up = { file: name, source, header, rows,
+    cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: -1,
+    cDate: guessCol(header, KW.date), cStatus: guessCol(header, KW.status), cClaim: guessCol(header, KW.claim), cNo: cNo0 >= 0 ? cNo0 : header.length - 1, cAttr: guessCol(header, KW.attr),
+    day, noCancel: true, splitN: true, mode: 'out', cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
+  renderUpload();
+}
+async function loadNaverSheet() {
+  const url = norm($('up-sheet-url').value), day = $('up-sheet-day').value || daysAgo(1);
+  if (!url) { toast('시트 주소를 넣어 주세요'); return; }
+  const b = $('up-sheet-go'); b.disabled = true; b.textContent = '가져오는 중…';
+  try {
+    const r = await api('readNaverSheet', url, day);
+    if (S.canWrite && url !== (S.conf || {}).naverSheet) api('saveConf', { naverSheet: url }).then(applyData).catch(() => {});
+    upFromTable(`${r.title} · ${r.tab}`, r.values, day, `${r.title} › ${r.tab}`);
+    toast(`'${r.tab}' 탭을 읽었습니다`);
+  } catch (e) { writeFail(e); }
+  finally { b.disabled = false; b.textContent = '시트에서 가져오기'; }
 }
 function readOrders(file) {
   readSheet(file, (aoa) => {
@@ -1538,7 +1576,7 @@ function updateUpload() {
     const st = u.stats || {}, used = st.total - (st.otherDay || 0) - (st.cancel || 0) - (st.done || 0) - (st.noDate || 0);
     const fa = m.groups.reduce((x, e) => x + ((e.locQty || {}).fassto || 0), 0);
     sb.innerHTML = u.cDate >= 0
-      ? `주문 ${fmt(st.total)}줄 중 <b>${u.day.slice(5).replace('-', '/')} 발송 ${fmt(used)}줄</b>만 뺍니다` + (st.otherDay ? ` · 다른 날 발송 ${fmt(st.otherDay)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '') + (st.done ? ` · <b>이미 뺀 주문 ${fmt(st.done)}줄 제외</b>` : '') + (st.noDate ? ` · 발송일 없음(미발송) ${fmt(st.noDate)}줄 제외` : '') + (fa ? ` · N배송 ${fmt(fa)}개는 파스토에서` : '')
+      ? `${u.source ? `<b>${esc(u.source)}</b> · ` : ''}주문 ${fmt(st.total)}줄 중 ` + (used ? `<b>${u.day.slice(5).replace('-', '/')} ${/주문|결제/.test(u.header[u.cDate] || '') ? '주문' : '발송'} ${fmt(used)}줄</b>만 뺍니다` : `<b>${u.day.slice(5).replace('-', '/')}에 새로 뺄 주문이 없습니다</b>`) + (st.otherDay ? ` · 다른 날 ${fmt(st.otherDay)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '') + (st.done ? ` · <b>이미 뺀 주문 ${fmt(st.done)}줄 제외</b>` : '') + (st.noDate ? ` · 발송일 없음(미발송) ${fmt(st.noDate)}줄 제외` : '') + (fa ? ` · N배송 ${fmt(fa)}개는 파스토에서` : '')
       : `발송일 열을 찾지 못해 <b>모든 줄</b>을 뺍니다` + (st.done ? ` · 이미 뺀 주문 ${fmt(st.done)}줄 제외` : '') + (st.cancel ? ` · 취소·반품 ${fmt(st.cancel)}줄 제외` : '');
   }
   $('up-unres').innerHTML = m.unresolved ? `<b style="color:var(--bad)">아직 연결 안 된 ${m.unresolved}종류</b>의 SKU를 골라 주세요.` : '모두 연결됐습니다.';
@@ -1563,7 +1601,7 @@ function renderUpload() {
       <label class="f">출고일<input type="date" id="up-date" value="${esc(u.date)}"></label>
       ${u.mode === 'in' ? `<label class="f">단가 열 (있으면)${colSel('up-cprice', u.cPrice, true)}</label><label class="f">단가 통화<select id="up-cur"><option value="USD"${u.cur === 'USD' ? ' selected' : ''}>달러 (USD)</option><option value="KRW"${u.cur === 'KRW' ? ' selected' : ''}>원 (KRW)</option></select></label>${u.cur === 'USD' ? `<label class="f">환율 (원/$)<input type="number" id="up-fx" step="0.01" style="width:96px" value="${esc(u.fx || '')}"></label>` : ''}` : ''}
       ${u.mode === 'out' && u.cDate >= 0 ? `<label class="f">발송일 열<select id="up-cdate">${u.header.map((h, i) => `<option value="${i}"${i === u.cDate ? ' selected' : ''}>${esc(h)}</option>`).join('')}</select></label>
-        <label class="f">이 날 발송된 주문만<input type="date" id="up-day" value="${esc(u.day)}"></label>` : ''}
+        <label class="f">${/주문|결제/.test(u.header[u.cDate] || '') ? '이 날 주문만' : '이 날 발송된 주문만'}<input type="date" id="up-day" value="${esc(u.day)}"></label>` : ''}
       ${u.mode === 'out' && (u.cStatus >= 0 || u.cClaim >= 0) ? `<label class="f"><span><input type="checkbox" id="up-nocancel"${u.noCancel ? ' checked' : ''}> 취소·반품 주문 빼기</span></label>` : ''}
       ${u.mode === 'out' && u.cAttr >= 0 ? `<label class="f"><span><input type="checkbox" id="up-splitn"${u.splitN ? ' checked' : ''}> N배송 주문은 파스토에서 빼기</span></label>` : ''}
       <label class="f">${u.mode === 'in' ? '어느 창고로 들어왔나요?' : u.cAttr >= 0 && u.splitN ? '그 밖의 주문은 어디서?' : '어디서 나갔나요?'}<select id="up-loc"><option value="hq"${u.loc === 'hq' ? ' selected' : ''}>본사창고${u.mode === 'in' ? '' : ' (자사 발송)'}</option><option value="fassto"${u.loc === 'fassto' ? ' selected' : ''}>파스토${u.mode === 'in' ? ' (공장에서 바로)' : ' (N배송 주문)'}</option></select></label>
@@ -1990,6 +2028,7 @@ function applyData(d) {
   S.memo = d.memo || { text: '', at: '', by: '' };
   S.conf = d.conf || {};
   S.fx = Number(S.conf.fx) || 0;
+  if ($('up-sheet-url') && !$('up-sheet-url').value && S.conf.naverSheet) $('up-sheet-url').value = S.conf.naverSheet;
   S.sups = [];
   for (const [k, v] of Object.entries(S.conf)) if (k.startsWith('sup:')) { try { S.sups.push({ ...JSON.parse(v), id: k.slice(4) }); } catch (e) { /* 깨진 값은 건너뜀 */ } }
   // 예전 버전(회사 하나)으로 저장한 정보가 있으면 첫 회사로 보여줌
@@ -2046,7 +2085,7 @@ $('hm-actions').addEventListener('click', (e) => {
   const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
   if (g) startRecord(GROUPS[g.dataset.gogroup].forms[0]);
   if (v) location.hash = '#' + v.dataset.goview;
-  if (e.target.closest('[data-naver]')) { location.hash = '#upload'; setUpMode('out'); toast('스마트스토어 주문 엑셀(발송일 포함)을 올려 주세요. 어제 발송분만 골라 뺍니다'); }
+  if (e.target.closest('[data-naver]')) { location.hash = '#upload'; setUpMode('out'); $('up-sheet-day').value = daysAgo(1); if ($('up-sheet-url').value) loadNaverSheet(); else toast('네이버 원가 관리 시트 주소를 한 번 넣어 주세요. 다음부터는 버튼 하나로 가져옵니다'); }
 });
 $('hm-status').addEventListener('click', (e) => { const b = e.target.closest('[data-stfilter]'); if (!b) return; S.stStatus = b.dataset.stfilter; S.stPart = ''; location.hash = '#stock'; renderStock(); });
 $('hm-dash').addEventListener('click', async (e) => {
@@ -2110,6 +2149,7 @@ $('md-btns').addEventListener('click', (e) => { const b = e.target.closest('butt
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(''); });
 document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); });
 
+$('up-sheet-go').addEventListener('click', loadNaverSheet);
 $('up-file').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; if (f) readOrders(f); });
 $('up-body').addEventListener('change', (e) => {
   const u = S.up, el = e.target; if (!u) return;
@@ -2139,6 +2179,9 @@ function setUpMode(mode) {
   $('up-desc').innerHTML = mode === 'in'
     ? '공장 입고 내역 엑셀(상품명 · 옵션 · <b>입고수량</b>, 단가가 있으면 단가까지)을 올리면 상품별로 합쳐서 <b>재고에 더합니다</b>. 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄고, 단가가 있으면 원가도 다시 계산됩니다.'
     : '네이버·쿠팡(판매자배송)·기타몰 <b>주문 엑셀</b>을 올리면 상품별 수량을 합쳐서 <b>재고에서 뺍니다</b>. 네이버 엑셀에 비밀번호가 걸려 있으면 엑셀에서 다른 이름으로 저장(비밀번호 없이)한 뒤 올려 주세요.';
+  $('up-sheetbox').hidden = mode !== 'out';
+  if (!$('up-sheet-url').value && S.conf && S.conf.naverSheet) $('up-sheet-url').value = S.conf.naverSheet;
+  if (!$('up-sheet-day').value) $('up-sheet-day').value = daysAgo(1);
   if (S.up && S.up.mode !== mode) { S.up = null; $('up-file').value = ''; renderUpload(); }
 }
 $('up-mode').addEventListener('click', (e) => { const b = e.target.closest('[data-upmode]'); if (b) setUpMode(b.dataset.upmode); });
