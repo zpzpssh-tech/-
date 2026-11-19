@@ -383,7 +383,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 수입원가2</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 원가환산</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -526,6 +526,7 @@ table.mini tr[data-sku] { cursor: pointer; }
       </div>
       <div class="row">
         <label class="f">기준원가(원)<input type="number" id="it-cost" min="0" placeholder="2200"></label>
+        <label class="f">또는 기준원가($)<input type="number" id="it-cost-usd" min="0" step="0.001" placeholder="1.65" title="달러로 넣으면 저장된 환율로 원화 환산해서 씁니다"></label>
         <label class="f">소매가(원)<input type="number" id="it-retail" min="0" placeholder="19900"></label>
         <label class="f">도매가(원)<input type="number" id="it-whole" min="0" placeholder="6500"></label>
         <label class="f">안전재고<input type="number" id="it-safety" min="0" value="100"></label>
@@ -541,6 +542,7 @@ table.mini tr[data-sku] { cursor: pointer; }
     </div>
     <div class="panel">
       <h2>등록된 SKU</h2>
+      <div id="it-usdnote" hidden></div>
       <div class="tablebox"><table id="it-table"></table></div>
     </div>
     <div class="cols2">
@@ -830,7 +832,7 @@ function ledger(win) {
   const m = new Map();
   const get = (code) => {
     let r = m.get(code);
-    if (!r) { const s = S.skus.get(code) || {}; r = { hq: 0, fassto: 0, pending: 0, avg: 0, base: Number(s.cost) || 0, sold: 0, cogs: 0, sales: 0, pcogs: 0, adj: 0, inQty: 0, inAmt: 0 }; m.set(code, r); }
+    if (!r) { const s = S.skus.get(code) || {}; r = { hq: 0, fassto: 0, pending: 0, avg: 0, base: baseCost(s), sold: 0, cogs: 0, sales: 0, pcogs: 0, adj: 0, inQty: 0, inAmt: 0 }; m.set(code, r); }
     return r;
   };
   for (const code of S.skus.keys()) get(code);
@@ -1240,6 +1242,9 @@ function closeProduct() { $('pmodal').hidden = true; S.pmKey = null; S.lines = [
 function buyCur() { if (S.buyCurMem) return S.buyCurMem; try { return localStorage.getItem('inv-buycur') || 'USD'; } catch (e) { return 'USD'; } }
 const fxFmt = (n) => Number(n || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
 function curFx() { const v = toNum(($('rc-fx') || {}).value); return v > 0 ? v : S.fx || 0; }
+// 기준원가: 달러로 저장돼 있으면(또는 100 미만이라 달러로 보이면) 저장된 환율로 원화 환산
+function usdOf(s) { if (!s) return 0; if (Number(s.costUsd) > 0) return Number(s.costUsd); const c = Number(s.cost) || 0; return c > 0 && c < 100 ? c : 0; }
+function baseCost(s) { if (!s) return 0; const u = usdOf(s); if (u) return S.fx ? Math.round(u * S.fx) : 0; return Number(s.cost) || 0; }
 function lastBuyPrice(code) { return S.lastBuy.get(code) || null; }
 function fillPrice(i, interactive) {
   const f = FORMS[S.form], ln = S.lines[i], code = parseSku(ln.v);
@@ -1251,11 +1256,12 @@ function fillPrice(i, interactive) {
     if (buyCur() === 'USD') {
       const fx = curFx();
       if (lb && lb.usd) { ln.p = String(lb.usd); ln.src = '직전 매입'; }
-      else if (fx && (lb ? lb.price : s.cost)) { ln.p = String(Math.round(((lb ? lb.price : Number(s.cost)) / fx) * 100) / 100); ln.src = lb ? '직전 매입 환산' : '기준원가 환산'; }
+      else if (!lb && usdOf(s)) { ln.p = String(usdOf(s)); ln.src = '기준원가'; }
+      else if (fx && (lb ? lb.price : baseCost(s))) { ln.p = String(Math.round(((lb ? lb.price : baseCost(s)) / fx) * 100) / 100); ln.src = lb ? '직전 매입 환산' : '기준원가 환산'; }
       else { ln.p = ''; ln.src = ''; }
       return;
     }
-    const p = lb ? lb.price : Number(s.cost) || 0;
+    const p = lb ? lb.price : baseCost(s);
     ln.p = p ? String(p) : ''; ln.src = lb ? '직전 매입' : p ? '기준원가' : '';
     return;
   }
@@ -1645,13 +1651,20 @@ function renderCost() {
   const cell = (n, cls) => `<td class="n ${cls || ''}">${n ? fmt(n) : '<span class="muted">—</span>'}</td>`;
   t.innerHTML = '<thead><tr><th>코드</th><th>상품</th><th class="n">기준원가</th><th class="n">평균원가</th><th class="n">보유</th><th class="n">재고금액</th><th class="n">판매수량</th><th class="n">판매원가</th><th class="n">거래처 매출</th><th class="n">거래처 이익</th><th class="n">조정손익</th></tr></thead><tbody>' +
     rows.map(({ code, s, r }) => `<tr><td class="code">${esc(code)}</td><td>${esc(s.name)} <span class="muted">${esc(s.option || '')}</span></td>
-      ${cell(r.base)}<td class="n"><b>${r.unit ? fmt(r.unit) : '<span style="color:var(--warn)">미등록</span>'}</b></td>${cell(r.have)}${cell(r.value)}${cell(r.sold)}${cell(r.cogs)}${cell(r.sales)}
+      <td class="n">${r.base ? fmt(r.base) : '<span class="muted">—</span>'}${usdOf(s) ? `<div class="muted small">$${usdOf(s)}</div>` : ''}</td><td class="n"><b>${r.unit ? fmt(r.unit) : '<span style="color:var(--warn)">미등록</span>'}</b></td>${cell(r.have)}${cell(r.value)}${cell(r.sold)}${cell(r.cogs)}${cell(r.sales)}
       ${cell(r.sales - r.pcogs, r.sales - r.pcogs < 0 ? 'neg' : '')}${cell(r.adj, r.adj < 0 ? 'neg' : r.adj > 0 ? 'pos' : '')}</tr>`).join('') +
     `</tbody><tfoot><tr><td colspan="5">합계</td><td class="n">${fmt(value)}</td><td></td><td class="n">${fmt(cogs)}</td><td class="n">${fmt(sales)}</td><td class="n">${fmt(sales - pcogs)}</td><td class="n">${fmt(adj)}</td></tr></tfoot>`;
 }
 
 /* ---------- 상품·거래처 ---------- */
 function renderItems() {
+  const guess = [...S.skus.values()].filter((x) => !(Number(x.costUsd) > 0) && Number(x.cost) > 0 && Number(x.cost) < 100);
+  const note = $('it-usdnote');
+  if (note) {
+    note.hidden = !guess.length && S.fx;
+    note.innerHTML = !S.fx ? `<div class="banner">달러 기준원가를 원화로 바꾸려면 환율이 필요합니다. <b>수입 원가 계산</b> 화면이나 입고 창에서 <b>[오늘 환율]</b>을 한 번 눌러 주세요.</div>`
+      : guess.length ? `<div class="banner info">기준원가가 100 미만인 SKU ${guess.length}개는 <b>달러(USD)</b>로 보고 환율 ${fxFmt(S.fx)}원으로 환산해 보여드리고 있습니다. <button class="sm" id="it-usdfix">달러 원가로 정리</button></div>` : '';
+  }
   const t = $('it-table');
   if (!ready()) t.innerHTML = '<tr><td class="empty">불러오는 중…</td></tr>';
   else if (!S.skus.size) t.innerHTML = '<tr><td class="empty"><b>등록된 SKU가 없습니다</b>위 칸에 입력하거나 \'엑셀\' 탭에서 한 번에 불러오세요.</td></tr>';
@@ -1659,9 +1672,9 @@ function renderItems() {
     const list = [...S.skus.values()].sort((a, b) => (a.part || '').localeCompare(b.part || '') || a.code.localeCompare(b.code));
     const used = new Set(S.moves.map((m) => m.sku));
     const c = (n) => `<td class="n">${n ? fmt(n) : '<span class="muted">—</span>'}</td>`;
-    t.innerHTML = '<thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가</th><th class="n">소매가</th><th class="n">도매가</th><th class="n">안전재고</th><th class="n">리드타임</th><th>상태</th><th></th></tr></thead><tbody>' +
+    t.innerHTML = '<thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가(원)</th><th class="n">소매가</th><th class="n">도매가</th><th class="n">안전재고</th><th class="n">리드타임</th><th>상태</th><th></th></tr></thead><tbody>' +
       list.map((s) => `<tr><td class="code">${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.part || '')}</td><td>${esc(s.option || '')}</td>
-        ${c(s.cost)}${c(s.retail)}${c(s.wholesale)}<td class="n">${fmt(s.safety)}</td><td class="n">${fmt(s.lead)}일</td>
+        <td class="n">${baseCost(s) ? fmt(baseCost(s)) : '<span class="muted">—</span>'}${usdOf(s) ? `<div class="muted small">$${usdOf(s)}</div>` : ''}</td>${c(s.retail)}${c(s.wholesale)}<td class="n">${fmt(s.safety)}</td><td class="n">${fmt(s.lead)}일</td>
         <td>${s.active === false ? '<span class="pill mute">미사용</span>' : '<span class="pill ok">사용</span>'}</td>
         <td>${!S.canWrite ? '' : S.confirmSku === s.code
           ? `<span class="confirm">${esc(s.code)} 삭제할까요? <button class="danger sm" data-skudel="${esc(s.code)}">삭제</button><button class="ghost" data-skucancel>취소</button></span>`
@@ -1694,7 +1707,7 @@ function fillItemForm(s) {
   $('it-title').textContent = s ? `SKU 수정: ${s.code}` : 'SKU 추가';
   $('it-code').value = s ? s.code : ''; $('it-code').disabled = !!s;
   $('it-name').value = s ? s.name : ''; $('it-part').value = s ? s.part || '' : ''; $('it-opt').value = s ? s.option || '' : '';
-  $('it-cost').value = s && s.cost ? s.cost : ''; $('it-retail').value = s && s.retail ? s.retail : ''; $('it-whole').value = s && s.wholesale ? s.wholesale : '';
+  $('it-cost').value = s && s.cost && !usdOf(s) ? s.cost : ''; $('it-cost-usd').value = s && usdOf(s) ? usdOf(s) : ''; $('it-retail').value = s && s.retail ? s.retail : ''; $('it-whole').value = s && s.wholesale ? s.wholesale : '';
   $('it-safety').value = s ? s.safety : 100; $('it-lead').value = s ? s.lead : 50; $('it-active').checked = s ? s.active !== false : true;
   $('it-cancel').hidden = !s;
 }
@@ -1706,7 +1719,7 @@ async function saveItem() {
   if (!norm($('it-name').value)) { toast('상품명을 적어 주세요'); return; }
   if (!S.editing && S.skus.has(code)) { toast('이미 있는 코드입니다'); return; }
   const s = { code, name: norm($('it-name').value), part: norm($('it-part').value), option: norm($('it-opt').value),
-    cost: toNum($('it-cost').value), retail: toNum($('it-retail').value), wholesale: toNum($('it-whole').value),
+    cost: toNum($('it-cost-usd').value) ? 0 : toNum($('it-cost').value), costUsd: Number($('it-cost-usd').value) || 0, retail: toNum($('it-retail').value), wholesale: toNum($('it-whole').value),
     safety: toNum($('it-safety').value), lead: toNum($('it-lead').value) || 50, active: $('it-active').checked };
   try { applyData(await api('saveSkus', [s])); toast(S.editing ? '수정했습니다' : 'SKU를 추가했습니다'); fillItemForm(null); } catch (e) { writeFail(e); }
 }
@@ -1728,12 +1741,12 @@ async function savePartner() {
 const IMP = {
   sku: { fields: {
     code: ['코드', 'SKU', 'SKU코드', '상품코드', '품목코드', '자체코드'], name: ['상품명', '품목명', '품명', '제품명'], part: ['부위', '분류', '카테고리'],
-    option: ['옵션', '규격', '색상/사이즈', '옵션명'], cost: ['기준원가', '원가', '매입가', '입고단가', '매입단가'], retail: ['소매가', '판매가'], wholesale: ['도매가', '공급가'],
+    option: ['옵션', '규격', '색상/사이즈', '옵션명'], costUsd: ['기준원가(USD)', '원가(USD)', '원가USD', 'USD', 'UNIT(USD)', '단가(USD)', '달러'], cost: ['기준원가', '원가', '매입가', '입고단가', '매입단가'], retail: ['소매가', '판매가'], wholesale: ['도매가', '공급가'],
     safety: ['안전재고'], lead: ['리드타임', '리드타임(일)'] }, req: ['code', 'name'] },
   stock: { fields: { code: ['코드', 'SKU', 'SKU코드', '상품코드', '품목코드', '자체코드'], qty: ['실사수량', '현재고', '재고수량', '재고', '수량'], loc: ['위치', '창고'] }, req: ['code', 'qty'] },
   rule: { fields: { rname: ['상품명에 포함', '상품명 포함', '상품명'], ropt: ['옵션에 포함', '옵션 포함', '옵션'], code: ['SKU', '코드', 'SKU코드'], mult: ['배수'], memo: ['메모'] }, req: ['code'] },
 };
-const FNAME = { rname: '상품명에 포함', ropt: '옵션에 포함', mult: '배수', memo: '메모', code: '코드', name: '상품명', part: '부위', option: '옵션', cost: '기준원가', retail: '소매가', wholesale: '도매가', safety: '안전재고', lead: '리드타임', qty: '수량', loc: '위치' };
+const FNAME = { rname: '상품명에 포함', ropt: '옵션에 포함', mult: '배수', memo: '메모', code: '코드', name: '상품명', part: '부위', option: '옵션', cost: '기준원가(원)', costUsd: '기준원가(USD)', retail: '소매가', wholesale: '도매가', safety: '안전재고', lead: '리드타임', qty: '수량', loc: '위치' };
 function readImport(file) {
   const kind = $('im-kind').value, def = IMP[kind];
   readSheet(file, (aoa) => {
@@ -1765,7 +1778,7 @@ function impPlan() {
       if (!CODE_RE.test(code) || !name) { bad.push(code || name); continue; }
       const old = S.skus.get(code) || { safety: 100, lead: 50, active: true };
       const pick = (f, numeric) => { const v = cell(r, f); return v === '' ? old[f] : numeric ? toNum(v) : v; };
-      list.push({ code, name, part: pick('part'), option: pick('option'), cost: pick('cost', 1), retail: pick('retail', 1), wholesale: pick('wholesale', 1),
+      list.push({ code, name, part: pick('part'), option: pick('option'), cost: pick('cost', 1), costUsd: c.costUsd >= 0 && cell(r, 'costUsd') ? Number(String(cell(r, 'costUsd')).replace(/[^\d.]/g, '')) || 0 : old.costUsd || 0, retail: pick('retail', 1), wholesale: pick('wholesale', 1),
         safety: pick('safety', 1), lead: pick('lead', 1) || 50, active: old.active !== false, isNew: !S.skus.has(code) });
     }
     return { list, bad };
@@ -1803,7 +1816,7 @@ function renderImport() {
       const nNew = plan.list.filter((x) => x.isNew).length;
       summary = `새 SKU <b>${nNew}</b>개 · 기존 SKU 수정 <b>${plan.list.length - nNew}</b>개` + (plan.bad.length ? ` · <span style="color:var(--bad)">형식 오류로 건너뜀 ${plan.bad.length}줄</span> (코드는 영문·숫자·하이픈)` : '');
       preview = '<thead><tr><th></th><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가</th><th class="n">소매가</th><th class="n">도매가</th></tr></thead><tbody>' +
-        plan.list.slice(0, 50).map((x) => `<tr><td>${x.isNew ? '<span class="pill ok">새로</span>' : '<span class="pill mute">수정</span>'}</td><td class="code">${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.part || '')}</td><td>${esc(x.option || '')}</td><td class="n">${fmt(x.cost)}</td><td class="n">${fmt(x.retail)}</td><td class="n">${fmt(x.wholesale)}</td></tr>`).join('') + '</tbody>';
+        plan.list.slice(0, 50).map((x) => `<tr><td>${x.isNew ? '<span class="pill ok">새로</span>' : '<span class="pill mute">수정</span>'}</td><td class="code">${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.part || '')}</td><td>${esc(x.option || '')}</td><td class="n">${x.costUsd ? '$' + x.costUsd : fmt(x.cost)}</td><td class="n">${fmt(x.retail)}</td><td class="n">${fmt(x.wholesale)}</td></tr>`).join('') + '</tbody>';
       canGo = plan.list.length > 0;
     } else {
       const ch = plan.preview.filter((x) => x.d);
@@ -1851,8 +1864,8 @@ const EXPORTS = {
     return [['상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모'], ...(S.rules.length ? S.rules.map((r) => [r.name, r.opt, r.sku, r.mult, r.memo]) : [['슬개건 밴드', '블랙 양쪽', 'BK-004-BK', 2, '(예시)']])];
   } },
   skus: { label: '상품(SKU) 목록 · 양식', desc: '지금 목록을 받아 고친 뒤 그대로 다시 불러올 수 있습니다', aoa() {
-    return [['코드', '상품명', '부위', '옵션', '기준원가', '소매가', '도매가', '안전재고', '리드타임'],
-      ...([...S.skus.values()].length ? [...S.skus.values()].map((s) => [s.code, s.name, s.part, s.option, s.cost || '', s.retail || '', s.wholesale || '', s.safety, s.lead])
+    return [['코드', '상품명', '부위', '옵션', '기준원가', '소매가', '도매가', '안전재고', '리드타임', '기준원가(USD)'],
+      ...([...S.skus.values()].length ? [...S.skus.values()].map((s) => [s.code, s.name, s.part, s.option, usdOf(s) ? '' : s.cost || '', s.retail || '', s.wholesale || '', s.safety, s.lead, usdOf(s) || ''])
         : [['KNEE-BK-M', '(예시) 슬개건 무릎보호대', '무릎', '블랙 M', 2200, 19900, 6500, 200, 50]])];
   } },
   count: { label: '실사표 (재고 세기용)', desc: 'SKU 목록에 장부 수량을 채운 표. 실사 수량 칸을 채워 불러오기', aoa() {
@@ -2088,6 +2101,11 @@ $('hi-table').addEventListener('click', (e) => {
 });
 
 $('it-save').addEventListener('click', saveItem);
+$('it-usdnote').addEventListener('click', async (e) => {
+  if (e.target.id !== 'it-usdfix' || !guard()) return;
+  const list = [...S.skus.values()].filter((x) => !(Number(x.costUsd) > 0) && Number(x.cost) > 0 && Number(x.cost) < 100).map((x) => ({ ...x, costUsd: Number(x.cost), cost: 0 }));
+  try { applyData(await api('saveSkus', list)); toast(`SKU ${list.length}개의 기준원가를 달러 원가로 옮겼습니다`); } catch (err) { writeFail(err); }
+});
 $('it-cancel').addEventListener('click', () => fillItemForm(null));
 $('it-table').addEventListener('click', async (e) => {
   const ed = e.target.closest('[data-edit]'), ask = e.target.closest('[data-skuask]'), del = e.target.closest('[data-skudel]'), cancel = e.target.closest('[data-skucancel]');
@@ -2571,7 +2589,7 @@ async function ldSaveCost() {
   // 같은 SKU로 여러 줄이 연결되면 수량(개수) 기준 가중평균
   const acc = new Map();
   for (const r of c.rows) for (const code of ldTargetCodes(r.sku)) { const v = acc.get(code) || { amt: 0, pcs: 0 }; const pcs = r.qty * r.mult; v.amt += r.perPiece * pcs; v.pcs += pcs; acc.set(code, v); }
-  for (const [code, v] of acc) list.set(code, { ...S.skus.get(code), cost: Math.round(v.amt / v.pcs) });
+  for (const [code, v] of acc) list.set(code, { ...S.skus.get(code), cost: Math.round(v.amt / v.pcs), costUsd: 0 });
   if (!list.size) { toast('연결된 상품이 없습니다'); return; }
   try { applyData(await api('saveSkus', [...list.values()])); await ldRemember(); toast(`SKU ${list.size}개의 기준원가를 저장했습니다`); renderLanded(); } catch (e) { writeFail(e); }
 }

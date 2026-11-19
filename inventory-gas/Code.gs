@@ -20,7 +20,7 @@ function setup() {
   return '준비 완료: ' + ss.getName();
 }
 const TABS = {
-  SKU: { name: 'SKU', head: ['코드', '상품명', '부위', '옵션', '안전재고', '리드타임(일)', '사용', '수정일', '기준원가', '소매가', '도매가'] },
+  SKU: { name: 'SKU', head: ['코드', '상품명', '부위', '옵션', '안전재고', '리드타임(일)', '사용', '수정일', '기준원가', '소매가', '도매가', '기준원가(USD)'] },
   PARTNER: { name: '거래처', head: ['이름', '기본 단가', '메모', '수정일'] },
   MOVE: { name: '기록', head: ['ID', '날짜', '종류', '위치', 'SKU', '수량', '메모', '묶음ID', '묶음이름', '기록시각', '기록자', '거래처', '단가', '외화단가(USD)', '환율'] },
   MAP: { name: '연결표', head: ['ID', '주문서 상품명·옵션', 'SKU', '배수', '수정일'] },
@@ -118,7 +118,7 @@ function getData() {
   const skus = rows_(TABS.SKU).filter((r) => str_(r[0])).map((r) => ({
     code: str_(r[0]), name: str_(r[1]), part: str_(r[2]), option: str_(r[3]),
     safety: num_(r[4]), lead: num_(r[5]) || 50, active: str_(r[6]) !== 'N',
-    cost: num_(r[8]), retail: num_(r[9]), wholesale: num_(r[10]),
+    cost: num_(r[8]), retail: num_(r[9]), wholesale: num_(r[10]), costUsd: num_(r[11]),
   }));
   const partners = rows_(TABS.PARTNER).filter((r) => str_(r[0])).map((r) => ({ name: str_(r[0]), basis: str_(r[1]) || '직접입력', memo: str_(r[2]) }));
   const moves = rows_(TABS.MOVE).filter((r) => str_(r[0])).map((r) => ({
@@ -169,7 +169,7 @@ function saveSkus(list) {
       const code = String(s.code || '').trim().toUpperCase();
       if (!/^[A-Z0-9][A-Z0-9_\-.]{0,39}$/.test(code) || !String(s.name || '').trim()) return;
       const row = [code, s.name, s.part || '', s.option || '', Math.max(0, num_(s.safety)), Math.max(1, num_(s.lead) || 50),
-        s.active === false ? 'N' : 'Y', now_(), num_(s.cost) || '', num_(s.retail) || '', num_(s.wholesale) || ''];
+        s.active === false ? 'N' : 'Y', now_(), num_(s.cost) || '', num_(s.retail) || '', num_(s.wholesale) || '', num_(s.costUsd) || ''];
       if (idx.has(code) && idx.get(code) >= 0) putRow_(TABS.SKU, idx.get(code), row);
       else if (!idx.has(code)) { add.push(row); idx.set(code, -1); }
     });
