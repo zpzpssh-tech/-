@@ -57,13 +57,29 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// 속도: 시트 열기와 탭 찾기는 한 번 실행 안에서 한 번만 하고 다시 씀 (예전엔 탭마다 시트를 새로 열었음)
+let BOOK_ = null;
+const SHEET_ = {};
+let LITE_ = false;
+// 탭 제목줄 점검은 프로그램이 바뀌었을 때 한 번만 (매번 하면 탭마다 읽기가 한 번씩 늘어남). 탭/열을 추가하면 이 값을 바꿀 것.
+const SCHEMA_VER = '2026-11-23';
+let SCHEMA_OK_ = null;
+function schemaOk_() { if (SCHEMA_OK_ === null) SCHEMA_OK_ = PropertiesService.getScriptProperties().getProperty('SCHEMA') === SCHEMA_VER; return SCHEMA_OK_; }   // true면 getData가 사진을 빼고 보냄 (저장할 때마다 큰 사진을 다시 받지 않도록)
 function book_() {
+  if (BOOK_) return BOOK_;
   const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   const ss = id ? SpreadsheetApp.openById(id) : SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('재고DB 시트를 찾지 못했습니다. Apps Script 편집기에서 setup 함수를 한 번 실행해 주세요.');
+  BOOK_ = ss;
   return ss;
 }
 function tab_(ss, t) {
+  if (SHEET_[t.name]) return SHEET_[t.name];
+  const sh0 = tabOpen_(ss, t);
+  SHEET_[t.name] = sh0;
+  return sh0;
+}
+function tabOpen_(ss, t) {
   let sh = ss.getSheetByName(t.name);
   if (!sh) {
     sh = ss.insertSheet(t.name);
@@ -71,7 +87,7 @@ function tab_(ss, t) {
     sh.setFrozenRows(1);
     // 날짜·코드가 자동으로 숫자/날짜로 바뀌지 않게 글자 형식으로 고정
     sh.getRange(1, 1, sh.getMaxRows(), t.head.length).setNumberFormat('@');
-  } else {
+  } else if (!schemaOk_()) {
     // 예전 버전 시트: 새로 생긴 열 제목만 뒤에 채워 넣기
     const cur = sh.getRange(1, 1, 1, t.head.length).getValues()[0];
     if (String(cur[t.head.length - 1] || '') === '') {
@@ -83,9 +99,10 @@ function tab_(ss, t) {
 }
 function rows_(t) {
   const sh = tab_(book_(), t);
-  const n = sh.getLastRow() - 1;
-  if (n < 1) return [];
-  return sh.getRange(2, 1, n, t.head.length).getValues();
+  const v = sh.getDataRange().getValues();
+  if (v.length < 2) return [];
+  const w = t.head.length;
+  return v.slice(1).map((r) => (r.length === w ? r : r.length > w ? r.slice(0, w) : r.concat(new Array(w - r.length).fill(''))));
 }
 function append_(t, rows) {
   if (!rows.length) return;
@@ -103,7 +120,8 @@ function putRow_(t, rowIndex0, row) {
 function withLock_(fn) {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) throw new Error('다른 사람이 기록 중입니다. 잠시 후 다시 시도해 주세요.');
-  try { return fn(); } finally { lock.releaseLock(); }
+  LITE_ = true;
+  try { return fn(); } finally { lock.releaseLock(); LITE_ = false; }
 }
 const str_ = (v) => {
   if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
@@ -132,8 +150,8 @@ function getData() {
   const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ id: str_(r[0]), name: str_(r[1]), opt: str_(r[2]), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1, memo: str_(r[5]) }));
   const mr = rows_(TABS.MEMO)[0] || [];
   const memo = { text: str_(mr[0]), at: str_(mr[1]), by: str_(mr[2]) };
-  const photos = {};
-  rows_(TABS.PHOTO).forEach((r) => { if (str_(r[0]) && r[2]) photos[str_(r[0])] = String(r[2]); });
+  let photos;
+  if (!LITE_) { photos = {}; rows_(TABS.PHOTO).forEach((r) => { if (str_(r[0]) && r[2]) photos[str_(r[0])] = String(r[2]); }); }
   const conf = {};
   rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
   const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
@@ -141,6 +159,7 @@ function getData() {
   const orderRows = rows_(TABS.ORDER).slice(-20000);
   const orderDone = orderRows.map((r) => str_(r[0])).filter(Boolean);
   const orderDays = {}; orderRows.forEach((r) => { const d = str_(r[1]); if (d) orderDays[d] = (orderDays[d] || 0) + 1; });
+  if (!LITE_ && !schemaOk_()) { PropertiesService.getScriptProperties().setProperty('SCHEMA', SCHEMA_VER); SCHEMA_OK_ = true; }
   return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, orderDone, orderDays, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
@@ -281,7 +300,9 @@ function editSku(oldCode, s) {
     if (i < 0) throw new Error('수정할 상품을 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     if (code !== oldCode && vals.some((r) => str_(r[0]).toUpperCase() === code)) throw new Error(`${code} 코드는 이미 다른 상품이 쓰고 있습니다.`);
     const o = vals[i];
-    const oldKey = `${str_(o[2]) || '기타'}|${str_(o[1])}`, newKey = `${String(s.part || '').trim() || '기타'}|${name}`;
+    // 사진은 'p' + (부위|상품명)의 짧은 암호 이름으로 저장돼 있음 (화면의 photoKey와 같은 규칙)
+    const pk = (part, nm) => 'p' + HASH_(`${part || '기타'}|${nm}`);
+    const oldKey = pk(str_(o[2]), str_(o[1])), newKey = pk(String(s.part || '').trim(), name);
     putRow_(TABS.SKU, i, [code, name, String(s.part || '').trim(), String(s.option || '').trim(), Math.max(0, num_(s.safety)), Math.max(1, num_(s.lead) || 50),
       s.active === false ? 'N' : 'Y', now_(), o[8], s.retail === undefined ? o[9] : num_(s.retail) || '', s.wholesale === undefined ? o[10] : num_(s.wholesale) || '', o[11]]);
     if (code !== oldCode) {
@@ -297,9 +318,10 @@ function editSku(oldCode, s) {
     }
     // 상품명·부위가 바뀌면 사진도 새 이름으로 옮겨 붙임 (같은 상품의 다른 옵션이 옛 이름을 쓰면 복사)
     if (oldKey !== newKey) {
+      LITE_ = false;
       const ph = rows_(TABS.PHOTO), pi = ph.findIndex((r) => str_(r[0]) === oldKey);
       if (pi >= 0 && !ph.some((r) => str_(r[0]) === newKey)) {
-        const stillUsed = vals.some((r, k) => k !== i && `${str_(r[2]) || '기타'}|${str_(r[1])}` === oldKey);
+        const stillUsed = vals.some((r, k) => k !== i && pk(str_(r[2]), str_(r[1])) === oldKey);
         const row = [newKey, name, ph[pi][2], now_()];
         if (stillUsed) append_(TABS.PHOTO, [row]); else putRow_(TABS.PHOTO, pi, row);
       }
@@ -314,6 +336,7 @@ function savePhoto(key, name, data) {
     const i = vals.findIndex((r) => str_(r[0]) === key);
     const row = [key, name || '', data || '', now_()];
     if (i >= 0) putRow_(TABS.PHOTO, i, row); else append_(TABS.PHOTO, [row]);
+    LITE_ = false;
     return getData();
   });
 }
@@ -322,6 +345,7 @@ function deletePhoto(key) {
     const sh = tab_(book_(), TABS.PHOTO);
     const vals = rows_(TABS.PHOTO);
     for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === key) sh.deleteRow(i + 2);
+    LITE_ = false;
     return getData();
   });
 }

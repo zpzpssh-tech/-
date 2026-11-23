@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 애니메이션</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 빠른로딩</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -820,9 +820,6 @@ table.mini tr[data-sku] { cursor: pointer; }
 <datalist id="rg-parts"></datalist>
 <div class="toast" id="toast" hidden></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -845,6 +842,21 @@ function api(fn, ...args) {
   });
 }
 
+// 엑셀·PDF 도구: 처음 켤 때 기다리지 않도록, 화면이 뜬 뒤(또는 필요할 때) 불러옴
+const LIBS = {
+  xlsx: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  h2c: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+};
+const LIBS_P = {};
+function loadLib(k) {
+  if (!LIBS_P[k]) LIBS_P[k] = new Promise((res, rej) => {
+    const sc = document.createElement('script'); sc.src = LIBS[k]; sc.async = true;
+    sc.onload = () => res(); sc.onerror = () => { delete LIBS_P[k]; rej(new Error('도구를 불러오지 못했습니다')); };
+    document.head.appendChild(sc);
+  });
+  return LIBS_P[k];
+}
 const LOC = { hq: '본사창고', fassto: '파스토', pending: '입고예정' };
 const MOVE = {
   order: '발주 등록', inbound: '입고', fassto_out: '파스토 이동(출)', fassto_in: '파스토 이동(입)',
@@ -964,7 +976,7 @@ const stockWin = () => Number($('st-win').value) || 60;
 /* ---------- 공통 ---------- */
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; t.classList.remove('pop'); void t.offsetWidth; t.classList.add('pop'); clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2800); }
 function banner(msg, kind) { const b = $('banner'); if (!msg) { b.hidden = true; return; } b.className = 'banner' + (kind ? ' ' + kind : ''); b.innerHTML = msg; b.hidden = false; }
-function guard() { if (!ready()) { toast('아직 데이터를 불러오는 중입니다'); return false; } if (!S.canWrite) { toast('보기 전용 권한이라 기록할 수 없습니다'); return false; } return true; }
+function guard() { if (!ready()) { toast('아직 데이터를 불러오는 중입니다'); return false; } if (S.stale) { toast('최신 정보로 맞추는 중이에요. 1~2초 뒤에 다시 눌러 주세요'); return false; } if (!S.canWrite) { toast('보기 전용 권한이라 기록할 수 없습니다'); return false; } return true; }
 function writeFail(e) {
   const msg = String((e && e.message) || e || '');
   if (/permission|권한|access|denied/i.test(msg)) { S.canWrite = false; applyWriteState(); }
@@ -975,6 +987,10 @@ function applyWriteState() {
   if (!S.canWrite) banner('보기 전용 권한입니다. 기록하려면 대표님께 재고DB 시트의 \'편집자\' 권한을 요청하세요.');
 }
 function xlsxDownload(filename, sheetName, aoa) {
+  if (!window.XLSX) { loadLib('xlsx').then(() => xlsxDownload2(filename, sheetName, aoa), () => toast('엑셀 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요')); return; }
+  xlsxDownload2(filename, sheetName, aoa);
+}
+function xlsxDownload2(filename, sheetName, aoa) {
   if (!window.XLSX) { toast('엑셀 도구를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요'); return; }
   try { const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), sheetName); XLSX.writeFile(wb, filename); toast(filename + ' 내려받기를 시작했습니다'); }
   catch (e) { toast('내려받지 못했습니다. \'시트에 저장\'을 써 주세요'); }
@@ -1634,7 +1650,7 @@ function readSheet(file, onRows, onErr) {
       onErr(enc ? '비밀번호가 걸린 엑셀이라 열 수 없습니다. 엑셀에서 열고 비밀번호 없이 다른 이름으로 저장한 뒤 올려 주세요.' : '파일을 읽지 못했습니다: ' + esc(e && e.message || e));
     }
   };
-  reader.readAsArrayBuffer(file);
+  loadLib('xlsx').catch(() => {}).then(() => reader.readAsArrayBuffer(file));
 }
 function findHeader(aoa, lists) {
   let hi = 0, best = -1;
@@ -2223,7 +2239,7 @@ function refresh() {
 }
 
 /* ---------- 데이터 ---------- */
-function applyData(d) {
+function applyData(d, fromCache) {
   S.skus = new Map(d.skus.map((x) => [x.code, x]));
   S.partners = new Map((d.partners || []).map((x) => [x.name, x]));
   S.moves = d.moves.map((m) => ({ ...m, qty: Number(m.qty) || 0, price: Number(m.price) || 0 }));
@@ -2245,7 +2261,7 @@ function applyData(d) {
   if (!S.sups.length && (S.conf.bizno || S.conf.name)) S.sups.push({ id: 'main', label: S.conf.name || '우리 회사', bizno: S.conf.bizno, name: S.conf.name, ceo: S.conf.ceo, addr: S.conf.addr, tel: S.conf.tel, type: S.conf.type, item: S.conf.item, manager: S.conf.manager, bank: S.conf.bank, holder: S.conf.holder, seal: S.conf.seal });
   S.sups.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
   S.quotes = d.quotes || [];
-  S.photos = d.photos || {};
+  if (d.photos) S.photos = d.photos; else if (!S.photos) S.photos = {};   // 저장 응답엔 사진이 없으면 기존 사진 그대로
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
     if (!m.price) continue;
@@ -2256,10 +2272,20 @@ function applyData(d) {
   if (d.sheetUrl) { $('sheet-link').href = d.sheetUrl; $('sheet-link').hidden = false; }
   S.loaded = true; S.ver++;
   renderSkuList(); refresh();
+  if (!fromCache) saveCache(d);
 }
+const CACHE_KEY = 'inv-cache-v1';
+function saveCache(d) {
+  clearTimeout(saveCache.t);
+  saveCache.t = setTimeout(() => {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ...d, photos: S.photos, savedAt: Date.now() })); }
+    catch (e) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ...d, photos: {}, savedAt: Date.now() })); } catch (e2) { /* 공간 부족: 기억하지 않음 */ } }
+  }, 300);
+}
+function loadCache() { try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); return c && c.skus && c.moves ? c : null; } catch (e) { return null; } }
 async function load(quiet) {
   const timer = setTimeout(() => { if (!ready()) banner('불러오는 데 시간이 걸리고 있습니다. 기록이 많으면 10~20초 걸릴 수 있습니다.', 'info'); }, 8000);
-  try { applyData(await api('getData')); if (S.canWrite) banner(null); }
+  try { applyData(await api('getData')); S.stale = false; $('sync-dot').hidden = true; if (S.canWrite) banner(null); }
   catch (e) {
     S.failed = !ready();
     const msg = String((e && e.message) || e || '');
@@ -2711,6 +2737,7 @@ async function saveQuote() {
   } catch (e) { writeFail(e); }
 }
 async function quotePdf() {
+  try { await Promise.all([loadLib('h2c'), loadLib('jspdf')]); } catch (e) { /* 아래에서 안내 */ }
   if (!window.html2canvas || !window.jspdf) { toast('PDF 도구를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요'); return null; }
   readQuoteForm(); renderPaper();
   const sc = $('qt-scale'), keep = sc.style.transform;
@@ -3048,7 +3075,11 @@ try {
     if (v && VIEWS[v] && !location.hash) { S.side = ''; location.hash = '#' + v; }
   });
 } catch (e) { /* 무시 */ }
+// 지난번 내용을 먼저 보여주고(바로 뜸), 최신 내용을 뒤에서 받아 바꿔 끼움
+{ const c = loadCache(); if (c) { S.stale = true; applyData(c, true); $('sync-dot').hidden = false; } }
 load();
+// 엑셀·PDF 도구는 화면이 다 뜬 뒤 미리 받아 둠
+setTimeout(() => { loadLib('xlsx').catch(() => {}); loadLib('h2c').catch(() => {}); loadLib('jspdf').catch(() => {}); }, 2500);
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
 setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden) load(true); }, 120000);
 })();
