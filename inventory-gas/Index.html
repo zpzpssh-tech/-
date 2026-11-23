@@ -248,6 +248,11 @@ button.big { height: 44px; padding: 0 26px; font-size: 15px; border-radius: 10px
 .viewtoggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .modal.wide { width: min(600px, 100%); text-align: left; }
 .modal.wide h3 { text-align: left; }
+.modal.reg { width: min(1000px, 100%); max-height: 92vh; overflow: auto; }
+.regtbl input { width: 100%; height: 34px; padding: 0 8px; }
+.regtbl td { padding: 4px; vertical-align: middle; }
+.regtbl th { font-size: 12px; }
+.regtbl .del { width: 34px; }
 .locgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .locgrid div { background: var(--sunken); border-radius: 10px; padding: 10px 12px; }
 .locgrid b { display: block; font-size: 20px; font-weight: 800; }
@@ -386,7 +391,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 원가숨김</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 상품일괄등록</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -438,6 +443,7 @@ table.mini tr[data-sku] { cursor: pointer; }
     <div class="panel">
       <div class="row">
         <input id="st-q" class="grow" placeholder="상품 이름, 옵션, 코드로 찾기">
+        <button type="button" class="primary" id="st-reg">+ 상품 한꺼번에 등록</button>
         <div class="viewtoggle" role="group" aria-label="보기 방식"><button type="button" data-stmode="card" aria-pressed="true">카드로 보기</button><button type="button" data-stmode="table" aria-pressed="false">표로 보기</button></div>
       </div>
       <div class="chips" id="st-status"></div>
@@ -759,6 +765,26 @@ table.mini tr[data-sku] { cursor: pointer; }
     <div id="sk-body"></div>
   </div>
 </div>
+<div class="modal-bg" id="regmodal" hidden>
+  <div class="modal wide reg" role="dialog" aria-modal="true" aria-labelledby="rg-title">
+    <div class="row"><h3 id="rg-title" class="grow">상품 한꺼번에 등록</h3><button class="ghost" id="rg-close" aria-label="닫기">닫기 ✕</button></div>
+    <p class="small muted" style="margin:0">한 줄에 <b>상품 하나</b>씩 적으세요. <b>옵션</b>은 쉼표(,)로 나눠 적으면 옵션마다 따로 등록됩니다 (예: <b>블랙, 블루, 레드</b> → 3개).
+      <b>코드</b>를 비워 두면 부위에 맞춰 자동으로 만듭니다 (무릎 BK-001, 허리 BB-001 …). 재고 수량은 나중에 <b>재고 실사</b>로 넣으면 됩니다.</p>
+    <details class="small"><summary><b>엑셀에서 복사해서 붙여넣기</b></summary>
+      <p class="muted" style="margin:6px 0">엑셀에서 <b>부위 · 상품명 · 코드 · 옵션</b> 순서의 칸을 드래그해서 복사(Ctrl+C)한 뒤 아래에 붙여넣고 [표로 옮기기]를 누르세요. 상품명 한 칸만 복사해도 됩니다.</p>
+      <textarea id="rg-paste" rows="4" style="width:100%" placeholder="무릎	슬개건 무릎보호대	BK-004	블랙, 블루, 레드"></textarea>
+      <div class="row"><span class="grow"></span><button type="button" id="rg-paste-go">표로 옮기기</button></div>
+    </details>
+    <div class="tablebox"><table class="regtbl" id="rg-table"></table></div>
+    <div class="row"><button type="button" id="rg-add">+ 줄 추가</button><span class="grow"></span>
+      <label class="f">안전재고(공통)<input type="number" id="rg-safety" min="0" value="100" style="width:90px"></label>
+      <label class="f">리드타임(일, 공통)<input type="number" id="rg-lead" min="1" value="50" style="width:90px"></label></div>
+    <h3 style="font-size:14px;margin:4px 0 0">등록될 SKU 미리보기</h3>
+    <div id="rg-preview"></div>
+    <div class="savebar"><div class="totals" id="rg-totals"></div><button class="primary big" id="rg-save">등록하기</button></div>
+  </div>
+</div>
+<datalist id="rg-parts"></datalist>
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -978,7 +1004,7 @@ function renderStock() {
   const cards = $('st-cards'), tb = $('st-tablebox'), t = $('st-table');
   cards.hidden = S.stMode !== 'card'; tb.hidden = S.stMode !== 'table';
   if (!ready()) { cards.innerHTML = `<div class="empty">${S.failed ? '데이터를 불러오지 못했습니다.' : '재고를 불러오는 중…'}</div>`; cards.hidden = false; tb.hidden = true; return; }
-  if (!S.skus.size) { cards.innerHTML = `<div class="empty"><b>아직 등록된 상품이 없어요</b>'엑셀 불러오기/내보내기'에서 기존 재고표를 올리거나, '상품·거래처'에서 상품을 추가하세요.</div>`; cards.hidden = false; tb.hidden = true; return; }
+  if (!S.skus.size) { cards.innerHTML = `<div class="empty"><b>아직 등록된 상품이 없어요</b>위의 <b>[+ 상품 한꺼번에 등록]</b>을 눌러 우리 제품을 먼저 등록하세요. 재고 수량은 나중에 넣어도 됩니다.</div>`; cards.hidden = false; tb.hidden = true; return; }
   const rows = stockRows(S.stStatus, S.stPart, norm($('st-q').value).toLowerCase());
   if (S.stMode === 'card') { cards.innerHTML = rows.length ? rows.map(stockCard).join('') : '<div class="empty">조건에 맞는 상품이 없어요.</div>'; return; }
   const dd = (d) => (d === Infinity ? '—' : d > 999 ? '999+' : fmt(d));
@@ -992,6 +1018,91 @@ function renderStock() {
       <td class="n" title="보유+오는 중이 이 수량 아래로 내려가면 주문">${fmt(r.point)}개 이하</td>
       <td class="n">${r.suggest && (r.status === 'bad' || r.status === 'warn') ? '<b>' + fmt(r.suggest) + '</b>' : '<span class="muted">—</span>'}</td></tr>`).join('')
       : `<tr><td colspan="11" class="empty">조건에 맞는 상품이 없어요.</td></tr>`) + '</tbody>';
+}
+
+/* ---------- 상품 한꺼번에 등록 (재고 보기) ---------- */
+const PART_PREFIX = [['무릎', 'BK'], ['슬개', 'BK'], ['허리', 'BB'], ['손목', 'WS'], ['팔꿈치', 'EB'], ['엘보', 'EB'], ['목', 'NS'], ['어깨', 'SH'], ['발목', 'AK'], ['깔창', 'FT'], ['발바닥', 'FT'], ['발', 'FT'], ['종아리', 'CF'], ['허벅지', 'TH'], ['손가락', 'FG']];
+const OPT_CODE = [[/블랙|검정|black/i, 'BK'], [/네이비|navy/i, 'NV'], [/블루|파랑|blue/i, 'BL'], [/레드|빨강|red/i, 'RD'], [/화이트|흰색|white/i, 'WH'], [/그레이|회색|gray|grey/i, 'GY'],
+  [/베이지|beige/i, 'BE'], [/핑크|pink/i, 'PK'], [/그린|초록|green/i, 'GN'], [/브라운|갈색|brown/i, 'BR'], [/퍼플|보라|purple/i, 'PP'], [/옐로우|노랑|yellow/i, 'YE'], [/스킨|살색|skin/i, 'SK'],
+  [/엑스라지|특대/, 'XL'], [/스몰|소형/, 'S'], [/미디엄|중형/, 'M'], [/라지|대형/, 'L'], [/프리|free/i, 'F'], [/왼쪽/, 'L'], [/오른쪽/, 'R'], [/한쪽|한팔/, '1P'], [/양쪽|양팔|1\s*쌍/, '2P'], [/일자/, 'ST']];
+const REG_PARTS = ['무릎', '허리', '손목', '팔꿈치', '발목', '어깨', '목', '발바닥', '종아리', '기타'];
+const PART_LABEL = { 슬개: '무릎', 엘보: '팔꿈치', 깔창: '발바닥', 발: '발바닥' };
+function guessPart(name) { const hit = PART_PREFIX.find(([k]) => String(name || '').includes(k)); return hit ? PART_LABEL[hit[0]] || hit[0] : ''; }
+function partPrefix(part) { const hit = PART_PREFIX.find(([k]) => String(part || '').includes(k)); return hit ? hit[1] : 'ET'; }
+function nextNum(pre, taken) { let mx = 0; const re = new RegExp('^' + pre + '-(\\d+)'); for (const c of taken) { const m = c.match(re); if (m) mx = Math.max(mx, Number(m[1])); } return mx + 1; }
+function optCode(o) {
+  const ex = o.match(/[(=:]\s*([A-Za-z0-9]{1,8})\s*\)?\s*$/); if (ex) return ex[1].toUpperCase();   // 블랙(BK) · 블랙=BK
+  const toks = o.split(/[\s/+·]+/).filter(Boolean), parts = [];
+  for (const t of toks) { if (/^[A-Za-z0-9]+$/.test(t)) { parts.push(t.toUpperCase()); continue; } const hit = OPT_CODE.find(([re]) => re.test(t)); if (!hit) return ''; parts.push(hit[1]); }
+  return parts.join('-');
+}
+function newRegRow() { return { part: '', name: '', code: '', opts: '' }; }
+function openReg() {
+  if (!S.canWrite) { toast('시트 편집 권한이 있어야 등록할 수 있습니다'); return; }
+  S.reg = { rows: [newRegRow(), newRegRow(), newRegRow(), newRegRow(), newRegRow()] };
+  const parts = [...new Set([...REG_PARTS, ...[...S.skus.values()].map((x) => x.part).filter(Boolean)])];
+  $('rg-parts').innerHTML = parts.map((p) => `<option value="${esc(p)}">`).join('');
+  $('rg-paste').value = ''; renderRegRows(); $('regmodal').hidden = false;
+  setTimeout(() => { const f = $('rg-table').querySelector('input'); if (f) f.focus(); }, 0);
+}
+function closeReg() { $('regmodal').hidden = true; }
+function renderRegRows() {
+  $('rg-table').innerHTML = '<thead><tr><th style="width:120px">부위</th><th>상품명 *</th><th style="width:130px">코드 (비우면 자동)</th><th>옵션 (쉼표로 나누기, 없으면 비움)</th><th class="del"></th></tr></thead><tbody>' +
+    S.reg.rows.map((r, i) => `<tr><td><input list="rg-parts" data-rg="${i}" data-f="part" value="${esc(r.part)}" placeholder="(자동)"></td>
+      <td><input data-rg="${i}" data-f="name" value="${esc(r.name)}" placeholder="예: 슬개건 무릎보호대"></td>
+      <td><input data-rg="${i}" data-f="code" value="${esc(r.code)}" placeholder="예: BK-004" style="text-transform:uppercase"></td>
+      <td><input data-rg="${i}" data-f="opts" value="${esc(r.opts)}" placeholder="예: 블랙, 블루, 레드"></td>
+      <td><button type="button" class="ghost sm" data-rgdel="${i}" title="이 줄 지우기">✕</button></td></tr>`).join('') + '</tbody>';
+  renderRegPreview();
+}
+function regPlan() {
+  const taken = new Set(S.skus.keys()), out = [], autoNo = {};
+  for (const r of S.reg.rows) {
+    const name = norm(r.name); if (!name) continue;
+    const part = norm(r.part) || guessPart(name);
+    let model = norm(r.code).toUpperCase().replace(/\s+/g, '');
+    const auto = !model;
+    if (auto) { const pre = partPrefix(part); const n = autoNo[pre] || nextNum(pre, taken); model = `${pre}-${String(n).padStart(3, '0')}`; autoNo[pre] = n + 1; }
+    const opts = norm(r.opts) ? String(r.opts).split(/[,，、\n]/).map(norm).filter(Boolean) : [''];
+    opts.forEach((o, k) => {
+      const code = o ? `${model}-${optCode(o) || String(k + 1).padStart(2, '0')}` : model;
+      const st = !CODE_RE.test(code) ? 'bad' : S.skus.has(code) ? 'exists' : out.some((x) => x.code === code) ? 'dup' : 'new';
+      out.push({ code, name, part, option: o, st, auto });
+    });
+  }
+  return out;
+}
+function renderRegPreview() {
+  const plan = regPlan(), nNew = plan.filter((x) => x.st === 'new').length;
+  const ST = { new: '<span class="pill ok">새로 등록</span>', exists: '<span class="pill mute">이미 있음 (건너뜀)</span>', dup: '<span class="pill bad">코드 겹침</span>', bad: '<span class="pill bad">코드는 영문·숫자만</span>' };
+  $('rg-preview').innerHTML = plan.length ? `<div class="tablebox"><table><thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th>상태</th></tr></thead><tbody>` +
+    plan.map((x) => `<tr><td class="code">${esc(x.code)}${x.auto ? ' <span class="muted small">자동</span>' : ''}</td><td>${esc(x.name)}</td><td>${esc(x.part)}</td><td>${esc(x.option)}</td><td>${ST[x.st]}</td></tr>`).join('') + '</tbody></table></div>'
+    : '<div class="empty small">위 표에 상품명을 적으면 여기에 등록될 SKU가 보입니다.</div>';
+  const bad = plan.filter((x) => x.st === 'bad' || x.st === 'dup').length;
+  $('rg-totals').innerHTML = `<span>새로 등록 <b>${nNew}</b>개</span>` + (bad ? `<span style="color:var(--bad)">고칠 줄 ${bad}개 (빼고 등록)</span>` : '');
+  $('rg-save').disabled = !nNew;
+}
+function regPaste() {
+  const lines = $('rg-paste').value.split(/\r?\n/).filter((l) => l.trim());
+  const rows = [];
+  for (const l of lines) {
+    const c = l.split('\t').map(norm);
+    if (c.some((x) => /^(상품명|품명|제품명)$/.test(x))) continue;   // 제목 줄 건너뜀
+    rows.push(c.length === 1 ? { part: '', name: c[0], code: '', opts: '' } : { part: c[0] || '', name: c[1] || '', code: c[2] || '', opts: c.slice(3).filter(Boolean).join(', ') });
+  }
+  if (!rows.length) { toast('붙여넣은 내용이 없습니다'); return; }
+  S.reg.rows = [...S.reg.rows.filter((r) => norm(r.name) || norm(r.code) || norm(r.opts)), ...rows];
+  $('rg-paste').value = ''; renderRegRows(); toast(`${rows.length}줄을 표로 옮겼습니다`);
+}
+async function regSave() {
+  const list = regPlan().filter((x) => x.st === 'new');
+  if (!list.length) return;
+  const safety = Math.max(0, toNum($('rg-safety').value)), lead = Math.max(1, toNum($('rg-lead').value) || 50);
+  $('rg-save').disabled = true;
+  try {
+    applyData(await api('saveSkus', list.map((x) => ({ code: x.code, name: x.name, part: x.part, option: x.option, safety, lead, active: true }))));
+    closeReg(); toast(`상품 ${list.length}개를 등록했습니다. 재고는 '입출고 하기 → 재고 실사'로 넣으세요`);
+  } catch (e) { writeFail(e); $('rg-save').disabled = false; }
 }
 
 /* ---------- 홈 ---------- */
@@ -2121,6 +2232,20 @@ $('hm-dash').addEventListener('click', async (e) => {
 $('hm-dash').addEventListener('input', (e) => { if (e.target.id === 'hm-memo') S.memoDirty = true; });
 $('st-status').addEventListener('click', (e) => { const b = e.target.closest('[data-ststatus]'); if (!b) return; S.stStatus = b.dataset.ststatus; renderStock(); });
 $('st-part').addEventListener('click', (e) => { const b = e.target.closest('[data-stpart]'); if (!b) return; S.stPart = b.dataset.stpart; renderStock(); });
+$('st-reg').addEventListener('click', openReg);
+$('rg-close').addEventListener('click', closeReg);
+$('regmodal').addEventListener('click', (e) => {
+  if (e.target.id === 'regmodal') { closeReg(); return; }
+  const d = e.target.closest('[data-rgdel]');
+  if (d) { S.reg.rows.splice(Number(d.dataset.rgdel), 1); if (!S.reg.rows.length) S.reg.rows.push(newRegRow()); renderRegRows(); }
+});
+$('regmodal').addEventListener('input', (e) => {
+  const el = e.target; if (el.dataset.rg === undefined) return;
+  S.reg.rows[Number(el.dataset.rg)][el.dataset.f] = el.value; renderRegPreview();
+});
+$('rg-add').addEventListener('click', () => { S.reg.rows.push(newRegRow()); renderRegRows(); const ins = $('rg-table').querySelectorAll('tbody tr:last-child input'); if (ins[0]) ins[0].focus(); });
+$('rg-paste-go').addEventListener('click', regPaste);
+$('rg-save').addEventListener('click', regSave);
 document.querySelectorAll('[data-stmode]').forEach((b) => b.addEventListener('click', () => { S.stMode = b.dataset.stmode; try { localStorage.setItem('inv-stmode', S.stMode); } catch (err) { /* 무시 */ } renderStock(); }));
 $('st-cards').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) openSku(c.dataset.sku); });
 $('st-table').addEventListener('click', (e) => { const c = e.target.closest('[data-sku]'); if (c) openSku(c.dataset.sku); });
@@ -2166,7 +2291,7 @@ $('rc-lines').addEventListener('click', (e) => {
 $('rc-save').addEventListener('click', saveRecord);
 $('md-btns').addEventListener('click', (e) => { const b = e.target.closest('button[data-price]'); if (b) closeModal(b.dataset.price); });
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(''); });
-document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); else if (!$('regmodal').hidden) closeReg(); });
 
 $('up-sheet-go').addEventListener('click', loadNaverSheet);
 $('up-sheetbox').addEventListener('click', async (e) => {
@@ -2842,7 +2967,7 @@ try {
 } catch (e) { /* 무시 */ }
 load();
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
-setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden) load(true); }, 120000);
+setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden) load(true); }, 120000);
 })();
 </script>
 </body>
