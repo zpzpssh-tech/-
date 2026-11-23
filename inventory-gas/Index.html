@@ -391,7 +391,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 카드수정</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 제자리입출고</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -1287,8 +1287,8 @@ async function saveSkuEdit(oldCode, btn) {
 }
 function startRecord(form, code, qty) {
   S.form = form;
-  if (location.hash !== '#record') location.hash = '#record';
-  renderPicker();
+  // 상품을 정해서 누른 경우(재고 보기 카드 등): 화면은 그대로 두고 입출고 창만 위에 띄움
+  if (!code) { if (location.hash !== '#record') location.hash = '#record'; renderPicker(); }
   if (code) {
     const s0 = S.skus.get(code); if (!s0) return;
     openProduct(productKeyOf(s0));
