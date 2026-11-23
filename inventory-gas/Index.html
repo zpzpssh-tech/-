@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진묶음</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진유지</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -1408,6 +1408,8 @@ function famLegacy() {
   if (famLegacy.sig === sig) return famLegacy.m;
   const m = new Map();
   for (const x of S.skus.values()) { const k = productKeyOf(x), ph = S.photos[legacyKey(k)], fk = photoKey(k); if (ph && !m.has(fk)) m.set(fk, ph); }
+  // 상품명을 고친 뒤 이름이 안 맞게 된 예전 사진도, 사진을 넣을 때 적어 둔 상품명으로 다시 찾아 붙임
+  for (const [k, nm] of Object.entries(S.photoNames || {})) { if (k[0] !== 'p' || !S.photos[k] || !nm) continue; const fk = 'f' + hash(famName(nm)); if (!m.has(fk)) m.set(fk, S.photos[k]); }
   famLegacy.sig = sig; famLegacy.m = m; return m;
 }
 function famMembers(key) { const fk = photoKey(key); return [...new Set([...S.skus.values()].map(productKeyOf))].filter((k) => photoKey(k) === fk); }
@@ -2281,7 +2283,8 @@ function applyData(d, fromCache) {
   if (!S.sups.length && (S.conf.bizno || S.conf.name)) S.sups.push({ id: 'main', label: S.conf.name || '우리 회사', bizno: S.conf.bizno, name: S.conf.name, ceo: S.conf.ceo, addr: S.conf.addr, tel: S.conf.tel, type: S.conf.type, item: S.conf.item, manager: S.conf.manager, bank: S.conf.bank, holder: S.conf.holder, seal: S.conf.seal });
   S.sups.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
   S.quotes = d.quotes || [];
-  if (d.photos) S.photos = d.photos; else if (!S.photos) S.photos = {};   // 저장 응답엔 사진이 없으면 기존 사진 그대로
+  if (d.photos) { S.photos = d.photos; S.photoNames = d.photoNames || {}; } else if (!S.photos) S.photos = {};
+  if (!S.photoNames) S.photoNames = {};   // 저장 응답엔 사진이 없으면 기존 사진 그대로
   S.lastSale = new Map(); S.lastBuy = new Map();
   for (const m of [...S.moves].sort(cmpMove)) {
     if (!m.price) continue;
@@ -2347,7 +2350,8 @@ $('pm-photo').addEventListener('change', (e) => {
 $('pm-photo-del').addEventListener('click', async () => {
   if (!guard() || !S.pmKey) return;
   // 묶음 사진 + 묶음에 속한 상품들의 예전 사진까지 함께 지움 (안 그러면 예전 사진이 다시 보임)
-  const keys = [photoKey(S.pmKey), ...famMembers(S.pmKey).map(legacyKey)].filter((k) => S.photos[k]);
+  const fk0 = photoKey(S.pmKey);
+  const keys = [...new Set([fk0, ...famMembers(S.pmKey).map(legacyKey), ...Object.entries(S.photoNames || {}).filter(([k, nm]) => k[0] === 'p' && 'f' + hash(famName(nm)) === fk0).map(([k]) => k)])].filter((k) => S.photos[k]);
   const old = keys.map((k) => [k, S.photos[k]]);
   keys.forEach((k) => delete S.photos[k]); S.phVer = (S.phVer || 0) + 1;
   renderPmHead(); refresh(); toast('사진을 지웠습니다'); if (S.lastD) saveCache(S.lastD);

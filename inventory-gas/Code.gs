@@ -151,7 +151,8 @@ function getData() {
   const mr = rows_(TABS.MEMO)[0] || [];
   const memo = { text: str_(mr[0]), at: str_(mr[1]), by: str_(mr[2]) };
   let photos;
-  if (!LITE_) { photos = {}; rows_(TABS.PHOTO).forEach((r) => { if (str_(r[0]) && r[2]) photos[str_(r[0])] = String(r[2]); }); }
+  let photoNames;
+  if (!LITE_) { photos = {}; photoNames = {}; rows_(TABS.PHOTO).forEach((r) => { if (str_(r[0]) && r[2]) { photos[str_(r[0])] = String(r[2]); photoNames[str_(r[0])] = str_(r[1]); } }); }
   const conf = {};
   rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) conf[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); });
   const quotes = rows_(TABS.QUOTE).filter((r) => str_(r[0])).map((r) => ({ no: str_(r[0]), date: str_(r[1]), to: str_(r[2]), total: num_(r[3]), body: String(r[6] || ''), by: str_(r[7]), at: str_(r[8]) }));
@@ -160,7 +161,7 @@ function getData() {
   const orderDone = orderRows.map((r) => str_(r[0])).filter(Boolean);
   const orderDays = {}; orderRows.forEach((r) => { const d = str_(r[1]); if (d) orderDays[d] = (orderDays[d] || 0) + 1; });
   if (!LITE_ && !schemaOk_()) { PropertiesService.getScriptProperties().setProperty('SCHEMA', SCHEMA_VER); SCHEMA_OK_ = true; }
-  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, orderDone, orderDays, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, photoNames, orderDone, orderDays, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */
@@ -303,6 +304,7 @@ function editSku(oldCode, s) {
     // 사진은 같은 상품 묶음('f' + 묶음 이름)으로 저장됨. 예전 사진은 'p' + (부위|상품명)
     const fk = (nm) => 'f' + HASH_(famName_(nm));
     const oldKey = fk(str_(o[1])), newKey = fk(name), oldLegacy = 'p' + HASH_(`${str_(o[2]) || '기타'}|${str_(o[1])}`);
+    const newLegacy = 'p' + HASH_(`${String(s.part || '').trim() || '기타'}|${name}`);
     putRow_(TABS.SKU, i, [code, name, String(s.part || '').trim(), String(s.option || '').trim(), Math.max(0, num_(s.safety)), Math.max(1, num_(s.lead) || 50),
       s.active === false ? 'N' : 'Y', now_(), o[8], s.retail === undefined ? o[9] : num_(s.retail) || '', s.wholesale === undefined ? o[10] : num_(s.wholesale) || '', o[11]]);
     if (code !== oldCode) {
@@ -316,8 +318,8 @@ function editSku(oldCode, s) {
         if (changed) rng.setValues(v);
       });
     }
-    // 상품명이 다른 묶음으로 바뀌면, 새 묶음에 사진이 없을 때 지금 사진을 복사해 붙임
-    if (oldKey !== newKey) {
+    // 상품명·부위가 바뀌면: 새 묶음에 사진이 없을 때 지금 사진(묶음 사진 또는 예전 방식 사진)을 새 묶음 이름으로 복사해 붙임
+    if (oldKey !== newKey || oldLegacy !== newLegacy) {
       LITE_ = false;
       const ph = rows_(TABS.PHOTO);
       if (!ph.some((r) => str_(r[0]) === newKey)) {
