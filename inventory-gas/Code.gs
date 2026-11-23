@@ -300,9 +300,9 @@ function editSku(oldCode, s) {
     if (i < 0) throw new Error('수정할 상품을 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     if (code !== oldCode && vals.some((r) => str_(r[0]).toUpperCase() === code)) throw new Error(`${code} 코드는 이미 다른 상품이 쓰고 있습니다.`);
     const o = vals[i];
-    // 사진은 'p' + (부위|상품명)의 짧은 암호 이름으로 저장돼 있음 (화면의 photoKey와 같은 규칙)
-    const pk = (part, nm) => 'p' + HASH_(`${part || '기타'}|${nm}`);
-    const oldKey = pk(str_(o[2]), str_(o[1])), newKey = pk(String(s.part || '').trim(), name);
+    // 사진은 같은 상품 묶음('f' + 묶음 이름)으로 저장됨. 예전 사진은 'p' + (부위|상품명)
+    const fk = (nm) => 'f' + HASH_(famName_(nm));
+    const oldKey = fk(str_(o[1])), newKey = fk(name), oldLegacy = 'p' + HASH_(`${str_(o[2]) || '기타'}|${str_(o[1])}`);
     putRow_(TABS.SKU, i, [code, name, String(s.part || '').trim(), String(s.option || '').trim(), Math.max(0, num_(s.safety)), Math.max(1, num_(s.lead) || 50),
       s.active === false ? 'N' : 'Y', now_(), o[8], s.retail === undefined ? o[9] : num_(s.retail) || '', s.wholesale === undefined ? o[10] : num_(s.wholesale) || '', o[11]]);
     if (code !== oldCode) {
@@ -316,14 +316,13 @@ function editSku(oldCode, s) {
         if (changed) rng.setValues(v);
       });
     }
-    // 상품명·부위가 바뀌면 사진도 새 이름으로 옮겨 붙임 (같은 상품의 다른 옵션이 옛 이름을 쓰면 복사)
+    // 상품명이 다른 묶음으로 바뀌면, 새 묶음에 사진이 없을 때 지금 사진을 복사해 붙임
     if (oldKey !== newKey) {
       LITE_ = false;
-      const ph = rows_(TABS.PHOTO), pi = ph.findIndex((r) => str_(r[0]) === oldKey);
-      if (pi >= 0 && !ph.some((r) => str_(r[0]) === newKey)) {
-        const stillUsed = vals.some((r, k) => k !== i && pk(str_(r[2]), str_(r[1])) === oldKey);
-        const row = [newKey, name, ph[pi][2], now_()];
-        if (stillUsed) append_(TABS.PHOTO, [row]); else putRow_(TABS.PHOTO, pi, row);
+      const ph = rows_(TABS.PHOTO);
+      if (!ph.some((r) => str_(r[0]) === newKey)) {
+        const src = ph.find((r) => str_(r[0]) === oldKey) || ph.find((r) => str_(r[0]) === oldLegacy);
+        if (src) append_(TABS.PHOTO, [[newKey, name, src[2], now_()]]);
       }
     }
     return getData();
@@ -342,8 +341,9 @@ function savePhoto(key, name, data) {
 function deletePhoto(key) {
   return withLock_(() => {
     const sh = tab_(book_(), TABS.PHOTO);
+    const del = new Set([].concat(key));
     const keys = photoKeys_();
-    for (let i = keys.length - 1; i >= 0; i--) if (keys[i] === key) sh.deleteRow(i + 2);
+    for (let i = keys.length - 1; i >= 0; i--) if (del.has(keys[i])) sh.deleteRow(i + 2);
     return { ok: true, key: key };
   });
 }
@@ -445,6 +445,16 @@ function packMult(name, opt) {
     return 0;
   };
   return f(opt) || (String(name || '').length <= 20 ? f(name) : 0) || 1;
+}
+// 같은 상품 묶음 이름: 끝에 붙은 사이즈·색상·수량 글자를 뗌 (예: '바른요 허리 XL' → '바른요 허리', '엘보 보호대 SET' → '엘보 보호대')
+const FAM_TAIL_ = /^(?:(?:x{0,3}s|m|x{0,3}l|[2-5]xl|free|f|프리|소|중|대|특대|소형|중형|대형|\d+\s*p|\d+\s*개입?|\d+\s*쌍|set|세트|한쪽|양쪽|한팔|양팔|좌|우|왼쪽|오른쪽|블랙|검정|화이트|흰색|그레이|회색|네이비|베이지|블루|레드|핑크|스킨|그린|브라운|퍼플|옐로우)(?:\(.*\))?|\(.*\)|\[.*\])$/i;
+function famName_(name) {
+  const t = String(name || '').replace(/\s+/g, ' ').trim().split(' ');
+  while (t.length > 1 && FAM_TAIL_.test(t[t.length - 1])) t.pop();
+  let s = t.join(' ');
+  const m = s.match(/^(.*[가-힣])(?:x{0,3}s|m|x{0,3}l|[2-5]xl)$/i);   // 붙여 쓴 사이즈: '허리XL' → '허리'
+  if (m && m[1].trim()) s = m[1];
+  return s.trim().toLowerCase();
 }
 const HASH_ = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 const NORM_ = (s) => String(s === null || s === undefined ? '' : s).replace(/\s+/g, ' ').trim();

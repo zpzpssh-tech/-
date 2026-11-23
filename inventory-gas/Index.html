@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진빠르게</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진묶음</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -1390,7 +1390,27 @@ function renderForm() {
 }
 /* 상품 = 같은 카테고리 + 같은 상품명 (색상·사이즈 옵션은 카드 안에 묶음) */
 const productKeyOf = (x) => `${x.part || '기타'}|${x.name}`;
-const photoKey = (key) => 'p' + hash(key);
+// 같은 상품 묶음 이름: 끝에 붙은 사이즈·색상·수량 글자를 뗌 (예: '바른요 허리 XL' → '바른요 허리', '엘보 보호대 SET' → '엘보 보호대')
+const FAM_TAIL = /^(?:(?:x{0,3}s|m|x{0,3}l|[2-5]xl|free|f|프리|소|중|대|특대|소형|중형|대형|\d+\s*p|\d+\s*개입?|\d+\s*쌍|set|세트|한쪽|양쪽|한팔|양팔|좌|우|왼쪽|오른쪽|블랙|검정|화이트|흰색|그레이|회색|네이비|베이지|블루|레드|핑크|스킨|그린|브라운|퍼플|옐로우)(?:\(.*\))?|\(.*\)|\[.*\])$/i;
+function famName(name) {
+  const t = String(name || '').replace(/\s+/g, ' ').trim().split(' ');
+  while (t.length > 1 && FAM_TAIL.test(t[t.length - 1])) t.pop();
+  let s = t.join(' ');
+  const m = s.match(/^(.*[가-힣])(?:x{0,3}s|m|x{0,3}l|[2-5]xl)$/i);   // 붙여 쓴 사이즈: '허리XL' → '허리'
+  if (m && m[1].trim()) s = m[1];
+  return s.trim().toLowerCase();
+}
+// 사진은 '같은 상품 묶음' 하나에 한 장: 바른요 허리 S·M·L·XL은 사진 하나를 같이 씀
+const photoKey = (key) => 'f' + hash(famName(String(key).split('|').slice(1).join('|')));
+const legacyKey = (key) => 'p' + hash(key);   // 예전 방식(상품마다 따로) 사진
+function famLegacy() {
+  const sig = S.ver + ':' + (S.phVer || 0);
+  if (famLegacy.sig === sig) return famLegacy.m;
+  const m = new Map();
+  for (const x of S.skus.values()) { const k = productKeyOf(x), ph = S.photos[legacyKey(k)], fk = photoKey(k); if (ph && !m.has(fk)) m.set(fk, ph); }
+  famLegacy.sig = sig; famLegacy.m = m; return m;
+}
+function famMembers(key) { const fk = photoKey(key); return [...new Set([...S.skus.values()].map(productKeyOf))].filter((k) => photoKey(k) === fk); }
 function productMap() {
   const m = new Map();
   for (const x of S.skus.values()) {
@@ -1402,7 +1422,7 @@ function productMap() {
   for (const p of m.values()) p.codes.sort((a, b) => (S.skus.get(a).option || '').localeCompare(S.skus.get(b).option || '', 'ko', { numeric: true }));
   return m;
 }
-const photoOf = (key) => S.photos[photoKey(key)] || '';
+const photoOf = (key) => S.photos[photoKey(key)] || S.photos[legacyKey(key)] || famLegacy().get(photoKey(key)) || '';
 const phLetter = (name) => esc(String(name || '?').replace(/^\s+/, '').charAt(0));
 function productCard(p, lg) {
   let have = 0, worst = 'ok';
@@ -2316,19 +2336,22 @@ $('pm-photo').addEventListener('change', (e) => {
     let data = cv.toDataURL('image/jpeg', 0.82); if (data.length > 45000) data = cv.toDataURL('image/jpeg', 0.6);
     $('pm-photo').value = '';
     // 화면에는 바로 보여주고, 시트 저장은 뒤에서 (기다릴 필요 없음)
-    const old = S.photos[key];
-    S.photos[key] = data; renderPmHead(); refresh(); toast('사진을 넣었습니다'); if (S.lastD) saveCache(S.lastD);
+    const old = S.photos[key], n = famMembers(S.pmKey).length;
+    S.photos[key] = data; S.phVer = (S.phVer || 0) + 1; renderPmHead(); refresh(); toast(n > 1 ? `사진을 넣었습니다 · 같은 상품 ${n}개에 모두 나옵니다` : '사진을 넣었습니다'); if (S.lastD) saveCache(S.lastD);
     try { await api('savePhoto', key, name, data); }
-    catch (err) { if (old) S.photos[key] = old; else delete S.photos[key]; renderPmHead(); refresh(); writeFail(err); }
+    catch (err) { if (old) S.photos[key] = old; else delete S.photos[key]; S.phVer = (S.phVer || 0) + 1; renderPmHead(); refresh(); writeFail(err); }
   };
   img.onerror = () => toast('사진을 열지 못했습니다. JPG나 PNG 사진으로 다시 시도해 주세요');
   img.src = URL.createObjectURL(f);   // 파일을 글자로 바꾸지 않고 바로 열어서 더 빠름
 });
 $('pm-photo-del').addEventListener('click', async () => {
   if (!guard() || !S.pmKey) return;
-  const key = photoKey(S.pmKey), old = S.photos[key];
-  delete S.photos[key]; renderPmHead(); refresh(); toast('사진을 지웠습니다'); if (S.lastD) saveCache(S.lastD);
-  try { await api('deletePhoto', key); } catch (err) { if (old) S.photos[key] = old; renderPmHead(); refresh(); writeFail(err); }
+  // 묶음 사진 + 묶음에 속한 상품들의 예전 사진까지 함께 지움 (안 그러면 예전 사진이 다시 보임)
+  const keys = [photoKey(S.pmKey), ...famMembers(S.pmKey).map(legacyKey)].filter((k) => S.photos[k]);
+  const old = keys.map((k) => [k, S.photos[k]]);
+  keys.forEach((k) => delete S.photos[k]); S.phVer = (S.phVer || 0) + 1;
+  renderPmHead(); refresh(); toast('사진을 지웠습니다'); if (S.lastD) saveCache(S.lastD);
+  try { if (keys.length) await api('deletePhoto', keys); } catch (err) { old.forEach(([k, v]) => { S.photos[k] = v; }); S.phVer++; renderPmHead(); refresh(); writeFail(err); }
 });
 $('hm-actions').addEventListener('click', (e) => {
   const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
