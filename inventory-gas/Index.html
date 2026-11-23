@@ -386,7 +386,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-19 쌍=2개</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 원가숨김</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -395,9 +395,7 @@ table.mini tr[data-sku] { cursor: pointer; }
       <a href="#upload" data-view="upload">엑셀 입출고</a>
       <a href="#history" data-view="history">기록 보기</a>
       <div class="grp">관리</div>
-      <a href="#cost" data-view="cost">원가·재고금액</a>
       <a href="#items" data-view="items">상품·거래처</a>
-      <a href="#landed" data-view="landed">수입 원가 계산</a>
       <a href="#quote" data-view="quote">견적서</a>
       <a href="#excel" data-view="excel">엑셀 불러오기/내보내기</a>
     </nav>
@@ -540,8 +538,8 @@ table.mini tr[data-sku] { cursor: pointer; }
         <label class="f">옵션(색상/사이즈)<input id="it-opt" placeholder="블랙 / L" style="width:120px"></label>
       </div>
       <div class="row">
-        <label class="f">기준원가(원)<input type="number" id="it-cost" min="0" placeholder="2200"></label>
-        <label class="f">또는 기준원가($)<input type="number" id="it-cost-usd" min="0" step="0.001" placeholder="1.65" title="달러로 넣으면 저장된 환율로 원화 환산해서 씁니다"></label>
+        <label class="f" hidden>기준원가(원)<input type="number" id="it-cost" min="0" placeholder="2200"></label>
+        <label class="f" hidden>또는 기준원가($)<input type="number" id="it-cost-usd" min="0" step="0.001" placeholder="1.65" title="달러로 넣으면 저장된 환율로 원화 환산해서 씁니다"></label>
         <label class="f">소매가(원)<input type="number" id="it-retail" min="0" placeholder="19900"></label>
         <label class="f">도매가(원)<input type="number" id="it-whole" min="0" placeholder="6500"></label>
         <label class="f">안전재고<input type="number" id="it-safety" min="0" value="100"></label>
@@ -557,7 +555,7 @@ table.mini tr[data-sku] { cursor: pointer; }
     </div>
     <div class="panel">
       <h2>등록된 SKU</h2>
-      <div id="it-usdnote" hidden></div>
+      <div id="it-usdnote" hidden style="display:none!important"></div>
       <div class="tablebox"><table id="it-table"></table></div>
     </div>
     <div class="cols2">
@@ -795,18 +793,18 @@ const MOVE = {
 };
 const SALES = new Set(['rocket', 'b2b', 'ship', 'nsale']);
 const FORMS = {
-  inbound: { label: '입고', mode: 'qty', price: 'buy', text: '공장 물건이 <b>본사창고에 도착</b>했을 때. 본사창고에 더해지고, 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄어듭니다. <b>개당 매입가</b>(운송비 포함)를 넣으면 원가가 자동으로 다시 계산돼요.' },
-  order: { label: '발주 등록', mode: 'qty', price: 'buy', text: '공장에 <b>생산 주문을 넣었을 때</b>. 아직 창고엔 없지만 \'오는 중\'으로 잡아 두면 같은 상품을 두 번 주문하는 실수를 막을 수 있어요.' },
+  inbound: { label: '입고', mode: 'qty', text: '공장 물건이 <b>본사창고에 도착</b>했을 때. 본사창고에 더해지고, 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄어듭니다.' },
+  order: { label: '발주 등록', mode: 'qty', text: '공장에 <b>생산 주문을 넣었을 때</b>. 아직 창고엔 없지만 \'오는 중\'으로 잡아 두면 같은 상품을 두 번 주문하는 실수를 막을 수 있어요.' },
   fassto: { label: '파스토 보내기', mode: 'qty', text: '본사창고에서 <b>파스토(N배송)로 옮길 때</b>. 판매가 아니라 창고 이동입니다: 본사창고 −, 파스토 +.' },
   rocket: { label: '로켓 출고', mode: 'qty', price: 'sell', partner: '쿠팡 로켓배송', text: '쿠팡 <b>로켓 센터로 납품</b>할 때. 입고되면 쿠팡이 산 물건이라 본사창고에서 빼고 끝냅니다. 공급단가는 직전 납품가가 자동으로 들어갑니다.' },
   b2b: { label: '거래처 출고', mode: 'qty', price: 'sell', partner: '', text: '병원·센터·도매처 등 <b>거래처에 판매</b>할 때. 거래처와 상품을 고르면 <b>그 거래처에 직전에 판 단가</b>가 자동으로 들어가고, 처음이면 소매가/도매가 중 고르게 물어봅니다.' },
   nsale: { label: '파스토 재고 반영', mode: 'count', fixedLoc: 'fassto', text: '파스토 관리자 화면에 보이는 <b>현재 재고를 그대로 입력</b>하세요. 줄어든 만큼은 N배송 판매로, 늘어난 만큼은 조정으로 기록합니다. 주 1회 권장.' },
   ship: { label: '개별 출고', mode: 'qty', locs: ['hq', 'fassto'], text: '주문서 없이 <b>직접 몇 개 보냈을 때</b> (지인 발송, 샘플, 협찬 등). 주문이 많으면 \'주문서 차감\' 탭이 편합니다.' },
   return: { label: '반품 입고', mode: 'qty', text: '고객 반품이 <b>다시 팔 수 있는 상태로</b> 본사창고에 들어왔을 때.' },
-  loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>. 평균원가 기준 금액이 조정손익(손실)으로 잡힙니다.' },
-  count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록하고, 차이 금액을 조정손익에 반영합니다. <b>처음 시작할 때 시작 재고</b>도 여기서(또는 엑셀 탭에서) 넣으세요.' },
+  loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>.' },
+  count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록합니다.' },
 };
-const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', cost: '원가·재고금액', items: '상품·거래처', landed: '수입 원가 계산', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', items: '상품·거래처', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
 const ICON = {
   in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
@@ -934,8 +932,7 @@ function renderLocs() {
   $('locs').innerHTML = `
     <div class="loc"><b>${v(hq)}</b><span>본사창고</span></div>
     <div class="loc"><b>${v(fa)}</b><span>파스토 (N배송)</span></div>
-    <div class="loc"><b>${v(pe)}</b><span>오는 중</span></div>
-    <div class="loc"><b>${ready() ? fmt(val / 10000) : '—'}<span style="font-size:12px">만원</span></b><span>재고금액</span></div>`;
+    <div class="loc"><b>${v(pe)}</b><span>오는 중</span></div>`;
 }
 
 /* ---------- 재고 현황 ---------- */
@@ -1056,8 +1053,7 @@ function renderHome() {
     <div class="warn"><span>곧 주문하세요</span><b>${fmt(c.warn)}개</b></div>
     <div class="${c.nostock ? 'mut' : ''}"><span>재고 미입력</span><b>${fmt(c.nostock)}개</b></div>
     <div class="${c.neg ? 'bad' : ''}"><span>마이너스 재고</span><b>${fmt(c.neg)}개</b></div>
-    <div><span>총 보유 수량</span><b>${fmt(have)}개</b></div>
-    <div><span>재고금액</span><b>${won(value)}</b></div></div>`, { more: 'stock' });
+    <div><span>총 보유 수량</span><b>${fmt(have)}개</b></div></div>`, { more: 'stock' });
 
   // 2) 입고 예정 (공장에 주문해 두고 아직 안 온 것)
   const lastOrder = new Map();
@@ -1299,7 +1295,6 @@ function lineHint(ln, st, loc) {
   if (f.mode === 'count' && ln.q !== '') { const d = Number(ln.q) - cur; return `장부에는 ${fmt(cur)}개 → ` + (d ? `<b>${d > 0 ? fmt(d) + '개 더 있음' : fmt(-d) + '개 모자람'}</b>` : '<b>딱 맞아요</b>'); }
   let h = `${LOC[loc]}에 지금 ${fmt(cur)}개` + (S.form === 'inbound' && r.pending ? ` · 오는 중 ${fmt(r.pending)}개` : '');
   const p = toNum(ln.p);
-  if (f.price === 'sell' && p > 0 && r.unit > 0) h += ` · 마진 ${Math.round(((p - r.unit) / p) * 100)}%`;
   if (f.price === 'buy' && buyCur() === 'USD' && p > 0) h += curFx() ? ` · <b>≈ ${won(p * curFx())}</b>/개` : ' · <b style="color:var(--bad)">환율을 넣어 주세요</b>';
   if (f.price === 'buy' && r.unit > 0) h += ` · 현재 평균원가 ${won(r.unit)}`;
   return h;
@@ -1340,8 +1335,7 @@ function renderTotals() {
   const el = $('rc-totals');
   if (!n) { el.innerHTML = '<span>옵션별 수량을 입력해 주세요</span>'; return; }
   if (f.mode === 'count') { el.innerHTML = `<span>상품 <b>${n}</b>개를 실사 수량으로 맞춥니다</span>`; return; }
-  el.innerHTML = `<span>상품 <b>${n}</b>개 · 모두 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b>${f.price === 'buy' && buyCur() === 'USD' && curFx() ? ` <span class="small">($${(amt / curFx()).toLocaleString('en-US', { maximumFractionDigits: 2 })} · 환율 ${fxFmt(curFx())})</span>` : ''}</span>` : '') +
-    (f.price === 'sell' && amt ? `<span>예상 이익 <b>${won(profit)}</b> (평균원가 기준)</span>` : '');
+  el.innerHTML = `<span>상품 <b>${n}</b>개 · 모두 <b>${fmt(qty)}</b>개</span>` + (f.price ? `<span>${f.price === 'sell' ? '판매' : '매입'} 금액 <b>${won(amt)}</b>${f.price === 'buy' && buyCur() === 'USD' && curFx() ? ` <span class="small">($${(amt / curFx()).toLocaleString('en-US', { maximumFractionDigits: 2 })} · 환율 ${fxFmt(curFx())})</span>` : ''}</span>` : '') ;
 }
 function buildMoves() {
   const f = FORMS[S.form], date = $('rc-date').value || today(), memo = norm($('rc-memo').value);
@@ -1403,8 +1397,7 @@ function openPriceModal(i) {
     <dt>상품</dt><dd style="">${esc(skuLabel(code))}</dd>
     <dt>직전 매출가</dt><dd>없음</dd>
     <dt>소매가</dt><dd>${s.retail ? won(s.retail) : '미등록'}</dd>
-    <dt>도매가</dt><dd>${s.wholesale ? won(s.wholesale) : '미등록'}</dd>
-    <dt>평균원가</dt><dd>${r.unit ? won(r.unit) : '미등록'}</dd>`;
+    <dt>도매가</dt><dd>${s.wholesale ? won(s.wholesale) : '미등록'}</dd>`;
   const btns = [];
   const pick = (label, val, primary) => btns.push(`<button type="button" class="${primary ? 'primary' : ''}" data-price="${val}">${label}</button>`);
   if (s.retail) pick(`소매가 ${won(s.retail)}`, s.retail, basis === '소매가');
@@ -1499,7 +1492,7 @@ function readOrders(file) {
     const hi = findHeader(aoa, [KW.name, KW.opt, KW.qty]);
     const header = (aoa[hi] || []).map((x, i) => norm(x) || `열 ${i + 1}`);
     S.up = { file: file.name, header, rows: aoa.slice(hi + 1).filter((r) => r.some((c) => norm(c))),
-      cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: guessCol(header, KW.price),
+      cName: guessCol(header, KW.name), cOpt: guessCol(header, KW.opt), cQty: guessCol(header, KW.qty), cPrice: -1,
       cDate: guessCol(header, KW.date), cStatus: guessCol(header, KW.status), cClaim: guessCol(header, KW.claim), cNo: guessCol(header, KW.orderNo), cAttr: guessCol(header, KW.attr),
       day: daysAgo(1), day2: daysAgo(1), noCancel: true, splitN: true,
       mode: S.upMode, cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
@@ -1619,7 +1612,7 @@ function renderUpload() {
       <label class="f">옵션 열${colSel('up-copt', u.cOpt, true)}</label>
       <label class="f">수량 열${colSel('up-cqty', u.cQty)}</label>
       <label class="f">출고일<input type="date" id="up-date" value="${esc(u.date)}"></label>
-      ${u.mode === 'in' ? `<label class="f">단가 열 (있으면)${colSel('up-cprice', u.cPrice, true)}</label><label class="f">단가 통화<select id="up-cur"><option value="USD"${u.cur === 'USD' ? ' selected' : ''}>달러 (USD)</option><option value="KRW"${u.cur === 'KRW' ? ' selected' : ''}>원 (KRW)</option></select></label>${u.cur === 'USD' ? `<label class="f">환율 (원/$)<input type="number" id="up-fx" step="0.01" style="width:96px" value="${esc(u.fx || '')}"></label>` : ''}` : ''}
+      ${false ? `<label class="f">단가 열 (있으면)${colSel('up-cprice', u.cPrice, true)}</label><label class="f">단가 통화<select id="up-cur"><option value="USD"${u.cur === 'USD' ? ' selected' : ''}>달러 (USD)</option><option value="KRW"${u.cur === 'KRW' ? ' selected' : ''}>원 (KRW)</option></select></label>${u.cur === 'USD' ? `<label class="f">환율 (원/$)<input type="number" id="up-fx" step="0.01" style="width:96px" value="${esc(u.fx || '')}"></label>` : ''}` : ''}
       ${u.mode === 'out' && u.cDate >= 0 ? `<label class="f">발송일 열<select id="up-cdate">${u.header.map((h, i) => `<option value="${i}"${i === u.cDate ? ' selected' : ''}>${esc(h)}</option>`).join('')}</select></label>
         <label class="f">${/주문|결제/.test(u.header[u.cDate] || '') ? '이 날 주문만' : '이 날 발송된 주문만'}<span style="display:flex;gap:4px;align-items:center"><input type="date" id="up-day" value="${esc(u.day)}">~<input type="date" id="up-day2" value="${esc(u.day2 || u.day)}"></span></label>` : ''}
       ${u.mode === 'out' && (u.cStatus >= 0 || u.cClaim >= 0) ? `<label class="f"><span><input type="checkbox" id="up-nocancel"${u.noCancel ? ' checked' : ''}> 취소·반품 주문 빼기</span></label>` : ''}
@@ -1727,7 +1720,7 @@ function renderHistory() {
         : `<button class="ghost" data-askbatch="${esc(m.batch)}" title="같이 기록된 묶음 전체를 지웁니다">삭제</button>`;
       return `<tr><td class="mono">${esc(m.date)}</td><td>${esc(MOVE[m.type] || m.type)}</td><td>${LOC[m.loc] || esc(m.loc)}</td>
         <td><span class="code">${esc(m.sku)}</span> <span class="muted">${esc((S.skus.get(m.sku) || {}).name || '')}</span></td>
-        <td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td><td>${esc(m.partner || '')}</td><td class="n">${m.price ? fmt(m.price) : ''}${m.usd ? `<div class="muted small">$${m.usd} × ${fxFmt(m.fx)}</div>` : ''}</td>
+        <td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td><td>${esc(m.partner || '')}</td><td class="n">${m.price && (m.type === 'rocket' || m.type === 'b2b') ? fmt(m.price) : ''}</td>
         <td class="muted">${esc(m.memo || '')}</td><td class="muted small">${esc(m.by ? m.by.split('@')[0] : '')}</td><td>${act}</td></tr>`;
     }).join('') + '</tbody>';
 }
@@ -1787,9 +1780,9 @@ function renderItems() {
     const list = [...S.skus.values()].sort((a, b) => (a.part || '').localeCompare(b.part || '') || a.code.localeCompare(b.code));
     const used = new Set(S.moves.map((m) => m.sku));
     const c = (n) => `<td class="n">${n ? fmt(n) : '<span class="muted">—</span>'}</td>`;
-    t.innerHTML = '<thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가(원)</th><th class="n">소매가</th><th class="n">도매가</th><th class="n">안전재고</th><th class="n">리드타임</th><th>상태</th><th></th></tr></thead><tbody>' +
+    t.innerHTML = '<thead><tr><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">소매가</th><th class="n">도매가</th><th class="n">안전재고</th><th class="n">리드타임</th><th>상태</th><th></th></tr></thead><tbody>' +
       list.map((s) => `<tr><td class="code">${esc(s.code)}</td><td>${esc(s.name)}</td><td>${esc(s.part || '')}</td><td>${esc(s.option || '')}</td>
-        <td class="n">${baseCost(s) ? fmt(baseCost(s)) : '<span class="muted">—</span>'}${usdOf(s) ? `<div class="muted small">$${usdOf(s)}</div>` : ''}</td>${c(s.retail)}${c(s.wholesale)}<td class="n">${fmt(s.safety)}</td><td class="n">${fmt(s.lead)}일</td>
+        ${c(s.retail)}${c(s.wholesale)}<td class="n">${fmt(s.safety)}</td><td class="n">${fmt(s.lead)}일</td>
         <td>${s.active === false ? '<span class="pill mute">미사용</span>' : '<span class="pill ok">사용</span>'}</td>
         <td>${!S.canWrite ? '' : S.confirmSku === s.code
           ? `<span class="confirm">${esc(s.code)} 삭제할까요? <button class="danger sm" data-skudel="${esc(s.code)}">삭제</button><button class="ghost" data-skucancel>취소</button></span>`
@@ -1930,8 +1923,8 @@ function renderImport() {
     } else if (m.kind === 'sku') {
       const nNew = plan.list.filter((x) => x.isNew).length;
       summary = `새 SKU <b>${nNew}</b>개 · 기존 SKU 수정 <b>${plan.list.length - nNew}</b>개` + (plan.bad.length ? ` · <span style="color:var(--bad)">형식 오류로 건너뜀 ${plan.bad.length}줄</span> (코드는 영문·숫자·하이픈)` : '');
-      preview = '<thead><tr><th></th><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">기준원가</th><th class="n">소매가</th><th class="n">도매가</th></tr></thead><tbody>' +
-        plan.list.slice(0, 50).map((x) => `<tr><td>${x.isNew ? '<span class="pill ok">새로</span>' : '<span class="pill mute">수정</span>'}</td><td class="code">${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.part || '')}</td><td>${esc(x.option || '')}</td><td class="n">${x.costUsd ? '$' + x.costUsd : fmt(x.cost)}</td><td class="n">${fmt(x.retail)}</td><td class="n">${fmt(x.wholesale)}</td></tr>`).join('') + '</tbody>';
+      preview = '<thead><tr><th></th><th>코드</th><th>상품명</th><th>부위</th><th>옵션</th><th class="n">소매가</th><th class="n">도매가</th></tr></thead><tbody>' +
+        plan.list.slice(0, 50).map((x) => `<tr><td>${x.isNew ? '<span class="pill ok">새로</span>' : '<span class="pill mute">수정</span>'}</td><td class="code">${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.part || '')}</td><td>${esc(x.option || '')}</td><td class="n">${fmt(x.retail)}</td><td class="n">${fmt(x.wholesale)}</td></tr>`).join('') + '</tbody>';
       canGo = plan.list.length > 0;
     } else {
       const ch = plan.preview.filter((x) => x.d);
@@ -1967,10 +1960,6 @@ const EXPORTS = {
     return [['코드', '상품명', '부위', '옵션', '본사창고', '파스토', '보유', '입고예정', '하루판매', '남은일수', '발주점', '제안수량', '상태'],
       ...[...st].map(([code, r]) => { const s = S.skus.get(code) || {}; return [code, s.name, s.part, s.option, r.hq, r.fassto, r.have, r.pending, +r.daily.toFixed(2), r.days === Infinity ? '' : Math.round(r.days), r.point, (r.status === 'bad' || r.status === 'warn') ? r.suggest : '', STATUS[r.status][1]]; })];
   } },
-  cost: { label: '원가·재고금액', desc: '평균원가, 재고금액, 판매원가, 조정손익 (원가 탭의 기간 기준)', aoa() {
-    return [['코드', '상품명', '옵션', '기준원가', '평균원가', '보유', '재고금액', '판매수량', '판매원가', '거래처매출', '거래처이익', '조정손익'],
-      ...costRows().map(({ code, s, r }) => [code, s.name, s.option, r.base, Math.round(r.unit), r.have, Math.round(r.value), r.sold, Math.round(r.cogs), Math.round(r.sales), Math.round(r.sales - r.pcogs), Math.round(r.adj)])];
-  } },
   history: { label: '기록 내역', desc: '기록 내역 탭의 검색·필터 그대로', aoa() {
     return [['날짜', '종류', '위치', '코드', '상품명', '수량', '거래처', '단가', '메모', '기록자', '기록시각'],
       ...historyRows().map((m) => [m.date, MOVE[m.type] || m.type, LOC[m.loc] || m.loc, m.sku, (S.skus.get(m.sku) || {}).name || '', m.qty, m.partner || '', m.price || '', m.memo || '', m.by || '', m.at])];
@@ -1979,9 +1968,9 @@ const EXPORTS = {
     return [['상품명에 포함', '옵션에 포함', 'SKU', '배수', '메모'], ...(S.rules.length ? S.rules.map((r) => [r.name, r.opt, r.sku, r.mult, r.memo]) : [['슬개건 밴드', '블랙 양쪽', 'BK-004-BK', 2, '(예시)']])];
   } },
   skus: { label: '상품(SKU) 목록 · 양식', desc: '지금 목록을 받아 고친 뒤 그대로 다시 불러올 수 있습니다', aoa() {
-    return [['코드', '상품명', '부위', '옵션', '기준원가', '소매가', '도매가', '안전재고', '리드타임', '기준원가(USD)'],
-      ...([...S.skus.values()].length ? [...S.skus.values()].map((s) => [s.code, s.name, s.part, s.option, usdOf(s) ? '' : s.cost || '', s.retail || '', s.wholesale || '', s.safety, s.lead, usdOf(s) || ''])
-        : [['KNEE-BK-M', '(예시) 슬개건 무릎보호대', '무릎', '블랙 M', 2200, 19900, 6500, 200, 50]])];
+    return [['코드', '상품명', '부위', '옵션', '소매가', '도매가', '안전재고', '리드타임'],
+      ...([...S.skus.values()].length ? [...S.skus.values()].map((s) => [s.code, s.name, s.part, s.option, s.retail || '', s.wholesale || '', s.safety, s.lead])
+        : [['KNEE-BK-M', '(예시) 슬개건 무릎보호대', '무릎', '블랙 M', 19900, 6500, 200, 50]])];
   } },
   count: { label: '실사표 (재고 세기용)', desc: 'SKU 목록에 장부 수량을 채운 표. 실사 수량 칸을 채워 불러오기', aoa() {
     const st = ledger(stockWin());
@@ -2266,7 +2255,7 @@ function setUpMode(mode) {
   S.upMode = mode;
   for (const b of document.querySelectorAll('[data-upmode]')) b.setAttribute('aria-pressed', String(b.dataset.upmode === mode));
   $('up-desc').innerHTML = mode === 'in'
-    ? '공장 입고 내역 엑셀(상품명 · 옵션 · <b>입고수량</b>, 단가가 있으면 단가까지)을 올리면 상품별로 합쳐서 <b>재고에 더합니다</b>. 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄고, 단가가 있으면 원가도 다시 계산됩니다.'
+    ? '공장 입고 내역 엑셀(상품명 · 옵션 · <b>입고수량</b>)을 올리면 상품별로 합쳐서 <b>재고에 더합니다</b>. 공장에 주문해 둔 \'오는 중\' 수량은 자동으로 줄어듭니다.'
     : '네이버·쿠팡(판매자배송)·기타몰 <b>주문 엑셀</b>을 올리면 상품별 수량을 합쳐서 <b>재고에서 뺍니다</b>. 네이버 엑셀에 비밀번호가 걸려 있으면 엑셀에서 다른 이름으로 저장(비밀번호 없이)한 뒤 올려 주세요.';
   $('up-sheetbox').hidden = mode !== 'out';
   if (!$('up-sheet-url').value && S.conf && S.conf.naverSheet) $('up-sheet-url').value = S.conf.naverSheet;
