@@ -269,6 +269,44 @@ function saveConf(obj) {
   });
 }
 /** 상품 사진 저장 (상품 하나에 한 장, 화면에서 작게 줄여서 보냄) */
+/** 상품 정보 수정 (재고 보기 카드에서). 코드를 바꾸면 기록·연결표·매칭규칙의 코드도 같이 바꿉니다. 숨겨 둔 원가 칸은 그대로 둡니다. */
+function editSku(oldCode, s) {
+  return withLock_(() => {
+    oldCode = String(oldCode || '').trim().toUpperCase();
+    const code = String(s.code || '').trim().toUpperCase(), name = String(s.name || '').trim();
+    if (!/^[A-Z0-9][A-Z0-9_\-.]{0,39}$/.test(code)) throw new Error('코드는 영문 대문자·숫자·하이픈(-)만 쓸 수 있습니다.');
+    if (!name) throw new Error('상품명을 적어 주세요.');
+    const vals = rows_(TABS.SKU);
+    const i = vals.findIndex((r) => str_(r[0]).toUpperCase() === oldCode);
+    if (i < 0) throw new Error('수정할 상품을 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+    if (code !== oldCode && vals.some((r) => str_(r[0]).toUpperCase() === code)) throw new Error(`${code} 코드는 이미 다른 상품이 쓰고 있습니다.`);
+    const o = vals[i];
+    const oldKey = `${str_(o[2]) || '기타'}|${str_(o[1])}`, newKey = `${String(s.part || '').trim() || '기타'}|${name}`;
+    putRow_(TABS.SKU, i, [code, name, String(s.part || '').trim(), String(s.option || '').trim(), Math.max(0, num_(s.safety)), Math.max(1, num_(s.lead) || 50),
+      s.active === false ? 'N' : 'Y', now_(), o[8], s.retail === undefined ? o[9] : num_(s.retail) || '', s.wholesale === undefined ? o[10] : num_(s.wholesale) || '', o[11]]);
+    if (code !== oldCode) {
+      // 기록(SKU 5번째 칸) · 연결표(3번째) · 매칭규칙(4번째)의 코드 바꾸기
+      [[TABS.MOVE, 5], [TABS.MAP, 3], [TABS.RULE, 4]].forEach(([t, col]) => {
+        const sh = tab_(book_(), t), n = sh.getLastRow() - 1;
+        if (n < 1) return;
+        const rng = sh.getRange(2, col, n, 1), v = rng.getValues();
+        let changed = false;
+        v.forEach((r) => { if (String(r[0]).trim().toUpperCase() === oldCode) { r[0] = code; changed = true; } });
+        if (changed) rng.setValues(v);
+      });
+    }
+    // 상품명·부위가 바뀌면 사진도 새 이름으로 옮겨 붙임 (같은 상품의 다른 옵션이 옛 이름을 쓰면 복사)
+    if (oldKey !== newKey) {
+      const ph = rows_(TABS.PHOTO), pi = ph.findIndex((r) => str_(r[0]) === oldKey);
+      if (pi >= 0 && !ph.some((r) => str_(r[0]) === newKey)) {
+        const stillUsed = vals.some((r, k) => k !== i && `${str_(r[2]) || '기타'}|${str_(r[1])}` === oldKey);
+        const row = [newKey, name, ph[pi][2], now_()];
+        if (stillUsed) append_(TABS.PHOTO, [row]); else putRow_(TABS.PHOTO, pi, row);
+      }
+    }
+    return getData();
+  });
+}
 function savePhoto(key, name, data) {
   return withLock_(() => {
     if (String(data || '').length > 49000) throw new Error('사진이 너무 큽니다. 다른 사진으로 다시 시도해 주세요.');

@@ -391,7 +391,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 상품일괄등록</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 카드수정</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -1236,7 +1236,9 @@ function openSku(code) {
       <button data-quick="rocket" data-code="${esc(code)}">출고</button>
       <button data-quick="count" data-code="${esc(code)}">실사</button>
       ${(r.status === 'bad' || r.status === 'warn') ? `<button data-quick="order" data-code="${esc(code)}" data-qty="${r.suggest || ''}">발주 등록</button>` : ''}
+      ${S.canWrite ? `<button class="ghost" data-skedit="${esc(code)}">✏️ 상품 정보 수정</button>` : ''}
     </div>
+    <div id="sk-edit" hidden></div>
     <div class="small muted" style="font-weight:700;margin-bottom:6px">최근 기록</div>
     <div class="tablebox" style="max-height:240px"><table>${recent.length ? '<thead><tr><th>날짜</th><th>무슨 일</th><th>창고</th><th class="n">수량</th></tr></thead><tbody>' +
       recent.map((m) => `<tr><td>${esc(m.date)}</td><td>${esc(MOVE[m.type] || m.type)}${m.partner ? ' · ' + esc(m.partner) : ''}</td><td>${LOC[m.loc] || ''}</td><td class="n ${m.qty < 0 ? 'neg' : 'pos'}">${signed(m.qty)}</td></tr>`).join('') + '</tbody>'
@@ -1244,6 +1246,45 @@ function openSku(code) {
   $('skumodal').hidden = false;
 }
 function closeSku() { $('skumodal').hidden = true; }
+function openSkuEdit(code) {
+  const s = S.skus.get(code); if (!s) return;
+  const parts = [...new Set([...REG_PARTS, ...[...S.skus.values()].map((x) => x.part).filter(Boolean)])];
+  const box = $('sk-edit'); box.hidden = false;
+  box.innerHTML = `<div class="panel" style="margin:0 0 12px;padding:14px;gap:10px">
+    <b>상품 정보 수정</b>
+    <div class="row">
+      <label class="f">코드 (모델명)<input id="se-code" value="${esc(s.code)}" style="text-transform:uppercase;width:150px"></label>
+      <label class="f grow">상품명<input id="se-name" value="${esc(s.name)}"></label>
+    </div>
+    <div class="row">
+      <label class="f">부위<input id="se-part" list="se-parts" value="${esc(s.part || '')}" style="width:120px"><datalist id="se-parts">${parts.map((p) => `<option value="${esc(p)}">`).join('')}</datalist></label>
+      <label class="f grow">옵션<input id="se-opt" value="${esc(s.option || '')}" placeholder="예: 블랙 M (없으면 비움)"></label>
+    </div>
+    <div class="row">
+      <label class="f">안전재고<input type="number" id="se-safety" min="0" value="${s.safety}" style="width:90px"></label>
+      <label class="f">리드타임(일)<input type="number" id="se-lead" min="1" value="${s.lead}" style="width:90px"></label>
+      <label class="f">소매가<input type="number" id="se-retail" min="0" value="${s.retail || ''}" style="width:100px"></label>
+      <label class="f">도매가<input type="number" id="se-whole" min="0" value="${s.wholesale || ''}" style="width:100px"></label>
+      <label class="f"><span><input type="checkbox" id="se-active"${s.active !== false ? ' checked' : ''}> 사용 중</span></label>
+    </div>
+    <p class="small muted" id="se-note" style="margin:0">코드를 바꾸면 지금까지의 입출고 기록, 주문서 연결표, 매칭 규칙의 코드도 <b>함께 바뀝니다</b>. '사용 중'을 끄면 재고 보기·입출고 목록에서 숨겨집니다.</p>
+    <div class="row"><span class="grow"></span><button class="ghost" data-skeditcancel>취소</button><button class="primary" data-sksave="${esc(code)}">저장</button></div>
+  </div>`;
+  $('se-name').focus();
+}
+async function saveSkuEdit(oldCode, btn) {
+  const code = norm($('se-code').value).toUpperCase().replace(/\s+/g, ''), name = norm($('se-name').value);
+  if (!CODE_RE.test(code)) { toast('코드는 영문·숫자·하이픈(-)만 쓸 수 있어요 (예: BK-004)'); return; }
+  if (!name) { toast('상품명을 적어 주세요'); return; }
+  if (code !== oldCode && S.skus.has(code)) { toast(`${code} 코드는 이미 다른 상품이 쓰고 있어요`); return; }
+  btn.disabled = true;
+  try {
+    applyData(await api('editSku', oldCode, { code, name, part: norm($('se-part').value), option: norm($('se-opt').value),
+      safety: toNum($('se-safety').value), lead: toNum($('se-lead').value) || 50, retail: toNum($('se-retail').value), wholesale: toNum($('se-whole').value), active: $('se-active').checked }));
+    toast(code !== oldCode ? `${oldCode} → ${code}로 바꾸고 저장했습니다` : '상품 정보를 저장했습니다');
+    if (S.skus.has(code)) openSku(code); else closeSku();
+  } catch (e) { writeFail(e); btn.disabled = false; }
+}
 function startRecord(form, code, qty) {
   S.form = form;
   if (location.hash !== '#record') location.hash = '#record';
@@ -2252,6 +2293,9 @@ $('st-table').addEventListener('click', (e) => { const c = e.target.closest('[da
 $('sk-close').addEventListener('click', closeSku);
 $('skumodal').addEventListener('click', (e) => {
   if (e.target.id === 'skumodal') { closeSku(); return; }
+  const ed = e.target.closest('[data-skedit]'); if (ed) { openSkuEdit(ed.dataset.skedit); return; }
+  if (e.target.closest('[data-skeditcancel]')) { $('sk-edit').hidden = true; return; }
+  const sv = e.target.closest('[data-sksave]'); if (sv) { saveSkuEdit(sv.dataset.sksave, sv); return; }
   const q = e.target.closest('[data-quick]'); if (!q) return;
   closeSku(); startRecord(q.dataset.quick, q.dataset.code, q.dataset.qty);
 });
