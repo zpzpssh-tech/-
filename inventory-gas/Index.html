@@ -424,14 +424,14 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 빠른로딩</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 메뉴이름</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
-      <a href="#stock" data-view="stock">재고 보기</a>
-      <a href="#record" data-view="record">입출고 하기</a>
+      <a href="#stock" data-view="stock">재고</a>
+      <a href="#record" data-view="record">입출고</a>
       <a href="#upload" data-view="upload">엑셀 입출고</a>
-      <a href="#history" data-view="history">기록 보기</a>
+      <a href="#history" data-view="history">기록</a>
       <div class="grp">관리</div>
       <a href="#items" data-view="items">상품·거래처</a>
       <a href="#quote" data-view="quote">견적서</a>
@@ -470,9 +470,9 @@ table.mini tr[data-sku] { cursor: pointer; }
     <div class="dash" id="hm-dash"></div>
   </section>
 
-  <!-- 재고 보기 -->
+  <!-- 재고 -->
   <section id="v-stock" class="view" hidden>
-    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>재고 보기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>재고</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
       <div class="row">
         <input id="st-q" class="grow" placeholder="상품 이름, 옵션, 코드로 찾기">
@@ -494,9 +494,9 @@ table.mini tr[data-sku] { cursor: pointer; }
     </div>
   </section>
 
-  <!-- 입출고 하기: 카테고리 → 상품 카드 -->
+  <!-- 입출고: 카테고리 → 상품 카드 -->
   <section id="v-record" class="view" hidden>
-    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고 하기</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
+    <div class="vhead"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span>입출고</span><button class="ghost wclose" data-close title="옆 창 닫기">닫기 ✕</button></div>
     <div class="panel">
       <div class="row"><h2 class="grow">상품을 눌러서 입고·출고하세요</h2><input id="pk-q" placeholder="상품 찾기" style="width:220px"></div>
       <div class="chips" id="pk-parts"></div>
@@ -875,7 +875,7 @@ const FORMS = {
   loss: { label: '불량·폐기', mode: 'qty', locs: ['hq', 'fassto'], text: '불량, 파손, 분실로 <b>팔 수 없게 된 수량</b>.' },
   count: { label: '실사 맞추기', mode: 'count', locs: ['hq', 'pending'], text: '직접 세어 본 <b>실제 수량</b>을 입력하면 장부와의 차이를 조정으로 기록합니다.' },
 };
-const VIEWS = { home: '홈', stock: '재고 보기', record: '입출고 하기', upload: '엑셀 입출고', history: '기록 보기', items: '상품·거래처', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
+const VIEWS = { home: '홈', stock: '재고', record: '입출고', upload: '엑셀 입출고', history: '기록', items: '상품·거래처', quote: '견적서', excel: '엑셀 불러오기/내보내기' };
 const ICON = {
   in: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0-4-4m4 4 4-4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
   out: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4m0 0L8 8m4-4 4 4"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
@@ -1069,7 +1069,7 @@ function renderStock() {
       : `<tr><td colspan="11" class="empty">조건에 맞는 상품이 없어요.</td></tr>`) + '</tbody>';
 }
 
-/* ---------- 상품 한꺼번에 등록 (재고 보기) ---------- */
+/* ---------- 상품 한꺼번에 등록 (재고) ---------- */
 const PART_PREFIX = [['무릎', 'BK'], ['슬개', 'BK'], ['허리', 'BB'], ['손목', 'WS'], ['팔꿈치', 'EB'], ['엘보', 'EB'], ['목', 'NS'], ['어깨', 'SH'], ['발목', 'AK'], ['깔창', 'FT'], ['발바닥', 'FT'], ['발', 'FT'], ['종아리', 'CF'], ['허벅지', 'TH'], ['손가락', 'FG']];
 const OPT_CODE = [[/블랙|검정|black/i, 'BK'], [/네이비|navy/i, 'NV'], [/블루|파랑|blue/i, 'BL'], [/레드|빨강|red/i, 'RD'], [/화이트|흰색|white/i, 'WH'], [/그레이|회색|gray|grey/i, 'GY'],
   [/베이지|beige/i, 'BE'], [/핑크|pink/i, 'PK'], [/그린|초록|green/i, 'GN'], [/브라운|갈색|brown/i, 'BR'], [/퍼플|보라|purple/i, 'PP'], [/옐로우|노랑|yellow/i, 'YE'], [/스킨|살색|skin/i, 'SK'],
@@ -1150,7 +1150,7 @@ async function regSave() {
   $('rg-save').disabled = true;
   try {
     applyData(await api('saveSkus', list.map((x) => ({ code: x.code, name: x.name, part: x.part, option: x.option, safety, lead, active: true }))));
-    closeReg(); toast(`상품 ${list.length}개를 등록했습니다. 재고는 '입출고 하기 → 재고 실사'로 넣으세요`);
+    closeReg(); toast(`상품 ${list.length}개를 등록했습니다. 재고는 '입출고 → 재고 실사'로 넣으세요`);
   } catch (e) { writeFail(e); $('rg-save').disabled = false; }
 }
 
@@ -1225,7 +1225,7 @@ function renderHome() {
   const td = today();
   const wPend = widget('입고 예정', '공장에 발주 등록했지만 아직 입고되지 않은 수량. 예정일 = 발주일 + 리드타임.', pendRows.length
     ? `<table class="mini"><thead><tr><th>예정일</th><th>상품</th><th class="n">수량</th></tr></thead><tbody>${pendRows.slice(0, 7).map((x) => `<tr data-sku="${esc(x.code)}"><td class="${x.eta && x.eta < td ? 'overdue' : ''}">${x.eta ? x.eta.slice(5).replace('-', '/') : '—'}${x.eta && x.eta < td ? ' 지연' : ''}</td><td>${esc(x.sk.name || x.code)} <span class="muted">${esc(x.sk.option || '')}</span></td><td class="n">${fmt(x.qty)}</td></tr>`).join('')}</tbody></table>`
-    : '<div class="empty">입고 예정이 없어요.<br><span class="small">공장에 주문하면 입출고 하기 → 기타 → 발주 등록</span></div>', { flush: !!pendRows.length, more: 'stock' });
+    : '<div class="empty">입고 예정이 없어요.<br><span class="small">공장에 주문하면 입출고 → 기타 → 발주 등록</span></div>', { flush: !!pendRows.length, more: 'stock' });
 
   // 3) 이번 달 입출고
   const mo = td.slice(0, 7), sum = { in: 0, out: 0, rocket: 0, mv: 0, ret: 0, loss: 0 };
@@ -1316,7 +1316,7 @@ function openSkuEdit(code) {
       <label class="f">도매가<input type="number" id="se-whole" min="0" value="${s.wholesale || ''}" style="width:100px"></label>
       <label class="f"><span><input type="checkbox" id="se-active"${s.active !== false ? ' checked' : ''}> 사용 중</span></label>
     </div>
-    <p class="small muted" id="se-note" style="margin:0">코드를 바꾸면 지금까지의 입출고 기록, 주문서 연결표, 매칭 규칙의 코드도 <b>함께 바뀝니다</b>. '사용 중'을 끄면 재고 보기·입출고 목록에서 숨겨집니다.</p>
+    <p class="small muted" id="se-note" style="margin:0">코드를 바꾸면 지금까지의 입출고 기록, 주문서 연결표, 매칭 규칙의 코드도 <b>함께 바뀝니다</b>. '사용 중'을 끄면 재고·입출고 목록에서 숨겨집니다.</p>
     <div class="row"><span class="grow"></span><button class="ghost" data-skeditcancel>취소</button><button class="primary" data-sksave="${esc(code)}">저장</button></div>
   </div>`;
   $('se-name').focus();
@@ -1336,7 +1336,7 @@ async function saveSkuEdit(oldCode, btn) {
 }
 function startRecord(form, code, qty) {
   S.form = form;
-  // 상품을 정해서 누른 경우(재고 보기 카드 등): 화면은 그대로 두고 입출고 창만 위에 띄움
+  // 상품을 정해서 누른 경우(재고 카드 등): 화면은 그대로 두고 입출고 창만 위에 띄움
   if (!code) { if (location.hash !== '#record') location.hash = '#record'; renderPicker(); }
   if (code) {
     const s0 = S.skus.get(code); if (!s0) return;
