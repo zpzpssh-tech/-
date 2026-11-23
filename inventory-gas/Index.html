@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 메뉴이름</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진빠르게</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -2272,7 +2272,7 @@ function applyData(d, fromCache) {
   if (d.sheetUrl) { $('sheet-link').href = d.sheetUrl; $('sheet-link').hidden = false; }
   S.loaded = true; S.ver++;
   renderSkuList(); refresh();
-  if (!fromCache) saveCache(d);
+  if (!fromCache) { S.lastD = d; saveCache(d); }
 }
 const CACHE_KEY = 'inv-cache-v1';
 function saveCache(d) {
@@ -2306,17 +2306,30 @@ $('pm-photo').addEventListener('change', (e) => {
   const f = e.target.files && e.target.files[0]; if (!f || !S.pmKey) return;
   if (!guard()) return;
   const img = new Image(), rd = new FileReader(), p = productMap().get(S.pmKey);
-  rd.onload = () => { img.onload = async () => {
-    // 가운데를 정사각형으로 잘라 360px JPEG로 줄임 (시트 한 칸에 들어가도록)
-    const side = Math.min(img.width, img.height), cv = document.createElement('canvas'); cv.width = cv.height = 360;
-    cv.getContext('2d').drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 360, 360);
-    let data = cv.toDataURL('image/jpeg', 0.8); if (data.length > 45000) data = cv.toDataURL('image/jpeg', 0.6);
-    try { applyData(await api('savePhoto', photoKey(S.pmKey), p ? p.name : '', data)); renderPmHead(); toast('사진을 넣었습니다'); } catch (err) { writeFail(err); }
+  const key = photoKey(S.pmKey), name = p ? p.name : '';
+  img.onload = async () => {
+    URL.revokeObjectURL(img.src);
+    // 가운데를 정사각형으로 잘라 320px JPEG로 줄임 (시트 한 칸에 들어가도록)
+    const side = Math.min(img.width, img.height), cv = document.createElement('canvas'); cv.width = cv.height = 320;
+    const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 320, 320);
+    let data = cv.toDataURL('image/jpeg', 0.82); if (data.length > 45000) data = cv.toDataURL('image/jpeg', 0.6);
     $('pm-photo').value = '';
-  }; img.src = rd.result; };
-  rd.readAsDataURL(f);
+    // 화면에는 바로 보여주고, 시트 저장은 뒤에서 (기다릴 필요 없음)
+    const old = S.photos[key];
+    S.photos[key] = data; renderPmHead(); refresh(); toast('사진을 넣었습니다'); if (S.lastD) saveCache(S.lastD);
+    try { await api('savePhoto', key, name, data); }
+    catch (err) { if (old) S.photos[key] = old; else delete S.photos[key]; renderPmHead(); refresh(); writeFail(err); }
+  };
+  img.onerror = () => toast('사진을 열지 못했습니다. JPG나 PNG 사진으로 다시 시도해 주세요');
+  img.src = URL.createObjectURL(f);   // 파일을 글자로 바꾸지 않고 바로 열어서 더 빠름
 });
-$('pm-photo-del').addEventListener('click', async () => { if (!guard() || !S.pmKey) return; try { applyData(await api('deletePhoto', photoKey(S.pmKey))); renderPmHead(); toast('사진을 지웠습니다'); } catch (err) { writeFail(err); } });
+$('pm-photo-del').addEventListener('click', async () => {
+  if (!guard() || !S.pmKey) return;
+  const key = photoKey(S.pmKey), old = S.photos[key];
+  delete S.photos[key]; renderPmHead(); refresh(); toast('사진을 지웠습니다'); if (S.lastD) saveCache(S.lastD);
+  try { await api('deletePhoto', key); } catch (err) { if (old) S.photos[key] = old; renderPmHead(); refresh(); writeFail(err); }
+});
 $('hm-actions').addEventListener('click', (e) => {
   const g = e.target.closest('[data-gogroup]'), v = e.target.closest('[data-goview]');
   if (g) startRecord(GROUPS[g.dataset.gogroup].forms[0]);

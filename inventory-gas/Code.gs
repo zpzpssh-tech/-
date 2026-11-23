@@ -332,22 +332,24 @@ function editSku(oldCode, s) {
 function savePhoto(key, name, data) {
   return withLock_(() => {
     if (String(data || '').length > 49000) throw new Error('사진이 너무 큽니다. 다른 사진으로 다시 시도해 주세요.');
-    const vals = rows_(TABS.PHOTO);
-    const i = vals.findIndex((r) => str_(r[0]) === key);
+    // 속도: 다른 사진들(큰 글자 덩어리)은 읽지 않고 '상품키' 칸만 읽어서 자리를 찾음. 전체 데이터도 다시 보내지 않음
+    const i = photoKeys_().indexOf(key);
     const row = [key, name || '', data || '', now_()];
     if (i >= 0) putRow_(TABS.PHOTO, i, row); else append_(TABS.PHOTO, [row]);
-    LITE_ = false;
-    return getData();
+    return { ok: true, key: key };
   });
 }
 function deletePhoto(key) {
   return withLock_(() => {
     const sh = tab_(book_(), TABS.PHOTO);
-    const vals = rows_(TABS.PHOTO);
-    for (let i = vals.length - 1; i >= 0; i--) if (str_(vals[i][0]) === key) sh.deleteRow(i + 2);
-    LITE_ = false;
-    return getData();
+    const keys = photoKeys_();
+    for (let i = keys.length - 1; i >= 0; i--) if (keys[i] === key) sh.deleteRow(i + 2);
+    return { ok: true, key: key };
   });
+}
+function photoKeys_() {
+  const sh = tab_(book_(), TABS.PHOTO), n = sh.getLastRow() - 1;
+  return n < 1 ? [] : sh.getRange(2, 1, n, 1).getValues().map((r) => str_(r[0]));
 }
 /** 오늘 달러 환율 (구글 파이낸스): 설정 탭 빈 칸에 잠깐 수식을 넣어 읽고 지움 */
 function getFx() {
