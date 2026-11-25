@@ -50,6 +50,66 @@ const DEFAULT_PARTNERS = [
 const rev_ = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [v, k]));
 const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
 
+/* ---------- 버전 · 자동 업데이트 ----------
+ * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
+ * (코드를 직접 복사·붙여넣기 할 필요 없음)
+ * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
+const APP_VERSION = '2026-11-25.02';
+const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
+function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
+function fetchText_(name) {
+  const r = UrlFetchApp.fetch(updateSrc_() + name + '?t=' + Date.now(), { muteHttpExceptions: true });
+  if (r.getResponseCode() !== 200) throw new Error(name + ' 파일을 받지 못했습니다 (' + r.getResponseCode() + ')');
+  return r.getContentText('UTF-8');
+}
+/** 새 버전이 있는지 확인 (화면이 켜질 때 한 번, 1시간 동안은 기억해 둔 결과를 씀) */
+function checkUpdate(force) {
+  const cache = CacheService.getScriptCache();
+  let latest = force ? null : cache.get('latestVersion');
+  let notes = force ? null : cache.get('latestNotes');
+  if (!latest) {
+    const code = fetchText_('Code.gs');
+    latest = (code.match(/const APP_VERSION = '([^']+)'/) || [])[1] || '';
+    try { notes = fetchText_('CHANGELOG.txt').split(/\r?\n/).filter((l) => l.trim()).slice(0, 8).join('\n'); } catch (e) { notes = ''; }
+    cache.put('latestVersion', latest, 3600); cache.put('latestNotes', notes || '', 3600);
+  }
+  return { current: APP_VERSION, latest: latest, notes: notes || '', available: !!latest && latest > APP_VERSION };
+}
+function scriptApi_(method, path, body) {
+  const r = UrlFetchApp.fetch('https://script.googleapis.com/v1/projects/' + ScriptApp.getScriptId() + path, {
+    method: method, contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, payload: body ? JSON.stringify(body) : undefined,
+  });
+  const code = r.getResponseCode(), text = r.getContentText();
+  if (code >= 300) {
+    if (/has not (been used|enabled)|SERVICE_DISABLED|usersettings/i.test(text)) throw new Error('Apps Script API가 꺼져 있습니다. script.google.com/home/usersettings 에서 "Google Apps Script API"를 사용으로 켜고 다시 눌러 주세요.');
+    if (code === 403) throw new Error('업데이트 권한이 없습니다. 프로그램을 만든 대표님 계정으로 눌러 주세요.');
+    throw new Error('업데이트 실패 (' + code + '): ' + text.slice(0, 200));
+  }
+  return text ? JSON.parse(text) : {};
+}
+/** 업데이트: 최신 코드 받기 → 프로젝트에 덮어쓰기 → 새 버전 → 지금 쓰는 웹앱 주소(배포)를 새 버전으로 */
+function applyUpdate() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) throw new Error('다른 업데이트가 진행 중입니다. 잠시 후 다시 시도해 주세요.');
+  try {
+    const code = fetchText_('Code.gs'), html = fetchText_('Index.html'), manifest = fetchText_('appsscript.json');
+    const latest = (code.match(/const APP_VERSION = '([^']+)'/) || [])[1] || '';
+    if (!latest || html.indexOf('</html>') < 0) throw new Error('받은 파일이 완전하지 않습니다. 잠시 후 다시 시도해 주세요.');
+    JSON.parse(manifest);
+    scriptApi_('put', '/content', { files: [
+      { name: 'appsscript', type: 'JSON', source: manifest },
+      { name: 'Code', type: 'SERVER_JS', source: code },
+      { name: 'Index', type: 'HTML', source: html },
+    ] });
+    const ver = scriptApi_('post', '/versions', { description: '자동 업데이트 ' + latest });
+    const deps = (scriptApi_('get', '/deployments').deployments || []).filter((d) => d.deploymentConfig && d.deploymentConfig.versionNumber && (d.entryPoints || []).some((e) => e.entryPointType === 'WEB_APP'));
+    deps.forEach((d) => scriptApi_('put', '/deployments/' + d.deploymentId, { deploymentConfig: { scriptId: ScriptApp.getScriptId(), versionNumber: ver.versionNumber, manifestFileName: 'appsscript', description: '자동 업데이트 ' + latest } }));
+    CacheService.getScriptCache().remove('latestVersion');
+    return { ok: true, version: latest, versionNumber: ver.versionNumber, deployments: deps.length };
+  } finally { lock.releaseLock(); }
+}
+
 /* ---------- 웹페이지 열기 ---------- */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -161,7 +221,7 @@ function getData() {
   const orderDone = orderRows.map((r) => str_(r[0])).filter(Boolean);
   const orderDays = {}; orderRows.forEach((r) => { const d = str_(r[1]); if (d) orderDays[d] = (orderDays[d] || 0) + 1; });
   if (!LITE_ && !schemaOk_()) { PropertiesService.getScriptProperties().setProperty('SCHEMA', SCHEMA_VER); SCHEMA_OK_ = true; }
-  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, photoNames, orderDone, orderDays, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
+  return { skus, partners, moves, maps, uploads, rules, memo, conf, quotes, photos, photoNames, orderDone, orderDays, appVersion: APP_VERSION, me: me_(), sheetUrl: book_().getUrl(), appUrl: appUrl_() };
 }
 
 /* ---------- 쓰기 ---------- */

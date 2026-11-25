@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-25 전체삭제</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px;cursor:pointer" title="눌러서 새 버전 확인">버전 2026-11-25.02</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -444,7 +444,8 @@ table.mini tr[data-sku] { cursor: pointer; }
     </div>
   </aside>
   <main class="main">
-  <header class="top">
+  <div class="banner info" id="upd-bar" hidden style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"></div>
+    <header class="top">
     <div><div class="ptitle" id="ptitle">재고 현황</div><div class="pmeta" id="pmeta">본사창고 · 파스토 · 입고예정</div></div>
     <div class="locs">
       <div id="locs" class="locs"></div>
@@ -1190,6 +1191,29 @@ async function runDelAll() {
     toast(`상품을 모두 지웠습니다 · 백업 탭: 백업_…_${(d.deleted || {}).backup || ''}`);
   } catch (e) { writeFail(e); $('da-go').disabled = false; }
 }
+
+/* ---------- 업데이트 (코드 붙여넣기 대신 버튼 한 번) ---------- */
+async function checkUpd(force) {
+  try { const r = await api('checkUpdate', !!force); S.upd = r; renderUpd(); if (force && !r.available) toast(`최신 버전입니다 (${r.current})`); }
+  catch (e) { if (force) toast('업데이트 확인 실패: ' + e.message); }
+}
+function renderUpd() {
+  const r = S.upd, b = $('upd-bar');
+  if (!r || !r.available) { b.hidden = true; return; }
+  b.hidden = false;
+  b.innerHTML = `<span><b>새 버전이 있습니다</b> (${esc(r.current)} → ${esc(r.latest)})</span>` + (r.notes ? `<span class="small" style="flex-basis:100%;white-space:pre-line">${esc(r.notes)}</span>` : '') +
+    `<span class="grow"></span><button class="primary sm" id="upd-go">지금 업데이트</button><button class="ghost sm" id="upd-later">나중에</button>`;
+}
+$('upd-bar').addEventListener('click', async (e) => {
+  if (e.target.id === 'upd-later') { $('upd-bar').hidden = true; return; }
+  if (e.target.id !== 'upd-go') return;
+  const btn = e.target; btn.disabled = true; btn.textContent = '업데이트 중… (30초쯤 걸려요)';
+  try {
+    const r = await api('applyUpdate');
+    $('upd-bar').innerHTML = `<span><b>업데이트 완료</b> (버전 ${esc(r.version)}) · </span><a href="${esc(S.appUrl || '#')}" target="_top"><b>여기를 눌러 새 버전으로 다시 열기</b></a>`;
+  } catch (err) { btn.disabled = false; btn.textContent = '다시 시도'; toast(err.message); }
+});
+$('app-ver').addEventListener('click', () => checkUpd(true));
 
 /* ---------- 홈 ---------- */
 function widget(title, tip, body, opts = {}) {
@@ -2329,6 +2353,8 @@ function applyData(d, fromCache) {
     if ((m.type === 'inbound' && m.loc === 'hq') || m.type === 'order') S.lastBuy.set(m.sku, { price: m.price, usd: m.usd || 0, date: m.date });
   }
   S.me = d.me || ''; S.appUrl = d.appUrl || '';
+  if (d.appVersion) $('app-ver').textContent = '버전 ' + d.appVersion;
+  if (!fromCache && !S.updChecked) { S.updChecked = true; setTimeout(() => checkUpd(false), 1500); }
   if (d.sheetUrl) { $('sheet-link').href = d.sheetUrl; $('sheet-link').hidden = false; }
   S.loaded = true; S.ver++;
   renderSkuList(); refresh();
