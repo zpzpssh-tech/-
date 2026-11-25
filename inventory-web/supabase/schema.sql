@@ -1,5 +1,5 @@
 -- 올투게더나우 재고관리 — 데이터베이스(Supabase) 표 만들기
--- Supabase 화면 왼쪽 'SQL Editor'에 이 파일 내용을 통째로 붙여넣고 [Run]을 한 번 누르면 됩니다.
+-- Vercel에서 Supabase를 연결해 두면 배포할 때 자동으로 실행됩니다 (직접 붙여넣을 필요 없음).
 -- 지금 구글 시트의 탭 하나 = 여기 표(table) 하나입니다.
 
 -- 1) 들어올 수 있는 사람 (대표님·직원 이메일). owner = 모든 권한, staff = 기록 가능, viewer = 보기만
@@ -148,6 +148,18 @@ end $$;
 alter table allowed_users enable row level security;
 drop policy if exists read_allowed on allowed_users;
 create policy read_allowed on allowed_users for select using (my_role() = 'owner' or lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+drop policy if exists write_allowed on allowed_users;
+create policy write_allowed on allowed_users for all using (my_role() = 'owner') with check (my_role() = 'owner');
+
+-- ===== 처음 로그인한 사람을 대표(owner)로: 아직 아무도 등록돼 있지 않을 때만 =====
+create or replace function claim_owner() returns text
+language plpgsql security definer set search_path = public as $$
+declare e text := lower(coalesce(auth.jwt() ->> 'email', ''));
+begin
+  if e = '' then return null; end if;
+  if not exists (select 1 from allowed_users) then insert into allowed_users (email, role) values (e, 'owner'); end if;
+  return (select role from allowed_users where lower(email) = e);
+end $$;
 
 -- ===== 상품 코드 바꾸기: 기록·연결표·규칙의 코드도 한 번에 (중간에 실패하면 전부 취소) =====
 create or replace function rename_sku(old_code text, new_code text) returns void
@@ -188,5 +200,5 @@ insert into partners (name, basis, memo) values
   ('쿠팡 로켓배송', '도매가', '쿠팡 매입(RKT)'), ('네이버 스마트스토어', '소매가', ''), ('쿠팡 올투게더나우', '소매가', 'CPG')
 on conflict do nothing;
 
--- 마지막: 대표님 이메일을 owner로 등록 (아래 이메일을 대표님 구글 계정으로 바꿔서 실행)
--- insert into allowed_users (email, role) values ('대표님이메일@gmail.com', 'owner') on conflict (email) do update set role = 'owner';
+-- 대표님 등록: 따로 할 필요 없음. 프로그램에 처음 로그인한 이메일이 자동으로 대표(owner)가 됩니다.
+-- (Vercel 환경 변수 OWNER_EMAIL 을 넣어 두면 그 이메일만 대표가 됩니다)

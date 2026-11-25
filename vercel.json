@@ -1,4 +1,5 @@
 {
+  "installCommand": "cd inventory-web && npm install --no-audit --no-fund",
   "buildCommand": "node inventory-web/build.js",
   "outputDirectory": "inventory-web/public"
 }

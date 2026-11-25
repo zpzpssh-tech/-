@@ -6,39 +6,20 @@
 - **데이터**: Supabase (전용 데이터베이스, 자동 백업)
 - **로그인**: 이메일로 받은 로그인 링크 (비밀번호 없음). `allowed_users` 표에 등록된 이메일만 들어올 수 있음
 
-## 처음 한 번 설정
+## 처음 한 번 설정 (Vercel 안에서 버튼으로)
 
-### 1. Supabase (데이터베이스)
-1. supabase.com → **GitHub 계정으로 로그인** → **New project**
-   - Name: `atgn-inventory` / Region: **Northeast Asia (Seoul)** / Database Password: 따로 적어 두기 (어디에도 붙여넣지 않기)
-2. 왼쪽 **SQL Editor** → **New query** → `supabase/schema.sql` 내용을 통째로 붙여넣고 **Run**
-3. 같은 곳에서 아래 한 줄을 대표님 이메일로 바꿔 **Run** (대표님을 관리자로 등록)
-   ```sql
-   insert into allowed_users (email, role) values ('대표님이메일@gmail.com', 'owner');
-   ```
-   직원은 `'staff'`(기록 가능), 보기만 할 사람은 `'viewer'`로 같은 방식으로 추가합니다.
-4. **Project Settings → API** 에서 두 값을 확인해 둡니다 (Vercel에 넣을 값)
-   - `Project URL`
-   - `anon` `public` 키 (⚠️ `service_role` 키는 절대 쓰지 않기)
+1. 이 저장소를 Vercel 프로젝트로 가져오기 (Root Directory 는 비워 둬도 됨 — 맨 위 vercel.json 이 알아서 이 폴더를 배포)
+2. Vercel 프로젝트 → **Storage** → **Create Database** → **Supabase** → Region **Seoul** → 이 프로젝트에 **Connect**
+   - 주소·공개 키·데이터베이스 접속 정보가 환경 변수로 **자동으로** 들어감 (복사·붙여넣기 없음)
+3. **Deployments → Redeploy** — 배포하면서 데이터베이스 표가 **자동으로** 만들어짐
+4. Supabase 화면(Storage 에서 Open in Supabase) → **Authentication → URL Configuration → Site URL** 에 Vercel 주소 입력
+5. 프로그램 주소로 들어가 이메일 로그인 → **처음 로그인한 사람이 자동으로 대표(owner)** 가 됨
+   - 다른 사람이 먼저 들어오는 것을 막으려면 Vercel 환경 변수  에 대표님 이메일을 넣어 두면 됨
 
-### 2. Vercel (화면)
-1. Vercel → **Add New… → Project** → 이 GitHub 저장소 **Import**
-2. **Root Directory**: `inventory-web` (Edit 눌러서 선택)
-3. **Environment Variables** 두 개 추가
-   - `SUPABASE_URL` = Supabase의 Project URL
-   - `SUPABASE_ANON_KEY` = Supabase의 anon public 키
-4. **Deploy** → 끝나면 나오는 주소(…vercel.app)를 복사
+> 직접 만든 Supabase 프로젝트를 쓸 때는 , (공개 키),  을 환경 변수로 넣으면 똑같이 동작합니다.
+> ⚠️ /secret 키는 화면에 들어가지 않도록 막아 두었습니다.
 
-> Vercel 메뉴 위치 (2026년 화면): 폴더는 **Settings → Build and Deployment → Root Directory**,
-> 배포 줄기는 **Settings → Environments → Production → Branch Tracking**.
-> 줄기를 바꾼 뒤에는 **Redeploy가 아니라 새 배포**가 필요합니다 (Redeploy는 예전 줄기의 코드를 다시 배포함).
-
-### 3. 로그인 링크 주소 맞추기
-Supabase → **Authentication → URL Configuration**
-- **Site URL**: Vercel 주소 (예: `https://atgn-inventory.vercel.app`)
-- **Redirect URLs**: 같은 주소 추가
-
-### 4. 데이터 옮기기
+### 데이터 옮기기
 1. 예전 재고DB 구글 시트 → **파일 → 다운로드 → Microsoft Excel (.xlsx)**
 2. 새 프로그램 → **엑셀 불러오기/내보내기 → 예전 프로그램(구글 시트)에서 옮겨 오기** → 파일 올리기 → **이대로 옮기기**
 

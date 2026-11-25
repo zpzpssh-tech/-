@@ -55,8 +55,8 @@
   async function whoami() {
     const s = await session(); if (!s) return null;
     ME = s.user.email || '';
-    const r = await q(sb.from('allowed_users').select('role').ilike('email', ME).maybeSingle());
-    ROLE = r ? r.role : null;
+    // 처음 로그인한 사람은 자동으로 대표(owner)가 됨 (아직 아무도 등록돼 있지 않을 때만)
+    ROLE = (await q(sb.rpc('claim_owner'))) || null;
     return { email: ME, role: ROLE };
   }
 

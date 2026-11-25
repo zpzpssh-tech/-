@@ -3,5 +3,6 @@
   "private": true,
   "version": "1.0.0",
   "description": "올투게더나우 재고관리 웹 프로그램",
-  "scripts": { "build": "node build.js" }
+  "scripts": { "build": "node build.js" },
+  "dependencies": { "pg": "8.13.1" }
 }
