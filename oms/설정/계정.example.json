@@ -1,0 +1,12 @@
+{
+  "데모모드": true,
+  "자동수집_분": 10,
+  "첫수집_일수": 3,
+  "기본택배사": "CJ대한통운",
+  "계정": {
+    "NAV": {"client_id": "", "client_secret": "", "n배송_속성": ["ARRIVAL_GUARANTEE"]},
+    "CPG": {"vendor_id": "", "access_key": "", "secret_key": ""},
+    "HCK": {"vendor_id": "", "access_key": "", "secret_key": "", "판매자배송": false, "로켓그로스": true},
+    "YCU": {"vendor_id": "", "access_key": "", "secret_key": "", "판매자배송": false, "로켓그로스": true}
+  }
+}

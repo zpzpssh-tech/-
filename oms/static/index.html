@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>올투게더나우 통합관리</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f8f9fb; --line: #e4e7ec; --line-2: #eef0f3;
+  --text: #191c21; --text-2: #5b6370; --text-3: #8a919c;
+  --side: #121a2b; --side-text: #c4cad6; --side-hover: #1c2740; --side-active: #25324f;
+  --accent: #2563eb; --accent-soft: #e8efff; --accent-text: #1d4fc4;
+  --good: #0e7a2f; --good-soft: #e3f4e8; --warn: #a76100; --warn-soft: #fff3dc;
+  --bad: #c62828; --bad-soft: #fde8e8; --info-soft: #eef2f7;
+  --series-1: #257de0; --series-2: #f47230; --series-3: #00b894; --series-4: #f2a600; --series-5: #ee7fac;
+  --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111317; --surface: #1a1d23; --surface-2: #20242b; --line: #2e333c; --line-2: #262a31;
+    --text: #eceef2; --text-2: #a7aeba; --text-3: #7c8491;
+    --side: #0b0f18; --side-text: #b4bccb; --side-hover: #151c2c; --side-active: #1e2a44;
+    --accent: #5b8def; --accent-soft: #1d2a47; --accent-text: #9dbbff;
+    --good: #4cc26e; --good-soft: #15301f; --warn: #f0b04a; --warn-soft: #3a2a10;
+    --bad: #f07070; --bad-soft: #3d1a1a; --info-soft: #232a35;
+    --series-1: #338ced; --series-2: #e76624; --series-3: #00a888; --series-4: #d28e05; --series-5: #e24d8b;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111317; --surface: #1a1d23; --surface-2: #20242b; --line: #2e333c; --line-2: #262a31;
+  --text: #eceef2; --text-2: #a7aeba; --text-3: #7c8491;
+  --side: #0b0f18; --side-text: #b4bccb; --side-hover: #151c2c; --side-active: #1e2a44;
+  --accent: #5b8def; --accent-soft: #1d2a47; --accent-text: #9dbbff;
+  --good: #4cc26e; --good-soft: #15301f; --warn: #f0b04a; --warn-soft: #3a2a10;
+  --bad: #f07070; --bad-soft: #3d1a1a; --info-soft: #232a35;
+  --series-1: #338ced; --series-2: #e76624; --series-3: #00a888; --series-4: #d28e05; --series-5: #e24d8b;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+.app { display: grid; grid-template-columns: 216px minmax(0, 1fr); min-height: 100vh; }
+/* 사이드바 */
+.side { background: var(--side); color: var(--side-text); padding: 20px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+.brand { padding: 4px 10px 20px; }
+.brand b { display: block; color: #fff; font-size: 16px; letter-spacing: -.2px; }
+.brand span { font-size: 12px; color: #7f8aa3; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--side-text); text-decoration: none; cursor: pointer; margin-bottom: 2px; }
+.nav a:hover { background: var(--side-hover); }
+.nav a.on { background: var(--side-active); color: #fff; }
+.nav svg { width: 18px; height: 18px; flex: none; opacity: .9; }
+.nav .badge { margin-left: auto; background: #e5484d; color: #fff; font-size: 11px; padding: 0 7px; border-radius: 10px; line-height: 18px; }
+.side-foot { margin-top: auto; padding: 10px; font-size: 12px; color: #7f8aa3; }
+.side-foot .mode { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #3a2f12; color: #f3c35b; font-weight: 600; margin-bottom: 6px; }
+.side-foot .mode.live { background: #12321e; color: #6fd68f; }
+/* 본문 */
+.main { padding: 24px 28px 60px; min-width: 0; }
+.head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.head h1 { font-size: 22px; margin: 0; letter-spacing: -.4px; }
+.head .sub { color: var(--text-3); font-size: 13px; }
+.head .right { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 7px 13px; border-radius: 8px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.danger { color: var(--bad); }
+.btn.sm { padding: 4px 10px; font-size: 13px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.card h2 { font-size: 15px; margin: 0; padding: 14px 16px 0; display: flex; align-items: center; gap: 8px; }
+.card h2 .hint { font-weight: 400; color: var(--text-3); font-size: 12px; }
+.card .body { padding: 12px 16px 16px; }
+.grid { display: grid; gap: 14px; }
+.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 14px; }
+.kpi { padding: 14px 16px; cursor: pointer; }
+.kpi .label { color: var(--text-2); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.kpi .val { font-size: 26px; font-weight: 700; letter-spacing: -.5px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .val small { font-size: 14px; font-weight: 500; color: var(--text-2); margin-left: 2px; }
+.kpi .foot { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+.kpi.alert .val { color: var(--bad); }
+.two { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+/* 표 */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-weight: 600; color: var(--text-2); font-size: 12px; padding: 9px 10px; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+tr:hover td { background: var(--surface-2); }
+td.num, th.num { text-align: right; }
+tr.sel td { background: var(--accent-soft) !important; }
+.muted { color: var(--text-3); }
+.small { font-size: 12px; }
+.ell { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; line-height: 20px; }
+.st-신규 { background: var(--accent-soft); color: var(--accent-text); }
+.st-발주확인 { background: var(--warn-soft); color: var(--warn); }
+.st-송장입력 { background: #efe7ff; color: #5b3cc4; }
+.st-출고완료 { background: var(--good-soft); color: var(--good); }
+.st-위탁배송 { background: var(--info-soft); color: var(--text-2); }
+.st-취소 { background: var(--bad-soft); color: var(--bad); }
+:root[data-theme="dark"] .st-송장입력 { background: #2b2246; color: #b9a6ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .st-송장입력 { background: #2b2246; color: #b9a6ff; } }
+.tag { display: inline-block; padding: 0 6px; border-radius: 5px; font-size: 11.5px; background: var(--info-soft); color: var(--text-2); white-space: nowrap; line-height: 19px; }
+.tag.acc { font-weight: 600; }
+.sku { display: inline-block; font-size: 11.5px; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line); color: var(--text-2); margin: 2px 4px 0 0; line-height: 18px; white-space: nowrap; }
+.unmapped { color: var(--bad); font-weight: 600; font-size: 12px; cursor: pointer; }
+.unmapped:hover { text-decoration: underline; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-right: 5px; }
+/* 필터 */
+.filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.filters input, .filters select, .field input, .field select, .field textarea {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 10px; outline: none; }
+.filters input:focus, .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.tabs { display: flex; gap: 2px; padding: 10px 14px 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 8px 12px; cursor: pointer; color: var(--text-2); border-bottom: 2px solid transparent; white-space: nowrap; }
+.tabs button.on { color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.tabs .n { font-size: 12px; color: var(--text-3); margin-left: 3px; }
+.actionbar { display: flex; gap: 6px; align-items: center; padding: 10px 14px; background: var(--accent-soft); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.actionbar .cnt { font-weight: 600; color: var(--accent-text); margin-right: 6px; }
+.empty { text-align: center; color: var(--text-3); padding: 40px 10px; }
+/* 모달 */
+.overlay { position: fixed; inset: 0; background: rgba(10,14,22,.45); display: flex; align-items: flex-start; justify-content: center; padding: 60px 16px; z-index: 50; overflow-y: auto; }
+.modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 560px; box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+.modal.wide { max-width: 760px; }
+.modal header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
+.modal header h3 { margin: 0; font-size: 16px; }
+.modal header .x { margin-left: auto; border: 0; background: none; font-size: 22px; cursor: pointer; color: var(--text-3); line-height: 1; }
+.modal .content { padding: 16px 20px; }
+.modal footer { padding: 12px 20px 16px; display: flex; justify-content: flex-end; gap: 8px; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 13px; color: var(--text-2); font-weight: 600; }
+.field .help { font-size: 12px; color: var(--text-3); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+textarea { width: 100%; min-height: 160px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace !important; font-size: 13px !important; }
+.note { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+.note b { color: var(--text); }
+/* 토스트 */
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 10px; z-index: 99; box-shadow: 0 8px 24px rgba(0,0,0,.2); max-width: 90vw; }
+.toast.err { background: #b42318; }
+/* 차트 */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: 220px; overflow: visible; }
+.chart .axis text { fill: var(--text-3); font-size: 11px; }
+.chart .grid line { stroke: var(--line-2); }
+.chart .bar rect { stroke: var(--surface); stroke-width: 2px; }
+.chart .hit { fill: transparent; cursor: default; }
+.chart g.dim rect, .chart g.dim path { opacity: .45; }
+.chart .bar { pointer-events: none; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.12); min-width: 150px; z-index: 5; }
+.tip b { display: block; margin-bottom: 4px; }
+.tip div { display: flex; justify-content: space-between; gap: 12px; }
+/* 재고 */
+.cell-stock { font-variant-numeric: tabular-nums; }
+.cell-stock .sub { display: block; font-size: 11px; color: var(--text-3); }
+.cell-stock.zero { color: var(--text-3); }
+.cell-stock.short { color: var(--bad); font-weight: 600; }
+.pill-days { font-size: 12px; font-weight: 600; }
+.pill-days.bad { color: var(--bad); } .pill-days.warn { color: var(--warn); } .pill-days.ok { color: var(--good); }
+.statusline { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.statusline.bad { color: var(--bad); } .statusline.warn { color: var(--warn); } .statusline.ok { color: var(--good); }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); border-left: 1px solid var(--line); z-index: 40; box-shadow: -10px 0 30px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+.drawer header { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+.drawer header h3 { margin: 0; font-size: 16px; }
+.drawer .content { padding: 12px 20px; overflow-y: auto; flex: 1; }
+/* 설정 */
+.acc-card { padding: 16px; }
+.acc-card .top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.acc-card .top b { font-size: 15px; }
+.conn { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; }
+.conn.on { background: var(--good-soft); color: var(--good); }
+.conn.off { background: var(--info-soft); color: var(--text-3); }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.switch input { width: 36px; height: 20px; appearance: none; background: var(--line); border-radius: 20px; position: relative; cursor: pointer; transition: .15s; margin: 0; }
+.switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
+.switch input:checked { background: var(--accent); }
+.switch input:checked::after { left: 18px; }
+.log { font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid var(--line-2); display: flex; gap: 10px; }
+.log .t { color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.log.error { color: var(--bad); }
+.list-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.list-row:last-child { border-bottom: 0; }
+.list-row .grow { flex: 1; min-width: 0; }
+.maprow { display: grid; grid-template-columns: 1fr 90px 36px; gap: 8px; margin-bottom: 8px; }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { min-width: 0; position: static; height: auto; flex-direction: row; align-items: center; padding: 8px; overflow-x: auto; }
+  .brand, .side-foot { display: none; }
+  .nav { display: flex; gap: 2px; }
+  .nav a { white-space: nowrap; }
+  .main { padding: 16px; }
+  .row2, .row3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>올투게더나우</b><span>통합 주문·재고 관리</span></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot" id="sidefoot"></div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="layer"></div>
+
+<script>
+// ───────────────────────── 공통 도구 ─────────────────────────
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const won = n => (Math.round(n || 0)).toLocaleString("ko-KR");
+const num = n => (n || 0).toLocaleString("ko-KR");
+const ICON = {
+  home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  orders: '<path d="M6 2h9l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>',
+  stock: '<path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8M7 17h10"/>',
+  map: '<path d="M7 7h10M7 12h4M14 12h3M7 17h10"/><rect x="3" y="3" width="18" height="18" rx="2"/>',
+  set: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+};
+const svgIcon = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[k]}</svg>`;
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || `오류 (${r.status})`);
+  return j;
+}
+function toast(msg, err) {
+  const t = document.createElement("div");
+  t.className = "toast" + (err ? " err" : "");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), err ? 5000 : 2800);
+}
+async function run(fn, okMsg) {
+  try { const r = await fn(); if (okMsg) toast(typeof okMsg === "function" ? okMsg(r) : okMsg); return r; }
+  catch (e) { toast(e.message, true); throw e; }
+}
+function modal(title, html, { wide = false, onOpen } = {}) {
+  const layer = $("#layer");
+  layer.innerHTML = `<div class="overlay"><div class="modal ${wide ? "wide" : ""}"><header><h3>${title}</h3><button class="x" data-close>×</button></header>${html}</div></div>`;
+  const ov = $(".overlay", layer);
+  ov.addEventListener("mousedown", e => { if (e.target === ov) closeModal(); });
+  $$("[data-close]", ov).forEach(b => b.onclick = closeModal);
+  onOpen && onOpen(ov);
+  const first = $("input, select, textarea", ov); first && first.focus();
+  return ov;
+}
+function closeModal() { $("#layer").innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closeDrawer(); } });
+
+// ───────────────────────── 상태 ─────────────────────────
+const S = { page: "home", meta: null, orders: [], sel: new Set(), of: { status: "처리대기" }, inv: null, invFilter: { q: "", cat: "" } };
+const ACC_COLOR = { NAV: "var(--series-1)", CPG: "var(--series-2)", HCK: "var(--series-3)", YCU: "var(--series-4)", RKT: "var(--series-5)" };
+const accName = c => (S.meta.accounts.find(a => a.code === c) || {}).name || c;
+const accShort = c => ({ NAV: "네이버", CPG: "쿠팡·올투", HCK: "휴책", YCU: "유큐어", RKT: "로켓배송" }[c] || c);
+const whName = c => (S.meta.warehouses.find(w => w.code === c) || {}).name || c;
+const skuName = c => (S.meta.skus.find(s => s.code === c) || {}).name || c;
+const accTag = c => `<span class="tag acc"><span class="sw" style="background:${ACC_COLOR[c] || "var(--text-3)"}"></span>${esc(accShort(c))}</span>`;
+
+const PAGES = [
+  ["home", "홈", "home"], ["orders", "주문", "orders"], ["stock", "재고", "stock"],
+  ["map", "상품 매핑", "map"], ["settings", "설정", "set"],
+];
+function renderNav(badges = {}) {
+  $("#nav").innerHTML = PAGES.map(([k, label, ic]) =>
+    `<a data-p="${k}" class="${S.page === k ? "on" : ""}">${svgIcon(ic)}${label}${badges[k] ? `<span class="badge">${badges[k]}</span>` : ""}</a>`).join("");
+  $$("#nav a").forEach(a => a.onclick = () => go(a.dataset.p));
+  $("#sidefoot").innerHTML = S.meta.demo
+    ? `<span class="mode">데모 모드</span><br>가짜 주문으로 연습 중입니다.<br>설정에서 API 키를 넣고 끄세요.`
+    : `<span class="mode live">실제 연결</span><br>쇼핑몰 API로 주문을 가져옵니다.`;
+}
+async function refreshBadges() {
+  const s = await api("/api/summary");
+  const pend = s.pending["신규"] + s.pending["발주확인"] + s.pending["송장입력"];
+  renderNav({ orders: pend, stock: s.low.length + s.refill.length, map: s.unmapped });
+  return s;
+}
+function go(p, opts = {}) {
+  S.page = p;
+  location.hash = p;
+  if (opts.of) S.of = opts.of;
+  closeDrawer();
+  render();
+}
+async function render() {
+  S.meta = await api("/api/meta");
+  const s = await refreshBadges();
+  const fn = { home: pageHome, orders: pageOrders, stock: pageStock, map: pageMap, settings: pageSettings }[S.page] || pageHome;
+  await fn(s);
+}
+async function collectNow(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "수집 중…"; }
+  try { const r = await api("/api/collect", {}); toast(r.msg, !r.ok); }
+  catch (e) { toast(e.message, true); }
+  await render();
+}
+
+// ───────────────────────── 홈 ─────────────────────────
+async function pageHome(s) {
+  const today = s.accounts.reduce((a, x) => ({ c: a.c + x.today_cnt, m: a.m + x.today_amt }), { c: 0, m: 0 });
+  const pend = s.pending["신규"] + s.pending["발주확인"] + s.pending["송장입력"];
+  const warn = s.low.length + s.refill.length;
+  $("#main").innerHTML = `
+  <div class="head"><h1>오늘의 현황</h1><span class="sub">${s.today} · 마지막 수집 ${esc(s.last_collect || "-")}</span>
+    <div class="right"><button class="btn primary" id="btnCollect">지금 주문 수집</button></div></div>
+  <div class="grid kpis">
+    <div class="card kpi" data-go="orders" data-st="전체"><div class="label">오늘 주문</div><div class="val">${num(today.c)}<small>건</small></div><div class="foot">${won(today.m)}원 · 5개 계정 합계</div></div>
+    <div class="card kpi ${pend ? "alert" : ""}" data-go="orders" data-st="처리대기"><div class="label">출고 처리 대기</div><div class="val">${num(pend)}<small>건</small></div><div class="foot">신규 ${s.pending["신규"]} · 발주확인 ${s.pending["발주확인"]} · 송장입력 ${s.pending["송장입력"]}</div></div>
+    <div class="card kpi ${s.unmapped ? "alert" : ""}" data-go="map"><div class="label">미매칭 상품</div><div class="val">${num(s.unmapped)}<small>개</small></div><div class="foot">매핑해야 재고가 정확히 빠집니다</div></div>
+    <div class="card kpi ${warn ? "alert" : ""}" data-go="stock"><div class="label">재고 경고</div><div class="val">${num(warn)}<small>건</small></div><div class="foot">안전재고 미달 ${s.low.length} · 창고 입고 필요 ${s.refill.length}</div></div>
+  </div>
+  <div class="grid two" style="margin-bottom:14px">
+    <div class="card"><h2>최근 14일 주문 건수 <span class="hint">계정별 · 취소 제외</span></h2><div class="body"><div class="chart" id="chart"></div></div></div>
+    <div class="card"><h2>재고 경고</h2><div class="body" id="warnList"></div></div>
+  </div>
+  <div class="grid two">
+    <div class="card"><h2>계정별 현황</h2><div class="body tbl-wrap"><table>
+      <thead><tr><th>계정</th><th>배송방식</th><th class="num">오늘 주문</th><th class="num">오늘 매출</th><th class="num">7일 주문</th><th class="num">7일 매출</th><th class="num">처리대기</th></tr></thead>
+      <tbody>${s.accounts.map(a => `<tr><td title="${esc(a.name)}">${accTag(a.code)}</td><td class="small" style="white-space:nowrap">${esc(a.ship_type)}</td>
+        <td class="num">${num(a.today_cnt)}</td><td class="num">${won(a.today_amt)}</td><td class="num">${num(a.w_cnt)}</td><td class="num">${won(a.w_amt)}</td>
+        <td class="num">${a.pending ? `<b style="color:var(--bad)">${a.pending}</b>` : '<span class="muted">0</span>'}</td></tr>`).join("")}</tbody></table></div></div>
+    <div class="card"><h2>최근 기록</h2><div class="body">${s.logs.map(l => `<div class="log ${l.level}"><span class="t">${esc(l.ts.slice(5))}</span><span>${esc(l.text)}</span></div>`).join("") || '<div class="muted">기록이 없습니다</div>'}</div></div>
+  </div>`;
+  $("#btnCollect").onclick = e => collectNow(e.currentTarget);
+  $$("[data-go]").forEach(el => el.onclick = () => go(el.dataset.go, el.dataset.st ? { of: { status: el.dataset.st === "전체" ? "" : el.dataset.st, from: el.dataset.st === "전체" ? s.today : "" } } : {}));
+  const wl = [];
+  s.low.forEach(x => wl.push(`<div class="list-row"><span class="statusline bad">● 부족</span><div class="grow"><b>${esc(x.name)}</b> <span class="muted small">${esc(x.code)}</span><div class="small muted">가용 ${num(x.avail)}개 / 안전재고 ${num(x.safety)}개${x.days != null ? ` · 약 ${x.days}일분` : ""}</div></div></div>`));
+  s.refill.forEach(x => x.wh.forEach(w => wl.push(`<div class="list-row"><span class="statusline warn">● 입고필요</span><div class="grow"><b>${esc(x.name)}</b><div class="small muted">${esc(whName(w.wh))} 가용 ${num(w.avail)}개 · ${w.days}일 뒤 소진 예상</div></div><button class="btn sm" data-mv="${esc(x.code)}" data-to="${esc(w.wh)}">이동 등록</button></div>`)));
+  $("#warnList").innerHTML = wl.join("") || '<div class="muted">경고가 없습니다 👍</div>';
+  $$("[data-mv]").forEach(b => b.onclick = () => stockModal("이동", { sku: b.dataset.mv, wh: "HQ", to_wh: b.dataset.to }));
+  drawChart($("#chart"), s.daily);
+}
+
+function drawChart(el, daily) {
+  const accs = S.meta.accounts.map(a => a.code);
+  const days = [];
+  const base = new Date(); base.setHours(12);
+  for (let i = 13; i >= 0; i--) { const d = new Date(base); d.setDate(d.getDate() - i); days.push(d.toISOString().slice(0, 10)); }
+  // toISOString은 UTC 기준이라 한국 날짜와 하루 어긋날 수 있어 로컬 날짜로 다시 만듭니다
+  for (let i = 0; i < days.length; i++) { const d = new Date(base); d.setDate(d.getDate() - (13 - i)); days[i] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+  const val = {}; daily.forEach(r => { val[r.d + r.account] = r.c; });
+  const tot = days.map(d => accs.reduce((a, c) => a + (val[d + c] || 0), 0));
+  const max = Math.max(10, ...tot);
+  const step = max > 80 ? 20 : max > 40 ? 10 : 5;
+  const top = Math.ceil(max / step) * step;
+  const W = 640, H = 220, L = 32, B = 22, T = 8, R = 4;
+  const bw = (W - L - R) / days.length, barW = Math.min(26, bw * 0.62);
+  const y = v => T + (H - T - B) * (1 - v / top);
+  let g = '<g class="grid axis">';
+  for (let v = 0; v <= top; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  g += "</g>";
+  let bars = "", hits = "";
+  days.forEach((d, i) => {
+    const x = L + i * bw + (bw - barW) / 2;
+    let acc = 0, segs = "";
+    const live = accs.filter(c => val[d + c]);
+    live.forEach((c, j) => {
+      const v = val[d + c]; const y0 = y(acc), y1 = y(acc + v); acc += v;
+      const h = Math.max(0, y0 - y1);
+      if (j === live.length - 1) { // 맨 위 조각만 둥글게
+        const r = Math.min(4, h, barW / 2);
+        segs += `<path d="M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + barW - r} Q${x + barW},${y1} ${x + barW},${y1 + r} V${y0} Z" fill="${ACC_COLOR[c]}" stroke="var(--surface)" stroke-width="2"/>`;
+      } else segs += `<rect x="${x}" y="${y1}" width="${barW}" height="${h}" fill="${ACC_COLOR[c]}"/>`;
+    });
+    const lab = (i % 2 === (days.length - 1) % 2) ? `<text x="${x + barW / 2}" y="${H - 6}" text-anchor="middle">${+d.slice(5, 7)}/${+d.slice(8)}</text>` : "";
+    bars += `<g class="bar" data-i="${i}">${segs}</g><g class="axis">${lab}</g>`;
+    hits += `<rect class="hit" data-i="${i}" x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}"/>`;
+  });
+  el.innerHTML = `<div class="legend">${accs.map(c => `<span><span class="sw" style="background:${ACC_COLOR[c]}"></span>${esc(accShort(c))}</span>`).join("")}</div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="최근 14일 계정별 주문 건수">${g}${bars}${hits}</svg><div class="tip" hidden></div>`;
+  const tip = $(".tip", el), svg = $("svg", el);
+  $$(".hit", el).forEach(h => {
+    h.onmousemove = e => {
+      const i = +h.dataset.i, d = days[i];
+      $$("g.bar", el).forEach(b => b.classList.toggle("dim", b.dataset.i != i));
+      tip.innerHTML = `<b>${+d.slice(5, 7)}월 ${+d.slice(8)}일 · ${tot[i]}건</b>` + accs.slice().reverse().map(c => `<div><span><span class="sw" style="background:${ACC_COLOR[c]}"></span>${esc(accShort(c))}</span><span>${val[d + c] || 0}</span></div>`).join("");
+      tip.hidden = false;
+      const rc = el.getBoundingClientRect();
+      let left = e.clientX - rc.left + 14; if (left + 170 > rc.width) left = e.clientX - rc.left - 180;
+      tip.style.left = left + "px"; tip.style.top = (e.clientY - rc.top - 20) + "px";
+    };
+    h.onmouseleave = () => { tip.hidden = true; $$("g.bar", el).forEach(b => b.classList.remove("dim")); };
+  });
+}
+
+// ───────────────────────── 주문 ─────────────────────────
+const STATUS_TABS = ["처리대기", "신규", "발주확인", "송장입력", "출고완료", "위탁배송", "취소", ""];
+async function pageOrders() {
+  const f = S.of;
+  const qs = new URLSearchParams(Object.entries(f).filter(([, v]) => v)).toString();
+  S.orders = await api("/api/orders?" + qs);
+  S.sel = new Set([...S.sel].filter(id => S.orders.some(o => o.id === id)));
+  $("#main").innerHTML = `
+  <div class="head"><h1>주문</h1><span class="sub">네이버 · 쿠팡 4개 계정 주문을 한곳에서</span>
+    <div class="right"><button class="btn" id="btnTrack">송장 일괄 입력</button><button class="btn" id="btnManual">주문 직접 등록</button><button class="btn primary" id="btnCollect">지금 주문 수집</button></div></div>
+  <div class="card">
+    <div class="tabs">${STATUS_TABS.map(t => `<button data-st="${t}" class="${(f.status || "") === t ? "on" : ""}">${t || "전체"}</button>`).join("")}</div>
+    <div class="filters">
+      <select id="fAcc"><option value="">전체 계정</option>${S.meta.accounts.map(a => `<option value="${a.code}" ${f.account === a.code ? "selected" : ""}>${esc(accShort(a.code))}</option>`).join("")}</select>
+      <select id="fShip"><option value="">전체 배송방식</option>${["판매자배송", "N배송", "로켓그로스", "로켓납품"].map(x => `<option ${f.ship_type === x ? "selected" : ""}>${x}</option>`).join("")}</select>
+      <input type="date" id="fFrom" value="${f.from || ""}"> ~ <input type="date" id="fTo" value="${f.to || ""}">
+      <input id="fQ" placeholder="주문번호·상품·받는분·송장 검색" value="${esc(f.q || "")}" style="min-width:220px">
+      <label class="small" style="display:flex;gap:5px;align-items:center"><input type="checkbox" id="fUn" ${f.unmapped ? "checked" : ""}>미매칭만</label>
+      <span class="muted small" style="margin-left:auto">${num(S.orders.length)}건${S.orders.length >= 500 ? " (최근 500건까지 표시)" : ""}</span>
+    </div>
+    <div id="actionbar"></div>
+    <div class="tbl-wrap" style="max-height:calc(100vh - 290px);overflow:auto">${ordersTable()}</div>
+  </div>`;
+  $$(".tabs button").forEach(b => b.onclick = () => { S.of.status = b.dataset.st; pageOrders(); });
+  const apply = () => { S.of = { ...S.of, account: $("#fAcc").value, ship_type: $("#fShip").value, from: $("#fFrom").value, to: $("#fTo").value, q: $("#fQ").value.trim(), unmapped: $("#fUn").checked ? "1" : "" }; pageOrders(); };
+  ["#fAcc", "#fShip", "#fFrom", "#fTo", "#fUn"].forEach(s => $(s).onchange = apply);
+  $("#fQ").onkeydown = e => { if (e.key === "Enter") apply(); };
+  $("#btnCollect").onclick = e => collectNow(e.currentTarget);
+  $("#btnTrack").onclick = trackingModal;
+  $("#btnManual").onclick = manualOrderModal;
+  bindOrderTable();
+  renderActionBar();
+}
+function ordersTable() {
+  if (!S.orders.length) return `<div class="empty">조건에 맞는 주문이 없습니다</div>`;
+  const all = S.orders.length && S.orders.every(o => S.sel.has(o.id));
+  return `<table><thead><tr><th style="width:28px"><input type="checkbox" id="selAll" ${all ? "checked" : ""}></th><th>주문일시</th><th>계정</th><th>배송</th><th>주문번호</th><th>상품 / 옵션 → 출고 SKU</th><th class="num">수량</th><th class="num">금액</th><th>받는분</th><th>상태</th><th>송장</th></tr></thead><tbody>
+  ${S.orders.map(o => `<tr data-id="${o.id}" class="${S.sel.has(o.id) ? "sel" : ""}">
+    <td><input type="checkbox" class="selOne" ${S.sel.has(o.id) ? "checked" : ""}></td>
+    <td class="small" style="white-space:nowrap">${esc(o.ordered_at.slice(5))}</td>
+    <td>${accTag(o.account)}</td>
+    <td class="small" style="white-space:nowrap">${esc(o.ship_type)}</td>
+    <td class="small">${esc(o.order_no)}</td>
+    <td><div class="ell" title="${esc(o.product_name)}">${esc(o.product_name)}</div><div class="small muted ell" title="${esc(o.option_name)}">${esc(o.option_name)}</div>
+      <div>${o.map.length ? o.map.map(m => `<span class="sku" title="${esc(skuName(m.sku))}">${esc(m.sku)} ×${m.qty * o.qty}</span>`).join("") : `<span class="unmapped" data-mapacc="${esc(o.account)}" data-mapkey="${esc(o.item_key)}">⚠ 미매칭 — 눌러서 연결</span>`}</div></td>
+    <td class="num">${o.qty}</td><td class="num">${won(o.amount)}</td>
+    <td class="small">${esc(o.receiver)}</td>
+    <td><span class="chip st-${o.status}">${o.status}</span></td>
+    <td class="small">${o.tracking ? `${esc(o.courier)}<br>${esc(o.tracking)}${o.sent ? "" : ' <span class="chip st-발주확인" title="쇼핑몰에 아직 안 보냄">미전송</span>'}` : '<span class="muted">-</span>'}</td>
+  </tr>`).join("")}</tbody></table>`;
+}
+function bindOrderTable() {
+  const sa = $("#selAll");
+  if (sa) sa.onchange = () => { S.orders.forEach(o => sa.checked ? S.sel.add(o.id) : S.sel.delete(o.id)); refreshSel(); };
+  $$(".selOne").forEach(cb => cb.onchange = () => { const id = +cb.closest("tr").dataset.id; cb.checked ? S.sel.add(id) : S.sel.delete(id); refreshSel(); });
+  $$("[data-mapacc]").forEach(el => el.onclick = () => mapModal(el.dataset.mapacc, el.dataset.mapkey));
+}
+function refreshSel() {
+  $$("tbody tr[data-id]").forEach(tr => { const on = S.sel.has(+tr.dataset.id); tr.classList.toggle("sel", on); $(".selOne", tr).checked = on; });
+  renderActionBar();
+}
+function renderActionBar() {
+  const el = $("#actionbar");
+  if (!S.sel.size) { el.innerHTML = ""; return; }
+  const sel = S.orders.filter(o => S.sel.has(o.id));
+  const c = st => sel.filter(o => st.includes(o.status)).length;
+  const nNew = c(["신규"]), nTrk = sel.filter(o => o.tracking && o.status !== "취소" && o.status !== "출고완료").length;
+  const nPend = c(["신규", "발주확인", "송장입력"]);
+  el.innerHTML = `<div class="actionbar"><span class="cnt">${sel.length}건 선택</span>
+    <button class="btn sm" data-a="confirm" ${nNew ? "" : "disabled"}>발주확인 (${nNew})</button>
+    <button class="btn sm" data-a="excel">택배 출고파일 받기</button>
+    <button class="btn sm primary" data-a="send" ${nTrk ? "" : "disabled"}>송장 전송 + 출고완료 (${nTrk})</button>
+    <button class="btn sm" data-a="ship" ${nPend ? "" : "disabled"} title="송장 없이 출고 처리 (로켓 납품·직접 전달 등)">송장 없이 출고완료 (${nPend})</button>
+    <button class="btn sm danger" data-a="cancel">취소 처리</button>
+    <button class="btn sm" data-a="clear" style="margin-left:auto">선택 해제</button></div>`;
+  $$("[data-a]", el).forEach(b => b.onclick = () => orderAction(b.dataset.a));
+}
+async function orderAction(a) {
+  const ids = [...S.sel];
+  if (a === "clear") { S.sel.clear(); return refreshSel(); }
+  if (a === "excel") { window.location = "/api/export/courier.csv?ids=" + ids.join(","); return; }
+  if (a === "cancel" && !confirm(`${ids.length}건을 취소 처리할까요?\n이미 빠진 재고는 다시 돌아옵니다. (쇼핑몰 취소는 각 쇼핑몰에서 따로 해야 합니다)`)) return;
+  const path = { confirm: "/api/orders/confirm", send: "/api/orders/send", ship: "/api/orders/ship", cancel: "/api/orders/cancel" }[a];
+  const r = await run(() => api(path, { ids }));
+  const label = { confirm: "발주확인", send: "송장 전송·출고완료", ship: "출고완료", cancel: "취소" }[a];
+  toast(`${label} ${r.done}건 완료` + (r.fails && r.fails.length ? ` · 실패: ${r.fails.join(", ")}` : ""), r.fails && r.fails.length);
+  S.sel.clear();
+  await render();
+}
+function trackingModal() {
+  modal("송장 일괄 입력", `<div class="content">
+    <div class="note">택배사 프로그램에서 받은 엑셀에서 <b>주문번호</b>와 <b>송장번호</b> 열을 복사해 아래에 붙여넣으세요.<br>
+    한 줄에 하나씩: <code>주문번호 [탭] 송장번호</code> 또는 <code>주문번호 [탭] 택배사 [탭] 송장번호</code><br>
+    같은 주문번호에 상품이 여러 개면 모두 같은 송장이 붙습니다.</div>
+    <div class="field"><label>택배사 (줄에 택배사가 없을 때)</label><select id="tCourier">${S.meta.couriers.map(c => `<option>${c}</option>`).join("")}</select></div>
+    <div class="field"><label>붙여넣기</label><textarea id="tText" placeholder="2026112500012\t512345678901"></textarea><span class="help" id="tPrev">0줄</span></div>
+  </div><footer><button class="btn" data-close>닫기</button><button class="btn primary" id="tSave">송장 입력</button></footer>`, {
+    onOpen: ov => {
+      const parse = () => $("#tText", ov).value.split(/\r?\n/).map(l => l.split(/\t|,/).map(x => x.trim()).filter(Boolean)).filter(p => p.length >= 2)
+        .map(p => p.length >= 3 ? { key: p[0], courier: S.meta.couriers.includes(p[1]) ? p[1] : $("#tCourier", ov).value, tracking: p[p.length - 1] } : { key: p[0], courier: $("#tCourier", ov).value, tracking: p[1] });
+      $("#tText", ov).oninput = () => { $("#tPrev", ov).textContent = `${parse().length}줄 인식`; };
+      $("#tSave", ov).onclick = async () => {
+        const rows = parse(); if (!rows.length) return toast("인식된 줄이 없습니다", true);
+        const r = await run(() => api("/api/orders/tracking", { rows }));
+        toast(`송장 ${r.done}건 입력` + (r.miss.length ? ` · 못 찾은 주문번호: ${r.miss.slice(0, 5).join(", ")}${r.miss.length > 5 ? " 외" : ""}` : ""), r.miss.length && !r.done);
+        closeModal(); S.of = { status: "송장입력" }; render();
+      };
+    }
+  });
+}
+function manualOrderModal() {
+  modal("주문 직접 등록", `<div class="content">
+    <div class="note">전화·B2B 주문, <b>쿠팡 로켓배송 발주서</b>처럼 API로 안 들어오는 주문을 직접 넣습니다. 출고완료 처리하면 본사창고 재고에서 빠집니다.</div>
+    <div class="row2"><div class="field"><label>계정</label><select id="mAcc">${S.meta.accounts.map(a => `<option value="${a.code}" ${a.code === "RKT" ? "selected" : ""}>${esc(accShort(a.code))}</option>`).join("")}</select></div>
+    <div class="field"><label>배송방식</label><select id="mShip"><option>로켓납품</option><option>판매자배송</option></select></div></div>
+    <div class="row2"><div class="field"><label>상품 (SKU)</label><select id="mSku">${S.meta.skus.map(s => `<option value="${s.code}">${esc(s.name)} (${s.code})</option>`).join("")}</select></div>
+    <div class="field"><label>수량</label><input id="mQty" type="number" min="1" value="1"></div></div>
+    <div class="row2"><div class="field"><label>금액 (원)</label><input id="mAmt" type="number" min="0" value="0"></div>
+    <div class="field"><label>주문번호/발주번호 (선택)</label><input id="mNo" placeholder="비우면 자동 생성"></div></div>
+    <div class="row2"><div class="field"><label>받는분</label><input id="mRcv"></div><div class="field"><label>전화번호</label><input id="mTel"></div></div>
+    <div class="field"><label>주소</label><input id="mAddr"></div>
+    <div class="field"><label>메모</label><input id="mMemo"></div>
+  </div><footer><button class="btn" data-close>닫기</button><button class="btn primary" id="mSave">등록</button></footer>`, {
+    onOpen: ov => {
+      $("#mAcc", ov).onchange = () => { $("#mShip", ov).value = $("#mAcc", ov).value === "RKT" ? "로켓납품" : "판매자배송"; };
+      $("#mSave", ov).onclick = async () => {
+        await run(() => api("/api/orders/manual", { account: $("#mAcc", ov).value, ship_type: $("#mShip", ov).value, sku: $("#mSku", ov).value, qty: +$("#mQty", ov).value, amount: +$("#mAmt", ov).value, order_no: $("#mNo", ov).value.trim(), receiver: $("#mRcv", ov).value, phone: $("#mTel", ov).value, address: $("#mAddr", ov).value, memo: $("#mMemo", ov).value }), "주문을 등록했습니다");
+        closeModal(); render();
+      };
+    }
+  });
+}
+
+// ───────────────────────── 재고 ─────────────────────────
+async function pageStock() {
+  const inv = await api("/api/inventory");
+  S.inv = inv;
+  const cats = [...new Set(inv.items.map(i => i.category))];
+  const f = S.invFilter;
+  const items = inv.items.filter(i => (!f.cat || i.category === f.cat) && (!f.q || (i.code + i.name).toLowerCase().includes(f.q.toLowerCase())));
+  const daysCls = d => d == null ? "" : d < 7 ? "bad" : d < 21 ? "warn" : "ok";
+  const tot = inv.items.reduce((a, i) => ({ oh: a.oh + i.total, av: a.av + i.avail, rs: a.rs + i.reserved, val: a.val + i.total * (i.cost || 0) }), { oh: 0, av: 0, rs: 0, val: 0 });
+  $("#main").innerHTML = `
+  <div class="head"><h1>재고</h1><span class="sub">창고별 현재고 · 가용(=현재고−출고대기) · 소진 예상</span>
+    <div class="right"><button class="btn primary" data-k="입고">＋ 입고 등록</button><button class="btn" data-k="이동">창고 이동</button><button class="btn" data-k="조정">실사 조정</button><button class="btn" data-k="출고">수동 출고</button><a class="btn" href="/api/export/inventory.csv">엑셀 받기</a></div></div>
+  <div class="grid kpis">
+    <div class="card kpi"><div class="label">총 현재고</div><div class="val">${num(tot.oh)}<small>개</small></div><div class="foot">${inv.warehouses.length}개 창고 합계</div></div>
+    <div class="card kpi"><div class="label">출고 대기(예약)</div><div class="val">${num(tot.rs)}<small>개</small></div><div class="foot">판매자배송 주문 중 아직 안 나간 수량</div></div>
+    <div class="card kpi"><div class="label">재고 금액 (원가)</div><div class="val">${won(tot.val / 10000)}<small>만원</small></div><div class="foot">SKU 원가 × 현재고</div></div>
+    <div class="card kpi ${inv.items.some(i => i.low || i.refill.length) ? "alert" : ""}"><div class="label">경고 SKU</div><div class="val">${inv.items.filter(i => i.low || i.refill.length).length}<small>개</small></div><div class="foot">부족 또는 창고 입고 필요</div></div>
+  </div>
+  <div class="card">
+    <div class="filters"><select id="iCat"><option value="">전체 분류</option>${cats.map(c => `<option ${f.cat === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+      <input id="iQ" placeholder="SKU·상품명 검색" value="${esc(f.q)}"><span class="muted small" style="margin-left:auto">칸 위 숫자 = 가용, 아래 = 현재고 · 행을 누르면 입출고 내역</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>SKU</th><th>상품명</th>${inv.warehouses.map(w => `<th class="num" title="${esc(w.memo)}">${esc(w.name)}</th>`).join("")}<th class="num">총 가용</th><th class="num">안전재고</th><th class="num">하루 판매</th><th class="num">소진 예상</th><th>상태</th></tr></thead><tbody>
+    ${items.map(i => `<tr data-sku="${esc(i.code)}" style="cursor:pointer"><td class="small"><b>${esc(i.code)}</b></td><td>${esc(i.name)}<div class="small muted">${esc(i.category)}</div></td>
+      ${inv.warehouses.map(w => { const c = i.wh[w.code]; const cls = c.on_hand === 0 && c.avail === 0 ? "zero" : (i.refill.includes(w.code) || c.avail < 0 ? "short" : "");
+        return `<td class="num cell-stock ${cls}" title="${c.daily ? `하루 ${c.daily}개 판매 · ${c.days}일분` : ""}">${num(c.avail)}<span class="sub">${c.reserved ? `현재고 ${num(c.on_hand)}` : c.days != null ? `${c.days}일분` : "&nbsp;"}</span></td>`; }).join("")}
+      <td class="num"><b>${num(i.avail)}</b></td><td class="num muted">${num(i.safety)}</td><td class="num">${i.daily || "-"}</td>
+      <td class="num"><span class="pill-days ${daysCls(i.days)}">${i.days != null ? i.days + "일" : "-"}</span></td>
+      <td>${i.low ? '<span class="statusline bad">● 부족</span>' : i.refill.length ? `<span class="statusline warn" title="${i.refill.map(whName).join(", ")}">● 입고필요</span>` : '<span class="statusline ok">● 정상</span>'}</td></tr>`).join("")}
+    </tbody></table></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h2>최근 입고 · 이동 · 조정 기록 <span class="hint">판매로 빠진 것은 SKU를 누르면 보입니다</span></h2><div class="body tbl-wrap" id="mvList"></div></div>`;
+  $$("[data-k]").forEach(b => b.onclick = () => stockModal(b.dataset.k));
+  $("#iCat").onchange = () => { S.invFilter.cat = $("#iCat").value; pageStock(); };
+  $("#iQ").onkeydown = e => { if (e.key === "Enter") { S.invFilter.q = $("#iQ").value.trim(); pageStock(); } };
+  $$("tr[data-sku]").forEach(tr => tr.onclick = () => skuDrawer(tr.dataset.sku));
+  const mv = await api("/api/movements");
+  $("#mvList").innerHTML = mvTable(mv.slice(0, 20), true);
+}
+function mvTable(mv, showSku) {
+  if (!mv.length) return '<div class="muted">기록이 없습니다</div>';
+  return `<table><thead><tr><th>일시</th>${showSku ? "<th>SKU</th>" : ""}<th>창고</th><th>구분</th><th class="num">수량</th><th>메모</th></tr></thead><tbody>
+  ${mv.map(m => `<tr><td class="small" style="white-space:nowrap">${esc(m.ts)}</td>${showSku ? `<td class="small">${esc(m.sku)}</td>` : ""}<td class="small">${esc(whName(m.wh))}</td><td class="small">${esc(m.kind)}</td>
+    <td class="num" style="color:${m.qty < 0 ? "var(--bad)" : "var(--good)"}">${m.qty > 0 ? "+" : ""}${num(m.qty)}</td><td class="small muted">${esc(m.memo)}</td></tr>`).join("")}</tbody></table>`;
+}
+async function skuDrawer(code) {
+  const mv = await api("/api/movements?sku=" + encodeURIComponent(code));
+  const i = S.inv.items.find(x => x.code === code);
+  closeDrawer();
+  const d = document.createElement("div");
+  d.className = "drawer"; d.id = "drawer";
+  d.innerHTML = `<header><h3>${esc(i.name)}</h3><span class="muted small">${esc(code)}</span><button class="btn sm" style="margin-left:auto" id="dClose">닫기</button></header>
+    <div class="content"><div class="note">${S.inv.warehouses.map(w => `${esc(w.name)} <b>${num(i.wh[w.code].on_hand)}</b>개`).join(" · ")}</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px"><button class="btn sm primary" data-k="입고">입고</button><button class="btn sm" data-k="이동">이동</button><button class="btn sm" data-k="조정">실사 조정</button></div>
+    ${mvTable(mv, false)}</div>`;
+  document.body.appendChild(d);
+  $("#dClose").onclick = closeDrawer;
+  $$("[data-k]", d).forEach(b => b.onclick = () => stockModal(b.dataset.k, { sku: code }));
+}
+function closeDrawer() { const d = $("#drawer"); d && d.remove(); }
+function stockModal(kind, pre = {}) {
+  const whOpts = sel => S.meta.warehouses.map(w => `<option value="${w.code}" ${sel === w.code ? "selected" : ""}>${esc(w.name)}</option>`).join("");
+  const help = {
+    입고: "공장(중국/한국)에서 물건이 들어왔을 때 등록합니다.",
+    이동: "본사창고 → 쿠팡 그로스·네이버 N배송창고로 보낼 때 등록합니다. 보내는 창고에서 빠지고 받는 창고에 더해집니다.",
+    조정: "직접 세어본 실제 수량을 넣으면, 장부와의 차이만큼 자동으로 맞춥니다.",
+    출고: "샘플·불량 폐기·협찬처럼 주문이 아닌 출고를 등록합니다.",
+  }[kind];
+  modal(kind === "조정" ? "실사 조정" : kind === "출고" ? "수동 출고" : kind + " 등록", `<div class="content"><div class="note">${help}</div>
+    <div class="field"><label>상품 (SKU)</label><select id="sSku">${S.meta.skus.map(s => `<option value="${s.code}" ${pre.sku === s.code ? "selected" : ""}>${esc(s.name)} (${s.code})</option>`).join("")}</select></div>
+    <div class="${kind === "이동" ? "row3" : "row2"}">
+      <div class="field"><label>${kind === "이동" ? "보내는 창고" : "창고"}</label><select id="sWh">${whOpts(pre.wh || "HQ")}</select></div>
+      ${kind === "이동" ? `<div class="field"><label>받는 창고</label><select id="sTo">${whOpts(pre.to_wh || "RG-HCK")}</select></div>` : ""}
+      <div class="field"><label>${kind === "조정" ? "실제 수량" : "수량"}</label><input id="sQty" type="number" min="0" value="${pre.qty || ""}"></div></div>
+    <div class="field"><label>메모</label><input id="sMemo" placeholder="${kind === "입고" ? "예: 중국 2차 입고 / 인보이스 번호" : kind === "이동" ? "예: 쿠팡 입고요청 번호" : ""}"></div>
+    <div class="help" id="sNow"></div>
+  </div><footer><button class="btn" data-close>닫기</button><button class="btn primary" id="sSave">저장</button></footer>`, {
+    onOpen: ov => {
+      const showNow = async () => {
+        if (!S.inv) S.inv = await api("/api/inventory");
+        const i = S.inv.items.find(x => x.code === $("#sSku", ov).value); if (!i) return;
+        const w = i.wh[$("#sWh", ov).value];
+        $("#sNow", ov).textContent = `현재 ${whName($("#sWh", ov).value)}: 현재고 ${w.on_hand}개 · 가용 ${w.avail}개`;
+      };
+      $("#sSku", ov).onchange = showNow; $("#sWh", ov).onchange = showNow; showNow();
+      $("#sSave", ov).onclick = async () => {
+        await run(() => api("/api/stock", { kind, sku: $("#sSku", ov).value, wh: $("#sWh", ov).value, to_wh: $("#sTo", ov)?.value, qty: +$("#sQty", ov).value, memo: $("#sMemo", ov).value }), "저장했습니다");
+        closeModal(); S.inv = null; render();
+      };
+    }
+  });
+}
+
+// ───────────────────────── 상품 매핑 · SKU ─────────────────────────
+let mapTab = "map";
+async function pageMap() {
+  $("#main").innerHTML = `<div class="head"><h1>상품 매핑</h1><span class="sub">쇼핑몰 판매상품(옵션) → 실제 출고되는 SKU와 개수</span>
+    <div class="right">${mapTab === "sku" ? '<button class="btn primary" id="btnSku">＋ SKU 추가</button>' : ""}</div></div>
+  <div class="card"><div class="tabs"><button data-t="map" class="${mapTab === "map" ? "on" : ""}">판매상품 매핑</button><button data-t="sku" class="${mapTab === "sku" ? "on" : ""}">SKU(실물 상품) 관리</button></div><div id="mapBody"></div></div>`;
+  $$(".tabs button").forEach(b => b.onclick = () => { mapTab = b.dataset.t; pageMap(); });
+  if (mapTab === "map") {
+    const list = await api("/api/mappings");
+    const un = list.filter(x => !x.map.length).length;
+    $("#mapBody").innerHTML = `<div class="filters"><div class="small" style="color:var(--text-2)">
+      예) 쿠팡 <b>"무릎보호대 2개"</b> 옵션 → <span class="sku">KNEE-ST-BK ×2</span> · 네이버 <b>"블랙 + 마사지볼 / 양쪽"</b> → <span class="sku">KNEE-ST-BK ×2</span><span class="sku">BALL ×1</span>
+      &nbsp;한 번만 연결해 두면 이후 주문은 자동으로 재고가 빠집니다.</div>
+      <span style="margin-left:auto" class="small">${un ? `<b style="color:var(--bad)">미매칭 ${un}개</b>` : "모두 연결됨 ✓"}</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>계정</th><th>판매상품 / 옵션</th><th>상품키</th><th class="num">주문</th><th class="num">수량</th><th>출고 SKU</th><th></th></tr></thead><tbody>
+      ${list.map(x => `<tr><td>${accTag(x.account)}</td><td><div class="ell">${esc(x.product_name || "-")}</div><div class="small muted ell">${esc(x.option_name)}</div></td>
+        <td class="small muted">${esc(x.item_key)}</td><td class="num">${num(x.orders)}</td><td class="num">${num(x.qty)}</td>
+        <td>${x.map.length ? x.map.map(m => `<span class="sku" title="${esc(skuName(m.sku))}">${esc(m.sku)} ×${m.qty}</span>`).join("") : '<span class="unmapped">⚠ 미매칭</span>'}</td>
+        <td><button class="btn sm ${x.map.length ? "" : "primary"}" data-acc="${esc(x.account)}" data-key="${esc(x.item_key)}">${x.map.length ? "수정" : "연결"}</button></td></tr>`).join("")}
+      </tbody></table></div>`;
+    $$("[data-acc]").forEach(b => b.onclick = () => mapModal(b.dataset.acc, b.dataset.key));
+  } else {
+    const list = await api("/api/skus");
+    $("#mapBody").innerHTML = `<div class="tbl-wrap"><table><thead><tr><th>SKU 코드</th><th>상품명</th><th>분류</th><th class="num">안전재고</th><th class="num">원가</th><th>메모</th><th>상태</th><th></th></tr></thead><tbody>
+      ${list.map(s => `<tr><td><b>${esc(s.code)}</b></td><td>${esc(s.name)}</td><td>${esc(s.category)}</td><td class="num">${num(s.safety)}</td><td class="num">${won(s.cost)}</td><td class="small muted">${esc(s.memo)}</td>
+      <td>${s.active ? '<span class="statusline ok">사용</span>' : '<span class="muted small">중지</span>'}</td><td><button class="btn sm" data-sku="${esc(s.code)}">수정</button></td></tr>`).join("")}</tbody></table></div>`;
+    $("#btnSku").onclick = () => skuModal({});
+    $$("[data-sku]").forEach(b => b.onclick = () => skuModal(list.find(s => s.code === b.dataset.sku)));
+  }
+}
+async function mapModal(account, itemKey) {
+  const list = await api("/api/mappings");
+  const it = list.find(x => x.account === account && x.item_key === itemKey) || { account, item_key: itemKey, map: [] };
+  const rowsHtml = items => items.map(m => `<div class="maprow"><select class="mSku"><option value="">SKU 선택</option>${S.meta.skus.map(s => `<option value="${s.code}" ${m.sku === s.code ? "selected" : ""}>${esc(s.name)} (${s.code})</option>`).join("")}</select>
+      <input class="mQty" type="number" min="1" value="${m.qty || 1}"><button class="btn sm mDel" title="빼기">−</button></div>`).join("");
+  modal("상품 매핑", `<div class="content">
+    <div class="note">${accTag(account)} <b>${esc(it.product_name || "")}</b><br><span class="muted">${esc(it.option_name || "")}</span><br><span class="small muted">상품키: ${esc(itemKey)}</span></div>
+    <div class="field"><label>이 옵션 1개가 팔리면 나가는 실물 상품</label><div class="help">세트·사은품이 있으면 줄을 추가하세요. 예) 양쪽 세트 + 마사지볼 → 무릎보호대 ×2, 마사지볼 ×1</div></div>
+    <div id="mRows">${rowsHtml(it.map.length ? it.map : [{ sku: "", qty: guessQty(it.option_name) }])}</div>
+    <button class="btn sm" id="mAdd">＋ 줄 추가</button>
+  </div><footer>${it.map.length ? '<button class="btn danger" id="mClear" style="margin-right:auto">연결 해제</button>' : ""}<button class="btn" data-close>닫기</button><button class="btn primary" id="mSave">저장</button></footer>`, {
+    onOpen: ov => {
+      const bindDel = () => $$(".mDel", ov).forEach(b => b.onclick = () => { b.closest(".maprow").remove(); });
+      bindDel();
+      $("#mAdd", ov).onclick = () => { $("#mRows", ov).insertAdjacentHTML("beforeend", rowsHtml([{ sku: "", qty: 1 }])); bindDel(); };
+      const save = async items => {
+        const r = await run(() => api("/api/mappings", { account, item_key: itemKey, items }));
+        toast(items.length ? `연결했습니다 · 이 상품 주문 ${r.orders}건 재고 반영` : "연결을 해제했습니다");
+        closeModal(); render();
+      };
+      $("#mSave", ov).onclick = () => {
+        const items = $$(".maprow", ov).map(r => ({ sku: $(".mSku", r).value, qty: +$(".mQty", r).value })).filter(x => x.sku && x.qty > 0);
+        if (!items.length) return toast("SKU를 하나 이상 선택해 주세요", true);
+        save(items);
+      };
+      const clr = $("#mClear", ov); if (clr) clr.onclick = () => save([]);
+    }
+  });
+}
+function guessQty(opt) {
+  // 옵션명에서 개수를 추측합니다: "2개", "양쪽", "2p" → 2
+  const s = opt || "";
+  if (/양쪽|양팔|1쌍/.test(s)) return 2;
+  const m = s.match(/(\d+)\s*(개|p|P|매|세트)/); return m ? +m[1] : 1;
+}
+function skuModal(s) {
+  const isNew = !s.code;
+  modal(isNew ? "SKU 추가" : "SKU 수정", `<div class="content">
+    <div class="note"><b>SKU</b>는 창고에 실제로 쌓여 있는 '낱개 실물 상품' 단위입니다. 사이즈·색상이 다르면 SKU도 다릅니다.</div>
+    <div class="row2"><div class="field"><label>SKU 코드</label><input id="kCode" value="${esc(s.code || "")}" ${isNew ? "" : "disabled"} placeholder="예: KNEE-ST-BK"></div>
+    <div class="field"><label>분류</label><input id="kCat" value="${esc(s.category || "")}" placeholder="무릎·손목·허리…"></div></div>
+    <div class="field"><label>상품명</label><input id="kName" value="${esc(s.name || "")}"></div>
+    <div class="row2"><div class="field"><label>안전재고 (전체 가용 기준)</label><input id="kSafe" type="number" min="0" value="${s.safety || 0}"><span class="help">이 아래로 내려가면 '부족' 경고</span></div>
+    <div class="field"><label>원가 (원)</label><input id="kCost" type="number" min="0" value="${s.cost || 0}"></div></div>
+    <div class="field"><label>메모</label><input id="kMemo" value="${esc(s.memo || "")}" placeholder="공장, 리드타임 등"></div>
+    <label class="switch"><input type="checkbox" id="kAct" ${s.active === 0 ? "" : "checked"}> 사용 중</label>
+  </div><footer><button class="btn" data-close>닫기</button><button class="btn primary" id="kSave">저장</button></footer>`, {
+    onOpen: ov => {
+      $("#kSave", ov).onclick = async () => {
+        await run(() => api("/api/skus", { code: $("#kCode", ov).value, name: $("#kName", ov).value, category: $("#kCat", ov).value, safety: +$("#kSafe", ov).value, cost: +$("#kCost", ov).value, memo: $("#kMemo", ov).value, active: $("#kAct", ov).checked ? 1 : 0 }), "저장했습니다");
+        closeModal(); render();
+      };
+    }
+  });
+}
+
+// ───────────────────────── 설정 ─────────────────────────
+async function pageSettings() {
+  const st = await api("/api/settings");
+  const logs = await api("/api/logs");
+  const accFields = a => a.channel === "네이버"
+    ? [["client_id", "애플리케이션 ID"], ["client_secret", "애플리케이션 시크릿"]]
+    : [["vendor_id", "업체코드 (A로 시작)"], ["access_key", "Access Key"], ["secret_key", "Secret Key"]];
+  $("#main").innerHTML = `<div class="head"><h1>설정</h1><span class="sub">쇼핑몰 연결 · 수집 주기</span></div>
+  <div class="grid two">
+    <div>
+      <div class="card" style="margin-bottom:14px"><h2>기본 설정</h2><div class="body">
+        <label class="switch" style="margin-bottom:6px"><input type="checkbox" id="cDemo" ${st["데모모드"] ? "checked" : ""}> <b>데모 모드</b></label>
+        <div class="help muted small" style="margin-bottom:14px">켜져 있으면 가짜 주문으로 연습합니다. 실제 API 키를 넣은 뒤 끄면 진짜 주문을 가져옵니다.</div>
+        <div class="row3"><div class="field"><label>자동 수집 (분)</label><input id="cMin" type="number" min="0" value="${st["자동수집_분"]}"><span class="help">0이면 끔</span></div>
+        <div class="field"><label>첫 수집 기간 (일)</label><input id="cDays" type="number" min="1" max="30" value="${st["첫수집_일수"]}"></div>
+        <div class="field"><label>기본 택배사</label><select id="cCourier">${S.meta.couriers.map(c => `<option ${st["기본택배사"] === c ? "selected" : ""}>${c}</option>`).join("")}</select></div></div>
+        <button class="btn primary" id="cSave">저장</button>
+      </div></div>
+      ${S.meta.accounts.map(a => {
+        const c = st["계정"][a.code];
+        if (a.code === "RKT" || !c) return `<div class="card acc-card" style="margin-bottom:14px"><div class="top">${accTag(a.code)}<b>${esc(a.name)}</b><span class="conn off">직접 등록</span></div>
+          <div class="small muted">로켓배송(직매입) 발주는 쿠팡 오픈API로 받을 수 없어서, <b>주문 → 주문 직접 등록</b>으로 발주를 넣고 출고완료하면 본사창고 재고에서 빠집니다.</div></div>`;
+        return `<div class="card acc-card" style="margin-bottom:14px" data-acc="${a.code}"><div class="top">${accTag(a.code)}<b>${esc(a.name)}</b><span class="small muted">${esc(a.ship_type)}</span><span class="conn ${c._connected ? "on" : "off"}" style="margin-left:auto">${c._connected ? "키 입력됨" : "미연결"}</span></div>
+          ${accFields(a).map(([k, l]) => `<div class="field"><label>${l}</label><input data-k="${k}" value="${esc(c[k] || "")}" autocomplete="off" spellcheck="false"></div>`).join("")}
+          ${a.channel === "쿠팡" ? `<div style="display:flex;gap:16px;margin-bottom:12px"><label class="switch small"><input type="checkbox" data-k="판매자배송" ${c["판매자배송"] ?? a.ship_type === "판매자배송" ? "checked" : ""}> 판매자배송 주문 수집</label><label class="switch small"><input type="checkbox" data-k="로켓그로스" ${c["로켓그로스"] ?? a.ship_type === "로켓그로스" ? "checked" : ""}> 로켓그로스 주문 수집</label></div>` : `<div class="help small muted" style="margin-bottom:12px">N배송(도착보장) 주문은 N배송창고에서, 그 외는 본사창고에서 재고가 빠집니다.</div>`}
+          <div style="display:flex;gap:8px"><button class="btn sm primary" data-save>저장</button><button class="btn sm" data-test>연결 테스트</button></div></div>`;
+      }).join("")}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px"><h2>API 키 받는 곳</h2><div class="body small">
+        <div class="list-row"><div class="grow"><b>네이버 커머스API</b><br><span class="muted">커머스API센터(apicenter.commerce.naver.com) → 애플리케이션 등록 → ID·시크릿 복사. 내 컴퓨터 IP 등록이 필요할 수 있습니다.</span></div></div>
+        <div class="list-row"><div class="grow"><b>쿠팡 WING 오픈API</b><br><span class="muted">WING → 판매자정보 → 추가판매정보 → OPEN API 키 발급. 계정(올투게더나우·휴책·유큐어)마다 따로 받습니다.</span></div></div>
+        <div class="note" style="margin:10px 0 0">🔒 키는 이 컴퓨터의 <b>oms/설정/계정.json</b>에만 저장되고, 화면에는 끝 4자리만 보입니다. 채팅·메신저에 붙여넣지 마세요.</div>
+      </div></div>
+      <div class="card" style="margin-bottom:14px"><h2>데모 데이터</h2><div class="body small"><div class="muted" style="margin-bottom:10px">연습하다 꼬였으면 데모 데이터를 처음 상태로 되돌립니다. (실제 연결 후에는 쓰지 마세요 — 모든 주문·재고가 지워집니다)</div>
+        <button class="btn danger" id="cReset">데모 데이터 초기화</button></div></div>
+      <div class="card"><h2>작업 기록</h2><div class="body" style="max-height:420px;overflow:auto">${logs.map(l => `<div class="log ${l.level}"><span class="t">${esc(l.ts.slice(5))}</span><span>${esc(l.text)}</span></div>`).join("") || '<div class="muted">기록이 없습니다</div>'}</div></div>
+    </div>
+  </div>`;
+  $("#cSave").onclick = async () => {
+    await run(() => api("/api/settings", { "데모모드": $("#cDemo").checked, "자동수집_분": +$("#cMin").value, "첫수집_일수": +$("#cDays").value, "기본택배사": $("#cCourier").value }), "저장했습니다");
+    render();
+  };
+  $$("[data-acc]").forEach(card => {
+    const acc = card.dataset.acc;
+    const collect = () => { const o = {}; $$("[data-k]", card).forEach(i => o[i.dataset.k] = i.type === "checkbox" ? i.checked : i.value); return o; };
+    $("[data-save]", card).onclick = async () => { await run(() => api("/api/settings", { "계정": { [acc]: collect() } }), "저장했습니다"); render(); };
+    $("[data-test]", card).onclick = async () => {
+      await api("/api/settings", { "계정": { [acc]: collect() } });
+      const r = await run(() => api("/api/test", { account: acc }));
+      toast((r.ok ? "✓ " : "✗ ") + r.msg, !r.ok);
+    };
+  });
+  $("#cReset").onclick = async () => {
+    if (!confirm("데모 데이터를 처음 상태로 되돌릴까요? 지금까지의 주문·재고 기록이 모두 지워집니다.")) return;
+    await run(() => api("/api/demo/reset", {}), "데모 데이터를 다시 만들었습니다");
+    go("home");
+  };
+}
+
+// ───────────────────────── 시작 ─────────────────────────
+S.page = (location.hash || "#home").slice(1);
+window.addEventListener("hashchange", () => { const p = location.hash.slice(1); if (p && p !== S.page) go(p); });
+render().catch(e => { $("#main").innerHTML = `<div class="empty">프로그램에 연결하지 못했습니다.<br>터미널에서 <b>python3 oms/app.py</b> 가 켜져 있는지 확인해 주세요.<br><span class="small">${esc(e.message)}</span></div>`; });
+setInterval(() => { if (!$("#layer").innerHTML && document.visibilityState === "visible" && S.page === "home") render(); }, 60000);
+</script>
+</body>
+</html>
