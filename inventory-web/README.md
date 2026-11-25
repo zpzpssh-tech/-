@@ -14,10 +14,10 @@
 3. **Deployments → Redeploy** — 배포하면서 데이터베이스 표가 **자동으로** 만들어짐
 4. Supabase 화면(Storage 에서 Open in Supabase) → **Authentication → URL Configuration → Site URL** 에 Vercel 주소 입력
 5. 프로그램 주소로 들어가 이메일 로그인 → **처음 로그인한 사람이 자동으로 대표(owner)** 가 됨
-   - 다른 사람이 먼저 들어오는 것을 막으려면 Vercel 환경 변수  에 대표님 이메일을 넣어 두면 됨
+   - 다른 사람이 먼저 들어오는 것을 막으려면 Vercel 환경 변수 `OWNER_EMAIL` 에 대표님 이메일을 넣어 두면 됨
 
-> 직접 만든 Supabase 프로젝트를 쓸 때는 , (공개 키),  을 환경 변수로 넣으면 똑같이 동작합니다.
-> ⚠️ /secret 키는 화면에 들어가지 않도록 막아 두었습니다.
+> 직접 만든 Supabase 프로젝트를 쓸 때는 `SUPABASE_URL`, `SUPABASE_ANON_KEY`(공개 키), `POSTGRES_URL` 을 환경 변수로 넣으면 똑같이 동작합니다.
+> ⚠️ `service_role`/secret 키는 화면에 들어가지 않도록 막아 두었습니다.
 
 ### 데이터 옮기기
 1. 예전 재고DB 구글 시트 → **파일 → 다운로드 → Microsoft Excel (.xlsx)**
