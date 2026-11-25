@@ -1,0 +1,11 @@
+{
+  "buildCommand": "node build.js",
+  "outputDirectory": "public",
+  "headers": [
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Frame-Options", "value": "DENY" },
+      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+    ] },
+    { "source": "/(index.html|db.js|config.js)?", "headers": [ { "key": "Cache-Control", "value": "no-cache" } ] }
+  ]
+}

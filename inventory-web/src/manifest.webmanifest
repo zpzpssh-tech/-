@@ -1,0 +1,9 @@
+{
+  "name": "올투게더나우 재고관리",
+  "short_name": "재고관리",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f5f8",
+  "theme_color": "#1f6feb",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

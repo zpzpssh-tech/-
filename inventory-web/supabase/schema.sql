@@ -161,5 +161,32 @@ begin
   update rules set sku = new_code where sku = old_code;
 end $$;
 
+-- ===== 주문서 출고/엑셀 입고: 기록·처리주문·연결표·파일 서명을 한 번에 (중간에 실패하면 전부 취소) =====
+create or replace function apply_upload(p_moves jsonb, p_maps jsonb, p_orders jsonb, p_upload jsonb) returns void
+language plpgsql as $$
+begin
+  if my_role() not in ('owner', 'staff') then raise exception '권한이 없습니다'; end if;
+  insert into orders_done (order_key, day, file)
+    select x ->> 'no', nullif(x ->> 'day', '')::date, coalesce(x ->> 'file', '')
+    from jsonb_array_elements(coalesce(p_orders, '[]'::jsonb)) x
+    where coalesce(x ->> 'no', '') <> ''
+    on conflict (order_key) do nothing;
+  insert into moves select * from jsonb_populate_recordset(null::moves, coalesce(p_moves, '[]'::jsonb));
+  insert into maps (id, key, sku, mult)
+    select x ->> 'id', x ->> 'key', x ->> 'sku', coalesce((x ->> 'mult')::numeric, 1)
+    from jsonb_array_elements(coalesce(p_maps, '[]'::jsonb)) x
+    on conflict (id) do update set key = excluded.key, sku = excluded.sku, mult = excluded.mult, updated_at = now();
+  if p_upload is not null then
+    insert into uploads (sig, file, units, by)
+      values (p_upload ->> 'sig', coalesce(p_upload ->> 'file', ''), coalesce((p_upload ->> 'units')::numeric, 0), coalesce(p_upload ->> 'by', ''))
+      on conflict (sig) do nothing;
+  end if;
+end $$;
+
+-- 처음 설치할 때 넣어 두는 판매 채널 (나중에 화면에서 고칠 수 있음)
+insert into partners (name, basis, memo) values
+  ('쿠팡 로켓배송', '도매가', '쿠팡 매입(RKT)'), ('네이버 스마트스토어', '소매가', ''), ('쿠팡 올투게더나우', '소매가', 'CPG')
+on conflict do nothing;
+
 -- 마지막: 대표님 이메일을 owner로 등록 (아래 이메일을 대표님 구글 계정으로 바꿔서 실행)
 -- insert into allowed_users (email, role) values ('대표님이메일@gmail.com', 'owner') on conflict (email) do update set role = 'owner';
