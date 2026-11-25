@@ -29,6 +29,10 @@
    - `SUPABASE_ANON_KEY` = Supabase의 anon public 키
 4. **Deploy** → 끝나면 나오는 주소(…vercel.app)를 복사
 
+> Vercel 메뉴 위치 (2026년 화면): 폴더는 **Settings → Build and Deployment → Root Directory**,
+> 배포 줄기는 **Settings → Environments → Production → Branch Tracking**.
+> 줄기를 바꾼 뒤에는 **Redeploy가 아니라 새 배포**가 필요합니다 (Redeploy는 예전 줄기의 코드를 다시 배포함).
+
 ### 3. 로그인 링크 주소 맞추기
 Supabase → **Authentication → URL Configuration**
 - **Site URL**: Vercel 주소 (예: `https://atgn-inventory.vercel.app`)
