@@ -424,7 +424,7 @@ table.mini tr[data-sku] { cursor: pointer; }
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-23 사진유지</small></div>
+    <div class="brand"><small>ALLTOGETHERNOW</small><h1>올투게더나우 재고관리</h1><small id="sync-dot" hidden style="letter-spacing:0;color:var(--accent);font-weight:600">● 최신 정보로 맞추는 중…</small><small id="app-ver" style="letter-spacing:0;margin-top:4px">버전 2026-11-25 전체삭제</small></div>
     <nav class="tabs" id="tabs">
       <div class="grp">매일 쓰는 것</div>
       <a href="#home" data-view="home">홈</a>
@@ -593,7 +593,7 @@ table.mini tr[data-sku] { cursor: pointer; }
         <b>삭제</b>는 아래 목록의 '삭제' 버튼으로 합니다. 입출고 기록이 있는 SKU는 지난 기록을 지키기 위해 지울 수 없으니, '수정'에서 <b>사용 중</b> 체크를 풀어 숨기세요.</p>
     </div>
     <div class="panel">
-      <h2>등록된 SKU</h2>
+      <div class="row"><h2 class="grow">등록된 SKU</h2><button type="button" class="danger sm" id="it-delall">상품 전체 삭제</button></div>
       <div id="it-usdnote" hidden style="display:none!important"></div>
       <div class="tablebox"><table id="it-table"></table></div>
     </div>
@@ -818,6 +818,21 @@ table.mini tr[data-sku] { cursor: pointer; }
   </div>
 </div>
 <datalist id="rg-parts"></datalist>
+<div class="modal-bg" id="delmodal" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="da-title">
+    <div class="row"><h3 id="da-title" class="grow" style="color:var(--bad)">상품 전체 삭제</h3><button class="ghost" id="da-close" aria-label="닫기">닫기 ✕</button></div>
+    <p id="da-sub" style="margin:0"></p>
+    <div style="display:grid;gap:8px">
+      <label><input type="checkbox" checked disabled> <b>상품(SKU) 목록</b> <span class="muted small" id="da-n-sku"></span></label>
+      <label><input type="checkbox" id="da-moves" checked> 입출고 기록 · 처리한 주문 목록 <span class="muted small" id="da-n-moves"></span></label>
+      <label><input type="checkbox" id="da-maps" checked> 주문서 연결표 · 매칭 규칙 <span class="muted small" id="da-n-maps"></span></label>
+      <label><input type="checkbox" id="da-photos"> 상품 사진 <span class="muted small">(남겨 두면 같은 이름으로 다시 등록할 때 사진이 그대로 나옴)</span></label>
+    </div>
+    <div class="banner info small" style="margin:0">지우기 전에 재고DB 시트에 <b>'백업_탭이름_날짜'</b> 탭으로 복사본을 자동으로 만들어 둡니다. 잘못 지웠으면 그 탭에서 되살릴 수 있습니다.</div>
+    <label class="f">확인을 위해 <b>삭제</b>라고 입력하세요<input id="da-confirm" placeholder="삭제" autocomplete="off"></label>
+    <div class="row"><span class="grow"></span><button class="ghost" id="da-cancel">취소</button><button class="danger" id="da-go" disabled>전부 삭제</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -1152,6 +1167,28 @@ async function regSave() {
     applyData(await api('saveSkus', list.map((x) => ({ code: x.code, name: x.name, part: x.part, option: x.option, safety, lead, active: true }))));
     closeReg(); toast(`상품 ${list.length}개를 등록했습니다. 재고는 '입출고 → 재고 실사'로 넣으세요`);
   } catch (e) { writeFail(e); $('rg-save').disabled = false; }
+}
+
+/* ---------- 상품 전체 삭제 ---------- */
+function openDelAll() {
+  if (!guard()) return;
+  if (!S.skus.size) { toast('지울 상품이 없습니다'); return; }
+  $('da-sub').innerHTML = `등록된 상품 <b>${fmt(S.skus.size)}개</b>를 모두 지웁니다. 함께 지울 것을 고르세요.`;
+  $('da-n-sku').textContent = `(${fmt(S.skus.size)}개)`;
+  $('da-n-moves').textContent = `(${fmt(S.moves.length)}건)`;
+  $('da-n-maps').textContent = `(연결 ${fmt(S.maps.size)}개 · 규칙 ${fmt(S.rules.length)}개)`;
+  $('da-confirm').value = ''; $('da-go').disabled = true; $('delmodal').hidden = false;
+  setTimeout(() => $('da-confirm').focus(), 0);
+}
+function closeDelAll() { $('delmodal').hidden = true; }
+async function runDelAll() {
+  if (norm($('da-confirm').value) !== '삭제') return;
+  $('da-go').disabled = true;
+  try {
+    const d = await api('deleteAllSkus', { moves: $('da-moves').checked, maps: $('da-maps').checked, photos: $('da-photos').checked });
+    applyData(d); closeDelAll(); S.confirmSku = null;
+    toast(`상품을 모두 지웠습니다 · 백업 탭: 백업_…_${(d.deleted || {}).backup || ''}`);
+  } catch (e) { writeFail(e); $('da-go').disabled = false; }
 }
 
 /* ---------- 홈 ---------- */
@@ -2379,6 +2416,12 @@ $('hm-dash').addEventListener('input', (e) => { if (e.target.id === 'hm-memo') S
 $('st-status').addEventListener('click', (e) => { const b = e.target.closest('[data-ststatus]'); if (!b) return; S.stStatus = b.dataset.ststatus; renderStock(); popList($('st-cards')); });
 $('st-part').addEventListener('click', (e) => { const b = e.target.closest('[data-stpart]'); if (!b) return; S.stPart = b.dataset.stpart; renderStock(); popList($('st-cards')); });
 $('st-reg').addEventListener('click', openReg);
+$('it-delall').addEventListener('click', openDelAll);
+$('da-close').addEventListener('click', closeDelAll);
+$('da-cancel').addEventListener('click', closeDelAll);
+$('delmodal').addEventListener('click', (e) => { if (e.target.id === 'delmodal') closeDelAll(); });
+$('da-confirm').addEventListener('input', () => { $('da-go').disabled = norm($('da-confirm').value) !== '삭제'; });
+$('da-go').addEventListener('click', runDelAll);
 $('rg-close').addEventListener('click', closeReg);
 $('regmodal').addEventListener('click', (e) => {
   if (e.target.id === 'regmodal') { closeReg(); return; }
@@ -2440,7 +2483,7 @@ $('rc-lines').addEventListener('click', (e) => {
 $('rc-save').addEventListener('click', saveRecord);
 $('md-btns').addEventListener('click', (e) => { const b = e.target.closest('button[data-price]'); if (b) closeModal(b.dataset.price); });
 $('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(''); });
-document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); else if (!$('regmodal').hidden) closeReg(); });
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('modal').hidden) closeModal(''); else if (!$('pmodal').hidden) closeProduct(); else if (!$('skumodal').hidden) closeSku(); else if (!$('regmodal').hidden) closeReg(); else if (!$('delmodal').hidden) closeDelAll(); });
 
 $('up-sheet-go').addEventListener('click', loadNaverSheet);
 $('up-sheetbox').addEventListener('click', async (e) => {
@@ -3121,7 +3164,7 @@ load();
 // 엑셀·PDF 도구는 화면이 다 뜬 뒤 미리 받아 둠
 setTimeout(() => { loadLib('xlsx').catch(() => {}); loadLib('h2c').catch(() => {}); loadLib('jspdf').catch(() => {}); }, 2500);
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
-setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden) load(true); }, 120000);
+setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden) load(true); }, 120000);
 })();
 </script>
 </body>

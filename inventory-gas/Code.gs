@@ -203,6 +203,29 @@ function saveSkus(list) {
   });
 }
 /** SKU 삭제: 기록이 하나도 없는 SKU만 지울 수 있음 (있으면 '미사용'으로 숨기기) */
+/** 상품 전체 삭제. 지우기 전에 탭마다 '백업_탭이름_날짜' 복사본을 만들어 둠 (잘못 지웠을 때 되살릴 수 있게) */
+function deleteAllSkus(opt) {
+  return withLock_(() => {
+    opt = opt || {};
+    const ss = book_(), stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyMMdd_HHmm');
+    const targets = [TABS.SKU];
+    if (opt.moves) targets.push(TABS.MOVE, TABS.ORDER, TABS.UPLOAD);
+    if (opt.maps) targets.push(TABS.MAP, TABS.RULE);
+    if (opt.photos) targets.push(TABS.PHOTO);
+    const done = [];
+    targets.forEach((t) => {
+      const sh = tab_(ss, t), n = sh.getLastRow() - 1;
+      if (n < 1) return;
+      sh.copyTo(ss).setName(`백업_${t.name}_${stamp}`);
+      sh.getRange(2, 1, n, Math.max(sh.getLastColumn(), t.head.length)).clearContent();
+      done.push(`${t.name} ${n}줄`);
+    });
+    LITE_ = false;
+    const d = getData();
+    d.deleted = { done: done, backup: stamp };
+    return d;
+  });
+}
 function deleteSku(code) {
   return withLock_(() => {
     code = String(code || '').trim().toUpperCase();
