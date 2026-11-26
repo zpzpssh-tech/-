@@ -1096,7 +1096,7 @@ function addLocalMoves(list, label) {
 }
 // 지금 화면 데이터를 서버 응답 모양으로 (applyData에 그대로 넣을 수 있게)
 function stateAsData() {
-  return { skus: [...S.skus.values()], partners: [...S.partners.values()], moves: S.moves, maps: [...S.maps.values()], uploads: [...S.uploads.values()], rules: S.rules,
+  return { skus: [...S.skus.values()], partners: [...S.partners.values()], moves: S.moves, maps: [...S.maps.values()], uploads: [...S.uploads.values()], rules: S.rules, baseRules: S.baseRules,
     memo: S.memo, conf: S.conf, quotes: S.quotes, orderDone: [...S.orderDone], orderDays: S.orderDays, me: S.me, appUrl: S.appUrl, appVersion: (($('app-ver') || {}).textContent || '').replace(/^버전\s*/, '').replace(/ ⚠.*$/, '') || undefined };
 }
 function api(fn, ...args) {
@@ -2134,7 +2134,11 @@ function upGroups() {
 const words = (s) => norm(s).toLowerCase().split(' ').filter(Boolean);
 function matchRule(name, opt) {
   const n = norm(name).toLowerCase(), o = norm(opt).toLowerCase();
-  return S.rules.find((r) => S.skus.has(r.sku) && (r.name || r.opt) && words(r.name).every((w) => n.includes(w)) && words(r.opt).every((w) => o.includes(w))) || null;
+  const hit = (r) => S.skus.has(r.sku) && (r.name || r.opt) && words(r.name).every((w) => n.includes(w)) && words(r.opt).every((w) => o.includes(w));
+  const mine = S.rules.find(hit); if (mine) return mine;
+  // 내 규칙에 없으면 프로그램에 들어 있는 기본 네이버 규칙으로 (배수는 적힌 그대로)
+  const b = (S.baseRules || []).find((r) => hit({ sku: r[2], name: r[0], opt: r[1] }));
+  return b ? { sku: b[2], mult: b[3], memo: '배수고정 (기본 규칙)', base: true } : null;
 }
 /** 매칭 규칙의 배수: 메모에 '배수고정'이 있으면 적힌 배수 그대로(1쌍=재고 1 같은 상품), 아니면 2 이상만 쓰고 1이면 옵션 글자로 짐작 */
 function ruleMult(rule, guess) { return rule.mult > 1 || /배수고정/.test(rule.memo || '') ? (rule.mult || 1) : guess; }
@@ -2642,6 +2646,7 @@ function applyData(d, fromCache) {
   S.maps = new Map(d.maps.map((x) => [x.id, x]));
   S.uploads = new Map(d.uploads.map((x) => [x.sig, x]));
   S.rules = d.rules || [];
+  if (d.baseRules) S.baseRules = d.baseRules;
   S.orderDone = new Set(d.orderDone || []);
   S.orderDays = d.orderDays || {};
   try { S.autoLog = JSON.parse((d.conf || {}).naverAutoLog || 'null'); } catch (e) { S.autoLog = null; }
