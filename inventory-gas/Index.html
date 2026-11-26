@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>올투게더나우 재고관리</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Poppins:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: 왼쪽 메뉴(업무/관리) + 오른쪽 작업 영역. 각 화면은 제목 막대가 있는 '창'이고, 옆에 띄우면 창 두 개가 나란히 놓임. 흰 바탕·회색 표머리·파란 실행 버튼의 업무용 프로그램 느낌 */
 :root {
@@ -418,6 +418,161 @@ table.mini tr[data-sku] { cursor: pointer; }
   #sk-edit:not([hidden]) { animation: itemIn .25s cubic-bezier(.2,.8,.2,1) both; }
   .chip[aria-pressed="true"] { animation: chipIn .22s cubic-bezier(.2,.9,.3,1.3); }
   @keyframes chipIn { from { transform: scale(.92); } to { transform: none; } }
+}
+
+/* =====================================================================
+   디자인 v2 (2026-11-26): 보라 포인트 · 청록→보라→분홍 그라데이션 · 둥근 흰 카드 · 아이콘 메뉴
+   (기능 코드는 그대로 두고, 모양만 이 아래에서 덮어씀)
+   ===================================================================== */
+:root {
+  --bg: #f4f5fa; --surface: #ffffff; --sunken: #f6f7fb; --chrome: #ffffff; --line: #eceef5; --line-strong: #dfe2ec;
+  --fg: #1d1d2c; --muted: #8a8fa3;
+  --accent: #7b61ff; --accent-hover: #6a4ff2; --accent-ink: #ffffff; --accent-soft: #f2efff;
+  --side-bg: #ffffff; --side-active: #f3f0ff;
+  --ok: #18a46b; --ok-soft: #e7f8f0; --warn: #e08a00; --warn-soft: #fff4e2; --bad: #ef4a6a; --bad-soft: #ffeaf0;
+  --grad: linear-gradient(135deg, #5ee7df 0%, #8f7cff 55%, #f39cff 100%);
+  --grad-soft: linear-gradient(135deg, rgba(94, 231, 223, .14), rgba(143, 124, 255, .14) 55%, rgba(243, 156, 255, .14));
+  --shadow: 0 2px 6px rgba(80, 70, 160, .04), 0 12px 32px rgba(80, 70, 160, .07);
+  --shadow-lg: 0 30px 70px rgba(50, 40, 120, .25);
+  --font-body: "Poppins", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --r: 22px;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #11121a; --surface: #1a1b26; --sunken: #20212e; --chrome: #1a1b26; --line: #2a2b3a; --line-strong: #363849;
+  --fg: #eceaf6; --muted: #9a9bb3; --accent: #9d8bff; --accent-hover: #b2a3ff; --accent-ink: #14112b; --accent-soft: #2a2546;
+  --side-bg: #1a1b26; --side-active: #2a2546;
+  --shadow: 0 2px 6px rgba(0, 0, 0, .25), 0 12px 32px rgba(0, 0, 0, .3); } }
+
+body { font-size: 13.5px; letter-spacing: -0.005em; }
+h1, h2, h3, .ptitle { letter-spacing: -0.02em; }
+
+/* 앱 전체를 큰 흰 카드 하나로 */
+.app { margin: 18px; min-height: calc(100vh - 36px); background: var(--surface); border-radius: 28px; box-shadow: var(--shadow); overflow: clip; grid-template-columns: 228px minmax(0, 1fr); }
+.sidebar { border-right: 1px solid var(--line); padding: 26px 0 18px; height: calc(100vh - 36px); top: 18px; gap: 22px; }
+.brand { padding: 0 26px; position: relative; padding-left: 64px; min-height: 36px; }
+.brand::before { content: ""; position: absolute; left: 24px; top: 2px; width: 30px; height: 30px; border-radius: 50%; background: var(--grad); box-shadow: 0 6px 16px rgba(143, 124, 255, .35); }
+.brand small { font-size: 10px; letter-spacing: .12em; }
+.brand h1 { font-size: 14px; font-weight: 700; white-space: nowrap; }
+/* 혼자 볼 때는 제목 막대를 숨김 (위쪽 큰 제목과 겹치지 않게). 옆 창을 띄웠을 때만 보임 */
+.work:not(.split) .vhead { display: none; }
+
+/* 메뉴: 아이콘 + 글자, 고른 메뉴는 연보라 바탕 + 오른쪽 보라 막대 */
+nav.tabs { gap: 4px; }
+nav.tabs .grp { padding: 14px 26px 6px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+nav.tabs a::before { width: 18px; height: 18px; border-radius: 0; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+nav.tabs a { padding: 11px 26px; border-radius: 0; font-weight: 500; color: var(--muted); position: relative; gap: 14px;
+  --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='4'/></svg>"); }
+nav.tabs a:hover { background: var(--sunken); color: var(--fg); }
+nav.tabs a[aria-current="page"] { background: var(--side-active); color: var(--accent); font-weight: 600; box-shadow: inset -3px 0 0 var(--accent); }
+nav.tabs a[aria-current="page"]::before { background: var(--accent); }
+nav.tabs a[data-view="home"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z'/></svg>"); }
+nav.tabs a[data-view="stock"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 8 12 3 3 8v8l9 5 9-5z'/><path d='M3 8l9 5 9-5M12 13v8'/></svg>"); }
+nav.tabs a[data-view="record"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4'/></svg>"); }
+nav.tabs a[data-view="upload"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4' y='3' width='16' height='18' rx='2'/><path d='M8 8h8M8 12h8M8 16h5'/></svg>"); }
+nav.tabs a[data-view="history"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/></svg>"); }
+nav.tabs a[data-view="items"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z'/><circle cx='7.5' cy='7.5' r='1.5'/></svg>"); }
+nav.tabs a[data-view="quote"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/><path d='M14 3v6h6M9 14h6M9 18h4'/></svg>"); }
+nav.tabs a[data-view="excel"] { --ico: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 4h16v16H4zM4 10h16M10 4v16'/></svg>"); }
+nav.tabs a.side::after { border-radius: 999px; padding: 0 6px; }
+.wincontrols { padding: 14px 26px 0; }
+.wincontrols select, .wincontrols button { border-radius: 10px; }
+
+/* 본문 */
+.main { padding: 22px 28px 60px; gap: 20px; }
+header.top .ptitle { font-size: 22px; font-weight: 700; }
+header.top .ptitle::after { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 8px; vertical-align: middle; box-shadow: 0 0 0 4px var(--accent-soft); }
+
+/* 위쪽 숫자 칸 → 작은 통계 카드, 첫 칸은 그라데이션 */
+.loc { border: 0; border-radius: 16px; background: var(--sunken); box-shadow: none; padding: 10px 14px; }
+.loc b { font-size: 19px; font-weight: 700; }
+#locs .loc:first-child { background: var(--grad); color: #fff; box-shadow: 0 10px 24px rgba(143, 124, 255, .3); }
+#locs .loc:first-child span { color: rgba(255, 255, 255, .85); }
+
+/* 창(화면): 맥 창 점 대신 깔끔한 제목 */
+.view { border: 0; border-radius: var(--r); box-shadow: none; background: transparent; gap: 18px; padding-bottom: 0; overflow: visible; }
+.view > :not(.vhead) { margin: 0; }
+.vhead { background: transparent; border: 0; height: auto; padding: 0; font-size: 17px; font-weight: 700; }
+.vhead .dots { display: none; }
+.work.split .view { background: var(--sunken); padding: 16px; border-radius: var(--r); }
+.view.secondary .vhead { font-size: 15px; }
+
+/* 판(패널)·위젯: 둥근 흰 카드 */
+.panel, .view > .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); }
+.view > .panel + .panel, .view > .panel + .cols2 { border-top: 1px solid var(--line); padding-top: 20px; }
+.widget { border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.whead { border-bottom: 0; padding: 16px 18px 4px; font-size: 14px; font-weight: 600; }
+.whead .tip { border-color: var(--accent-soft); background: var(--accent-soft); color: var(--accent); }
+.wbody { padding: 10px 18px 16px; }
+.dash { gap: 18px; }
+.kv div { border-bottom: 1px solid var(--line); padding: 9px 0; }
+.kv b { font-weight: 700; }
+
+/* 홈 상태 3칸 → 통계 카드 */
+.status3 { gap: 16px; }
+.stile { border-radius: var(--r); border: 1px solid var(--line); background: var(--surface) !important; box-shadow: var(--shadow); padding: 18px 20px; position: relative; overflow: hidden; }
+.stile::after { content: ""; position: absolute; right: 18px; top: 18px; width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: .9; }
+.stile.bad { color: var(--bad); } .stile.warn { color: var(--warn); } .stile.ok { color: var(--ok); }
+.stile b { font-size: 32px; font-weight: 700; color: var(--fg) !important; }
+.stile .t { color: inherit !important; font-weight: 600; }
+.stile.bad:first-child { background: var(--grad) !important; color: #fff; border: 0; box-shadow: 0 14px 30px rgba(143, 124, 255, .32); }
+.stile.bad:first-child b, .stile.bad:first-child .t, .stile.bad:first-child .d { color: #fff !important; }
+.stile.bad:first-child::after { background: #fff; }
+.hero h2 { font-size: 22px; font-weight: 700; }
+
+/* 버튼·칩 */
+button { border-radius: 10px; border-color: var(--line-strong); font-weight: 500; }
+button.primary { background: var(--accent); border-color: var(--accent); box-shadow: 0 6px 16px rgba(123, 97, 255, .28); }
+button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+button.big { border-radius: 14px; }
+button.ghost { box-shadow: none; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 500; height: 32px; padding: 0 14px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 14px rgba(123, 97, 255, .3); }
+input, select, textarea { border-radius: 10px; border-color: var(--line-strong); }
+.viewtoggle { border-radius: 12px; overflow: hidden; }
+
+/* 타일·카드 */
+.tile { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+.tile svg { color: var(--accent); background: var(--accent-soft); border-radius: 12px; padding: 7px; width: 38px; height: 38px; }
+.tile[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.card { border-radius: 18px; border: 1px solid var(--line); border-left-width: 1px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+.card::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--line-strong); }
+.card.st-bad::before { background: var(--bad); } .card.st-warn::before { background: var(--warn); } .card.st-ok::before { background: var(--ok); }
+.pcard { border-radius: 18px; border: 1px solid var(--line); box-shadow: var(--shadow); }
+.pcard:hover { border-color: var(--accent); }
+.pill { border-radius: 999px; padding: 2px 10px; font-weight: 600; }
+
+/* 표 */
+.tablebox { border: 1px solid var(--line); border-radius: 16px; }
+th { background: var(--sunken); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); }
+th, td { border-right: 0; }
+tbody tr:hover td { background: var(--sunken); }
+
+/* 안내 띠·창(팝업) */
+.banner { border-radius: 14px; }
+.banner.info { background: var(--accent-soft); color: var(--accent); }
+.modal { border-radius: 26px; }
+.modal-bg { background: rgba(30, 24, 70, .32); backdrop-filter: blur(3px); }
+.toast { border-radius: 14px; background: #1d1d2c; }
+
+/* 차트 (홈 입출고 추이 · 재고 도넛) */
+.chart text { font-family: var(--font-body); font-size: 10.5px; }
+.donutwrap { display: flex; align-items: center; gap: 18px; }
+.donutwrap .kv { flex: 1; min-width: 0; }
+.donut { flex: none; width: 132px; height: 132px; }
+.donut text.big { font-size: 22px; font-weight: 700; fill: var(--accent); font-family: var(--font-body); }
+.donut text.sm { font-size: 10px; fill: var(--muted); font-family: var(--font-body); }
+
+@media (max-width: 860px) {
+  .app { margin: 0; border-radius: 0; min-height: 100vh; box-shadow: none; grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: static; top: auto; height: auto; padding: 14px 0 0; border-right: 0; border-bottom: 1px solid var(--line); gap: 10px; }
+  .brand { padding-left: 56px; } .brand::before { left: 16px; }
+  nav.tabs { padding: 0 10px; }
+  nav.tabs a { padding: 9px 12px; border-radius: 10px 10px 0 0; box-shadow: none; }
+  nav.tabs a[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--accent); }
+  nav.tabs a::before { display: none; }
+  .main { padding: 16px 14px 60px; }
+  .panel, .view > .panel { padding: 14px; }
+  .donutwrap { flex-direction: column; align-items: stretch; } .donut { align-self: center; }
 }
 </style>
 </head>
@@ -1234,20 +1389,50 @@ function dailySeries(days) {
 }
 function niceMax(v) { if (v <= 0) return 10; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (v <= m * p) return m * p; return 10 * p; }
 function chartSVG(series) {
-  const W = 640, H = 210, L = 40, R = 12, T = 12, B = 26, w = W - L - R, h = H - T - B;
+  const W = 640, H = 220, L = 40, R = 14, T = 30, B = 26, w = W - L - R, h = H - T - B;
   const max = niceMax(Math.max(20, ...series.map((d) => Math.max(d.out, d.inb))));
   const x = (i) => L + (series.length === 1 ? w / 2 : (i * w) / (series.length - 1));
   const y = (v) => T + h - (v / max) * h;
-  const line = (k) => series.map((d, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join('');
+  // 점들을 부드러운 곡선으로 잇기 (꺾은선 대신)
+  const smooth = (k) => {
+    const p = series.map((d, i) => [x(i), y(d[k])]);
+    if (p.length < 2) return p.length ? `M${p[0][0]},${p[0][1]}` : '';
+    let d = `M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;
+    for (let i = 0; i < p.length - 1; i++) {
+      const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = Math.min(T + h, p1[1] + (p2[1] - p0[1]) / 6);
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = Math.min(T + h, p2[1] - (p3[1] - p1[1]) / 6);
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  };
   let g = '';
-  for (let t = 0; t <= 4; t++) { const v = (max / 4) * t, yy = y(v).toFixed(1); g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${(+yy + 4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`; }
+  for (let t = 0; t <= 4; t++) { const v = (max / 4) * t, yy = y(v).toFixed(1); g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1" stroke-dasharray="${t ? '3 5' : ''}"/><text x="${L - 8}" y="${(+yy + 4).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`; }
   series.forEach((d, i) => { if (i % 7 === (series.length - 1) % 7) g += `<text x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${i === series.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}">${d.date.slice(5).replace('-', '/')}</text>`; });
   const last = series.length - 1;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${series.length}일 출고·입고 추이">${g}
-    <path d="${line('out')}L${x(last).toFixed(1)},${y(0)}L${x(0).toFixed(1)},${y(0)}Z" fill="var(--accent)" fill-opacity=".10"/>
-    <path d="${line('out')}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linejoin="round"/>
-    <path d="${line('inb')}" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 4" stroke-linejoin="round"/>
-    <circle cx="${x(last).toFixed(1)}" cy="${y(series[last].out).toFixed(1)}" r="3.5" fill="var(--accent)"/></svg>`;
+  let pk = 0; series.forEach((d, i) => { if (d.out > series[pk].out) pk = i; });
+  const px = x(pk), py = y(series[pk].out), tipW = 92, tipX = Math.min(Math.max(px - tipW / 2, L), W - R - tipW);
+  const tip = series[pk].out > 0 ? `<line x1="${px.toFixed(1)}" x2="${px.toFixed(1)}" y1="${py.toFixed(1)}" y2="${T + h}" stroke="url(#cg-line)" stroke-width="2" opacity=".35"/>
+    <rect x="${tipX.toFixed(1)}" y="${Math.max(2, py - 38).toFixed(1)}" width="${tipW}" height="28" rx="8" fill="#1d1d2c"/>
+    <text x="${(tipX + tipW / 2).toFixed(1)}" y="${Math.max(2, py - 38) + 13}" text-anchor="middle" style="fill:#fff;font-size:11.5px;font-weight:700">${fmt(series[pk].out)}개 출고</text>
+    <text x="${(tipX + tipW / 2).toFixed(1)}" y="${Math.max(2, py - 38) + 24}" text-anchor="middle" style="fill:#b9b6d3;font-size:9px">${series[pk].date.slice(5).replace('-', '/')} 최다</text>
+    <circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="#fff" stroke="var(--accent)" stroke-width="2.5"/>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 ${series.length}일 출고·입고 추이">
+    <defs><linearGradient id="cg-line" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#5ee7df"/><stop offset=".5" stop-color="#8f7cff"/><stop offset="1" stop-color="#f39cff"/></linearGradient>
+    <linearGradient id="cg-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8f7cff" stop-opacity=".22"/><stop offset="1" stop-color="#8f7cff" stop-opacity="0"/></linearGradient></defs>${g}
+    <path d="${smooth('out')} L${x(last).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z" fill="url(#cg-fill)"/>
+    <path d="${smooth('out')}" fill="none" stroke="url(#cg-line)" stroke-width="3" stroke-linecap="round"/>
+    <path d="${smooth('inb')}" fill="none" stroke="var(--ok)" stroke-width="1.8" stroke-dasharray="5 5" stroke-linecap="round" opacity=".8"/>
+    ${tip}</svg>`;
+}
+// 그라데이션 도넛 (재고 현황: '충분해요' 비율)
+function donutSVG(pct, label) {
+  const r = 52, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, pct));
+  return `<svg class="donut" viewBox="0 0 132 132" role="img" aria-label="${esc(label)} ${v}%">
+    <defs><linearGradient id="dg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#5ee7df"/><stop offset=".55" stop-color="#8f7cff"/><stop offset="1" stop-color="#f39cff"/></linearGradient></defs>
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="var(--sunken)" stroke-width="14"/>
+    <circle cx="66" cy="66" r="${r}" fill="none" stroke="url(#dg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(c * v / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 66 66)"/>
+    <text class="big" x="66" y="70" text-anchor="middle">${v}%</text><text class="sm" x="66" y="88" text-anchor="middle">${esc(label)}</text></svg>`;
 }
 function renderHome() {
   $('hm-actions').innerHTML = Object.entries(GROUPS).filter(([k]) => k !== 'etc').map(([k, g]) => `<button type="button" class="tile" data-gogroup="${k}">${ICON[g.icon]}<b>${g.label}</b><span>${g.sub}</span></button>`).join('') +
@@ -1268,13 +1453,14 @@ function renderHome() {
   // 1) 재고 현황
   let have = 0, value = 0, pend = 0;
   for (const r of lg.values()) { have += Math.max(r.have, 0); value += r.value; pend += r.pending; }
-  const wStock = widget('재고 현황', '본사창고 + 파스토 기준. 로켓 센터 재고는 쿠팡 소유라 넣지 않습니다.', `<div class="kv">
+  const okPct = c.all ? Math.round((c.ok / c.all) * 100) : 0;
+  const wStock = widget('재고 현황', '본사창고 + 파스토 기준. 로켓 센터 재고는 쿠팡 소유라 넣지 않습니다.', `<div class="donutwrap">${donutSVG(okPct, '충분한 상품')}<div class="kv">
     <div><span>관리 중인 상품</span><b>${fmt(c.all)}개</b></div>
     <div class="bad"><span>지금 주문하세요</span><b>${fmt(c.bad)}개</b></div>
     <div class="warn"><span>곧 주문하세요</span><b>${fmt(c.warn)}개</b></div>
     <div class="${c.nostock ? 'mut' : ''}"><span>재고 미입력</span><b>${fmt(c.nostock)}개</b></div>
     <div class="${c.neg ? 'bad' : ''}"><span>마이너스 재고</span><b>${fmt(c.neg)}개</b></div>
-    <div><span>총 보유 수량</span><b>${fmt(have)}개</b></div></div>`, { more: 'stock' });
+    <div><span>총 보유 수량</span><b>${fmt(have)}개</b></div></div></div>`, { more: 'stock' });
 
   // 2) 입고 예정 (공장에 주문해 두고 아직 안 온 것)
   const lastOrder = new Map();
