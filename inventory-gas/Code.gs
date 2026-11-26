@@ -56,7 +56,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-26.02';
+const APP_VERSION = '2026-11-26.03';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -236,6 +236,14 @@ function moveRows_(list, batchLabel) {
 }
 function addMoves(list, batchLabel) {
   return withLock_(() => { append_(TABS.MOVE, moveRows_(list, batchLabel)); return getData(); });
+}
+/** 빠른 저장: 기록만 붙이고, 전체 데이터를 다시 읽지 않고 방금 저장한 줄만 돌려줌 (입출고 창 저장 버튼용) */
+function addMovesFast(list, batchLabel) {
+  return withLock_(() => {
+    const rows = moveRows_(list, batchLabel);
+    append_(TABS.MOVE, rows);
+    return { ok: true, moves: rows.map((r, i) => ({ id: r[0], date: r[1], type: list[i].type, loc: list[i].loc, sku: r[4], qty: Number(r[5]), memo: r[6], batch: r[7], batchLabel: r[8], at: r[9], by: r[10], partner: r[11], price: Number(r[12]) || 0, usd: Number(r[13]) || 0, fx: Number(r[14]) || 0 })) };
+  });
 }
 function deleteBatch(batch) {
   return withLock_(() => {

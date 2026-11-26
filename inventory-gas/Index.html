@@ -1847,15 +1847,36 @@ async function saveRecord() {
   const { out, errs } = buildMoves();
   if (errs.length) { toast(errs[0]); return; }
   if (!out.length) { toast(FORMS[S.form].mode === 'count' ? '장부와 실제 수량이 같아서 기록할 차이가 없습니다' : '상품과 수량을 입력해 주세요'); return; }
-  const btn = $('rc-save'); btn.disabled = true;
+  // 빠르게: 화면에는 바로 반영하고 창을 닫은 뒤, 시트 저장은 뒤에서 (실패하면 되돌리고 알려 줌)
+  const label = FORMS[S.form].label, doneMsg = FORMS[S.form].mode === 'count' ? '실사 수량으로 재고를 맞췄습니다' : `${SUBLABEL[S.form]} 기록했습니다`;
+  const tag = 'tmp' + Date.now() + Math.random().toString(36).slice(2, 6);
+  const temp = out.map((m, i) => ({ ...m, id: tag + '-' + i, batch: tag, batchLabel: label, at: new Date().toISOString().slice(0, 19).replace('T', ' '), by: S.me, qty: Number(m.qty) || 0, price: Number(m.price) || 0, memo: m.memo || '', partner: m.partner || '', saving: true }));
+  S.moves.push(...temp); indexMoves(temp); S.ver++;
+  S.lines = []; $('rc-memo').value = '';
+  closeProduct(); renderPicker(); refresh();
+  toast(doneMsg); S.savingN = (S.savingN || 0) + 1; showSaving();
   try {
-    applyData(await api('addMoves', out, FORMS[S.form].label));
-    S.lines = []; $('rc-memo').value = '';
-    closeProduct(); renderPicker();
-    toast(FORMS[S.form].mode === 'count' ? '실사 수량으로 재고를 맞췄습니다' : `${SUBLABEL[S.form]} 기록했습니다`);
-  } catch (e) { writeFail(e); }
-  finally { btn.disabled = !S.canWrite; }
+    const r = await api('addMovesFast', out, label);
+    const tmpIds = new Set(temp.map((m) => m.id)), have = new Set(S.moves.map((m) => m.id));
+    S.moves = S.moves.filter((m) => !tmpIds.has(m.id)).concat((r.moves || []).filter((m) => !have.has(m.id)));
+    S.ver++; refresh();
+  } catch (e) {
+    const tmpIds = new Set(temp.map((m) => m.id));
+    S.moves = S.moves.filter((m) => !tmpIds.has(m.id)); S.ver++; applyLastPrices(); refresh();
+    writeFail(e); toast('저장하지 못해서 방금 기록을 되돌렸습니다: ' + ((e && e.message) || e));
+  } finally { S.savingN--; showSaving(); }
 }
+// 저장 중 표시 (왼쪽 위): 뒤에서 시트에 쓰는 동안
+function showSaving() { const d = $('sync-dot'); if (!d) return; if (S.savingN > 0) { d.hidden = false; d.textContent = '● 시트에 저장 중…'; } else if (!S.stale) { d.hidden = true; d.textContent = '● 최신 정보로 맞추는 중…'; } }
+// 직전 판매가·매입가 기억 (단가 자동 채우기용)
+function indexMoves(list) {
+  for (const m of list) {
+    if (!m.price) continue;
+    if ((m.type === 'rocket' || m.type === 'b2b') && m.partner && m.qty < 0) S.lastSale.set(m.partner + '|' + m.sku, { price: m.price, date: m.date });
+    if ((m.type === 'inbound' && m.loc === 'hq') || m.type === 'order') S.lastBuy.set(m.sku, { price: m.price, usd: m.usd || 0, date: m.date });
+  }
+}
+function applyLastPrices() { S.lastSale = new Map(); S.lastBuy = new Map(); indexMoves([...S.moves].sort(cmpMove)); }
 
 /* 단가 확인 창: 거래처에 처음 파는 상품일 때 */
 function openPriceModal(i) {
@@ -3398,7 +3419,7 @@ load();
 // 엑셀·PDF 도구는 화면이 다 뜬 뒤 미리 받아 둠
 setTimeout(() => { loadLib('xlsx').catch(() => {}); loadLib('h2c').catch(() => {}); loadLib('jspdf').catch(() => {}); }, 2500);
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
-setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden) load(true); }, 120000);
+setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden && !(S.savingN > 0)) load(true); }, 120000);
 })();
 </script>
 </body>
