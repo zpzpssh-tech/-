@@ -2550,7 +2550,8 @@ function renderAutoBox() {
   const pushAge = push && push.at ? (Date.now() - new Date(String(push.at).replace(' ', 'T') + '+09:00').getTime()) / 60000 : Infinity;
   const box = $('up-auto');
   if (box) {
-    const srcRow = `<span class="small"><b>가져오는 곳</b></span>
+    // 네이버 API 방식은 보류 (구글 시트 방식으로 진행). 혹시 API로 설정돼 있을 때만 고르는 버튼을 보여줌
+    const srcRow = !isApi ? '' : `<span class="small"><b>가져오는 곳</b></span>
       <button type="button" class="chip" data-src="" aria-pressed="${!isApi}">원가 관리 시트 (매일)</button>
       <button type="button" class="chip" data-src="api" aria-pressed="${isApi}">네이버 API (10분마다)</button>
       ${isApi ? `<span class="small" style="flex-basis:100%">${push ? `주문 수집 프로그램 마지막 연락: <b>${esc(String(push.at).slice(5, 16))}</b> · 새로 받은 주문 ${fmt(push.count || 0)}건` + (pushAge > 40 ? ' · <b style="color:var(--bad)">40분 넘게 연락이 없습니다 (클라우드 PC·수집 프로그램 확인)</b>' : '') : '<b>아직 주문 수집 프로그램에서 받은 주문이 없습니다</b> (설치 후 10분 안에 들어옵니다)'}</span>` : ''}
