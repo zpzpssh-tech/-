@@ -30,6 +30,8 @@ const TABS = {
   CONF: { name: '설정', head: ['항목', '값', '수정시각'] },
   QUOTE: { name: '견적서', head: ['견적번호', '견적일', '받는 곳', '합계(부가세포함)', '공급가액', '부가세', '내용(JSON)', '작성자', '작성시각'] },
   ORDER: { name: '처리주문', head: ['상품주문번호', '출고일', '파일', '기록시각'] },
+  // 클라우드 PC의 주문 수집 프로그램 → 연결 다리(Bridge)가 채우는 탭. 이 프로그램은 읽기만 함
+  API: { name: 'API주문', head: ['상품주문번호', '채널', '계정', '주문일시', '주문상태', '클레임상태', '배송속성', '상품번호', '상품명', '옵션정보', '수량', '판매자관리코드', '옵션관리코드', '수정시각'] },
   UPLOAD: { name: '업로드', head: ['서명', '파일명', '차감수량', '기록시각', '기록자'] },
 };
 // 시트에는 사람이 읽기 쉬운 한글로 저장하고, 프로그램 안에서는 코드로 씁니다.
@@ -122,7 +124,7 @@ let BOOK_ = null;
 const SHEET_ = {};
 let LITE_ = false;
 // 탭 제목줄 점검은 프로그램이 바뀌었을 때 한 번만 (매번 하면 탭마다 읽기가 한 번씩 늘어남). 탭/열을 추가하면 이 값을 바꿀 것.
-const SCHEMA_VER = '2026-11-23';
+const SCHEMA_VER = '2026-11-26';
 let SCHEMA_OK_ = null;
 function schemaOk_() { if (SCHEMA_OK_ === null) SCHEMA_OK_ = PropertiesService.getScriptProperties().getProperty('SCHEMA') === SCHEMA_VER; return SCHEMA_OK_; }   // true면 getData가 사진을 빼고 보냄 (저장할 때마다 큰 사진을 다시 받지 않도록)
 function book_() {
@@ -485,6 +487,7 @@ function savePdf(base64, filename) {
 }
 /** 네이버 원가 관리 시트에서 시작일~종료일이 걸친 달 탭(예: '202610월', '202611월')을 읽어 한 표로 합쳐 돌려줌 (날짜 거르기는 화면에서) */
 function readNaverSheet(url, from, to) {
+  if (String(url || '').trim().toUpperCase() === 'API') return readApiOrders_(from, to || from);
   const id = (String(url || '').match(/[-\w]{25,}/) || [])[0];
   if (!id) throw new Error('구글 시트 주소를 확인해 주세요.');
   let ss;
@@ -551,61 +554,95 @@ function dayOf_(v) {
 }
 function confMap_() { const c = {}; rows_(TABS.CONF).forEach((r) => { if (str_(r[0])) c[str_(r[0])] = String(r[1] === null || r[1] === undefined ? '' : r[1]); }); return c; }
 function dayShift_(d, n) { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return Utilities.formatDate(x, Session.getScriptTimeZone(), 'yyyy-MM-dd').slice(0, 10); }
+/** 네이버 API로 받은 주문(API주문 탭)을 원가 관리 시트와 같은 모양의 표로 돌려줌 */
+function readApiOrders_(from, to) {
+  const head = ['상품주문번호', '주문일시', '주문상태', '클레임상태', '배송속성', '상품번호', '상품명', '옵션정보', '수량', '판매자관리코드', '옵션관리코드'];
+  const out = [head];
+  rows_(TABS.API).forEach((r) => {
+    if (!str_(r[0])) return;
+    const d = dayOf_(r[3]);
+    if (from && (!d || d < from)) return;
+    if (to && d > to) return;
+    out.push([str_(r[0]), str_(r[3]), str_(r[4]), str_(r[5]), str_(r[6]), str_(r[7]), str_(r[8]), str_(r[9]), str_(r[10]), str_(r[11]), str_(r[12])]);
+  });
+  return { title: '네이버 API', tab: 'API주문', missing: [], values: out };
+}
+/** 자동 출고.
+ *  - 원가 관리 시트 방식(naverSource 없음): 매일 정한 시각에, 마지막 처리일 다음날 ~ 어제 주문
+ *  - 네이버 API 방식(naverSource = 'api'): 10분마다, 최근 7일 주문 중 아직 안 뺀 것 + 취소·반품 확정된 것은 되돌림 */
 function autoNaverShip_(opt) {
   opt = opt || {};
-  const conf = confMap_();
-  if (!conf.naverSheet) throw new Error('네이버 원가 관리 시트 주소가 저장되어 있지 않습니다. 엑셀 입출고 화면에서 한 번 [시트에서 가져오기]를 해 주세요.');
-  const yest = opt.to || dayShift_(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd').slice(0, 10), -1);
-  let from = opt.from || (conf.naverAutoLast ? dayShift_(conf.naverAutoLast, 1) : yest);
+  const conf = confMap_(), api = conf.naverSource === 'api';
+  const tz = Session.getScriptTimeZone(), todayStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd').slice(0, 10);
+  if (!api && !conf.naverSheet) throw new Error('네이버 원가 관리 시트 주소가 저장되어 있지 않습니다. 엑셀 입출고 화면에서 한 번 [시트에서 가져오기]를 해 주세요.');
+  const yest = opt.to || (api ? todayStr : dayShift_(todayStr, -1));
+  let from = opt.from || (api ? dayShift_(todayStr, -6) : (conf.naverAutoLast ? dayShift_(conf.naverAutoLast, 1) : yest));
   const floor = dayShift_(yest, -13); if (from < floor) from = floor;
   if (from > yest) return { from, to: yest, units: 0, moves: 0, pending: [], note: '처리할 새 날짜가 없습니다' };
-  const sheet = readNaverSheet(conf.naverSheet, from, yest), v = sheet.values;
+  const sheet = api ? readApiOrders_(from, yest) : readNaverSheet(conf.naverSheet, from, yest), v = sheet.values;
   const head = (v[0] || []).map(NORM_);
   const col = (names) => { for (const n of names) { const i = head.indexOf(n); if (i >= 0) return i; } for (const n of names) { const i = head.findIndex((h) => h.indexOf(n) >= 0); if (i >= 0) return i; } return -1; };
   const cDate = col(['발송처리일', '발송일', '발송일시', '출고일', '배송시작일', '주문일시', '주문일', '결제일']), cStatus = col(['상품주문상태', '주문상태', '배송상태']), cClaim = col(['클레임상태']);
   const cPno = col(['상품번호']), cName = col(['상품명', '노출상품명', '등록상품명', '제품명', '품명']), cOpt = col(['옵션정보', '등록옵션명', '노출옵션명', '옵션명', '옵션']), cQty = col(['수량', '구매수(수량)', '주문수량', '구매수량']);
-  const cNo = col(['상품주문번호']), cAttr = col(['배송속성', '배송구분', '배송방법']);
-  if (cDate < 0 || cName < 0 || cQty < 0) throw new Error('시트에서 주문일시·상품명·수량 열을 찾지 못했습니다.');
+  const cNo = col(['상품주문번호']), cAttr = col(['배송속성', '배송구분', '배송방법']), cCode1 = col(['판매자관리코드']), cCode2 = col(['옵션관리코드']);
+  if (cDate < 0 || cName < 0 || cQty < 0) throw new Error('주문일시·상품명·수량 열을 찾지 못했습니다.');
   const done = new Set(rows_(TABS.ORDER).map((r) => str_(r[0])));
   const skus = new Set(rows_(TABS.SKU).map((r) => str_(r[0]).toUpperCase()).filter(Boolean));
   const maps = new Map(rows_(TABS.MAP).filter((r) => str_(r[0])).map((r) => [str_(r[0]), { sku: str_(r[2]), mult: num_(r[3]) || 1 }]));
   const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ name: str_(r[1]).toLowerCase(), opt: str_(r[2]).toLowerCase(), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1 }));
   const words = (s) => s.split(' ').filter(Boolean);
   const seen = new Map(), agg = new Map(), orderNos = [], pending = [];
-  let rowsUsed = 0;
+  let rowsUsed = 0, reversed = 0;
   for (let i = 1; i < v.length; i++) {
     const r = v[i];
     if (!r.some((c) => NORM_(c))) continue;
-    // 화면과 같은 주문열쇠: 주문일시·상품번호·상품명·옵션·수량 + 같은 줄 순번
     let key;
     if (cNo >= 0) key = NORM_(r[cNo]);
     else { const base = [cDate, cPno, cName, cOpt, cQty].map((c) => (c >= 0 ? NORM_(r[c]) : '')).join('|'); const k = (seen.get(base) || 0) + 1; seen.set(base, k); key = 'S' + HASH_(base) + '-' + k; }
     const d = dayOf_(r[cDate]); if (!d || d < from || d > yest) continue;
-    if (/취소|반품|교환|환불/.test(`${cStatus >= 0 ? r[cStatus] : ''} ${cClaim >= 0 ? r[cClaim] : ''}`)) continue;
-    if (key && done.has(key)) continue;
+    const st = `${cStatus >= 0 ? r[cStatus] : ''} ${cClaim >= 0 ? r[cClaim] : ''}`;
+    const cancelled = /취소|반품|교환|환불/.test(st);
+    // API 방식: 이미 뺀 주문이 나중에 '취소 완료'·'반품 완료'되면 재고를 되돌림 (취소 요청·교환은 그대로 둠)
+    const finalCancel = api && key && done.has(key) && !done.has(key + ':R') && /(^|\s)(취소|반품)(\s|$)|취소완료|반품완료/.test(st) && !/교환/.test(st);
+    if (cancelled && !finalCancel) continue;
+    if (!finalCancel && key && done.has(key)) continue;
     const name = NORM_(r[cName]), op = cOpt >= 0 ? NORM_(r[cOpt]) : '', qty = num_(r[cQty]);
     if (!name || !qty) continue;
     const mkey = op ? `${name} ¦ ${op}` : name;
     let hit = maps.get(HASH_(mkey));
+    // 판매자관리코드·옵션관리코드에 SKU 코드를 적어 두면 바로 연결
+    if (!hit) { const code = [cCode2, cCode1].map((c) => (c >= 0 ? NORM_(r[c]).toUpperCase() : '')).find((x) => x && skus.has(x)); if (code) hit = { sku: code, mult: 1 }; }
     if (!hit) { const t = (`${name} ${op}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((x) => skus.has(x)); if (t) hit = { sku: t, mult: packMult(name, op) }; }
     if (!hit) { const n = name.toLowerCase(), o = op.toLowerCase(); const rule = rules.find((x) => skus.has(x.sku) && (x.name || x.opt) && words(x.name).every((w) => n.indexOf(w) >= 0) && words(x.opt).every((w) => o.indexOf(w) >= 0)); if (rule) hit = { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : packMult(name, op) }; }
-    if (!hit || !hit.sku) { pending.push({ day: d, name, opt: op, qty }); continue; }
+    if (!hit || !hit.sku) { if (!finalCancel) pending.push({ day: d, name, opt: op, qty }); continue; }
+    const loc = cAttr >= 0 && /N\s*배송|도착보장|풀필먼트|NFA|파스토|FASSTO/i.test(NORM_(r[cAttr])) ? 'fassto' : 'hq';
+    if (finalCancel) {
+      orderNos.push({ no: key + ':R', day: d }); reversed++;
+      if (hit.sku !== '__skip') { const ak = hit.sku + '|' + loc + '|' + d + '|R'; agg.set(ak, (agg.get(ak) || 0) + qty * hit.mult); }
+      continue;
+    }
     rowsUsed++;
     if (key) orderNos.push({ no: key, day: d });
     if (hit.sku === '__skip') continue;
-    const loc = cAttr >= 0 && /N\s*배송|풀필먼트|NFA|파스토|FASSTO/i.test(NORM_(r[cAttr])) ? 'fassto' : 'hq';
     const ak = hit.sku + '|' + loc + '|' + d;
     agg.set(ak, (agg.get(ak) || 0) + qty * hit.mult);
   }
-  const list = [...agg].map(([k, q]) => { const [sku, loc, d] = k.split('|'); return { sku, loc, qty: -q, type: loc === 'fassto' ? 'nsale' : 'ship', date: d, memo: `네이버 원가 관리 · ${d.slice(5)} 주문분 (자동)` }; }).sort((a, b) => a.date.localeCompare(b.date));
-  const units = list.reduce((a, m) => a - m.qty, 0);
+  const src = api ? '네이버 API' : '네이버 원가 관리';
+  const list = [...agg].map(([k, q]) => {
+    const [sku, loc, d, rev] = k.split('|');
+    if (rev) return { sku, loc, qty: q, type: 'return', date: d, memo: `${src} · ${d.slice(5)} 주문 취소·반품 되돌림 (자동)` };
+    return { sku, loc, qty: -q, type: loc === 'fassto' ? 'nsale' : 'ship', date: d, memo: `${src} · ${d.slice(5)} 주문분 (자동)` };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+  const units = list.filter((m) => m.qty < 0).reduce((a, m) => a - m.qty, 0);
   withLock_(() => {
     const at = now_();
-    if (list.length) append_(TABS.MOVE, moveRows_(list, `네이버 자동 출고 (${from === yest ? yest : from + '~' + yest})`));
-    if (orderNos.length) append_(TABS.ORDER, orderNos.map((n) => [n.no, n.day, '네이버 자동 출고', at]));
+    if (list.length) append_(TABS.MOVE, moveRows_(list, `${api ? '네이버 API 자동 출고' : '네이버 자동 출고'} (${from === yest ? yest : from + '~' + yest})`));
+    if (orderNos.length) append_(TABS.ORDER, orderNos.map((n) => [n.no, n.day, api ? '네이버 API' : '네이버 자동 출고', at]));
   });
-  const log = { at: now_(), from, to: yest, units, moves: list.length, orders: rowsUsed, pending: pending.slice(0, 200), pendingCount: pending.length, tab: sheet.tab };
-  saveConf({ naverAutoLast: yest, naverAutoLog: JSON.stringify(log) });
+  const log = { at: now_(), from, to: yest, units, moves: list.length, orders: rowsUsed, reversed, pending: pending.slice(0, 200), pendingCount: pending.length, tab: sheet.tab, source: api ? 'api' : 'sheet' };
+  const save = { naverAutoLog: JSON.stringify(log) };
+  if (!api) save.naverAutoLast = yest;
+  saveConf(save);
   return log;
 }
 /** 시간 트리거가 부르는 함수 (실패해도 기록만 남김) */
@@ -616,10 +653,15 @@ function autoNaverTrigger() {
 /** 화면: 지금 바로 자동 출고 실행 */
 function runAutoNaver(from, to) { const res = autoNaverShip_({ from: from || '', to: to || '' }); const d = getData(); d.autoResult = res; return d; }
 /** 화면: 매일 자동 출고 켜기/끄기 */
-function setAutoNaver(on, hour) {
+function setAutoNaver(on, hour, source) {
   ScriptApp.getProjectTriggers().filter((t) => t.getHandlerFunction() === 'autoNaverTrigger').forEach((t) => ScriptApp.deleteTrigger(t));
-  if (on) ScriptApp.newTrigger('autoNaverTrigger').timeBased().everyDays(1).atHour(Math.max(0, Math.min(23, Number(hour) || 9))).create();
-  saveConf({ naverAuto: on ? 'on' : 'off', naverAutoHour: String(Number(hour) || 9) });
+  const conf = confMap_();
+  const src = source === undefined || source === null ? (conf.naverSource || '') : (source === 'api' ? 'api' : '');
+  if (on) {
+    if (src === 'api') ScriptApp.newTrigger('autoNaverTrigger').timeBased().everyMinutes(10).create();
+    else ScriptApp.newTrigger('autoNaverTrigger').timeBased().everyDays(1).atHour(Math.max(0, Math.min(23, Number(hour) || 9))).create();
+  }
+  saveConf({ naverAuto: on ? 'on' : 'off', naverAutoHour: String(Number(hour) || 9), naverSource: src });
   return getData();
 }
 

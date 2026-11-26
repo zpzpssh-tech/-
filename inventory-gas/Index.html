@@ -1759,13 +1759,13 @@ function upFromTable(name, aoa, day, source, day2) {
     day, day2: day2 || day, noCancel: true, splitN: true, mode: 'out', cur: buyCur(), fx: S.fx || '', date: today(), loc: 'hq', pick: {}, mult: {}, remember: true, dupOk: false };
   renderUpload();
 }
-async function loadNaverSheet() {
-  const url = norm($('up-sheet-url').value), day = $('up-sheet-day').value || daysAgo(1), day2 = $('up-sheet-day2').value && $('up-sheet-day2').value >= day ? $('up-sheet-day2').value : day;
+async function loadNaverSheet(force) {
+  const url = typeof force === 'string' && force ? force : norm($('up-sheet-url').value), day = $('up-sheet-day').value || daysAgo(1), day2 = $('up-sheet-day2').value && $('up-sheet-day2').value >= day ? $('up-sheet-day2').value : day;
   if (!url) { toast('시트 주소를 넣어 주세요'); return; }
   const b = $('up-sheet-go'); b.disabled = true; b.textContent = '가져오는 중…';
   try {
     const r = await api('readNaverSheet', url, day, day2);
-    if (S.canWrite && url !== (S.conf || {}).naverSheet) api('saveConf', { naverSheet: url }).then(applyData).catch(() => {});
+    if (S.canWrite && url !== 'API' && url !== (S.conf || {}).naverSheet) api('saveConf', { naverSheet: url }).then(applyData).catch(() => {});
     upFromTable(`${r.title} · ${r.tab}`, r.values, day, `${r.title} › ${r.tab}`, day2);
     toast(`'${r.tab}' 탭을 읽었습니다` + (r.missing && r.missing.length ? ` (없는 탭: ${r.missing.join(', ')}월)` : ''));
   } catch (e) { writeFail(e); }
@@ -2516,9 +2516,17 @@ $('up-sheetbox').addEventListener('click', async (e) => {
   if (e.target.id === 'up-auto-toggle') {
     if (!guard()) return;
     const on = (S.conf || {}).naverAuto !== 'on', hour = Number($('up-auto-hour').value) || 9;
-    if (on && !(S.conf || {}).naverSheet) { toast('먼저 시트 주소를 넣고 [시트에서 가져오기]를 한 번 해 주세요'); return; }
+    const isApi = (S.conf || {}).naverSource === 'api';
+    if (on && !isApi && !(S.conf || {}).naverSheet) { toast('먼저 시트 주소를 넣고 [시트에서 가져오기]를 한 번 해 주세요'); return; }
     e.target.disabled = true;
-    try { applyData(await api('setAutoNaver', on, hour)); toast(on ? `매일 ${hour}시에 어제 주문을 자동으로 뺍니다` : '자동 출고를 껐습니다'); } catch (err) { writeFail(err); } finally { e.target.disabled = false; }
+    try { applyData(await api('setAutoNaver', on, hour, isApi ? 'api' : '')); toast(on ? (isApi ? '10분마다 네이버 API로 받은 주문을 자동으로 뺍니다' : `매일 ${hour}시에 어제 주문을 자동으로 뺍니다`) : '자동 출고를 껐습니다'); } catch (err) { writeFail(err); } finally { e.target.disabled = false; }
+  }
+  const srcBtn = e.target.closest('[data-src]');
+  if (srcBtn) {
+    if (!guard()) return;
+    const src = srcBtn.dataset.src, c = S.conf || {};
+    if ((c.naverSource || '') === src) return;
+    try { applyData(await api('setAutoNaver', c.naverAuto === 'on', Number(c.naverAutoHour) || 9, src)); toast(src === 'api' ? '이제 네이버 API로 받은 주문을 씁니다 (원가 관리 시트는 읽지 않음)' : '다시 원가 관리 시트를 매일 읽습니다'); } catch (err) { writeFail(err); }
   }
   if (e.target.id === 'up-auto-run') {
     if (!guard()) return;
@@ -2534,23 +2542,32 @@ $('hm-auto').addEventListener('click', (e) => {
   if (e.target.id !== 'hm-auto-fix') return;
   const L = S.autoLog || {}, days = (L.pending || []).map((x) => x.day).sort();
   location.hash = '#upload'; setUpMode('out');
-  if (days.length) { $('up-sheet-day').value = days[0]; $('up-sheet-day2').value = days[days.length - 1]; loadNaverSheet(); }
+  if (days.length) { $('up-sheet-day').value = days[0]; $('up-sheet-day2').value = days[days.length - 1]; loadNaverSheet((S.conf || {}).naverSource === 'api' ? 'API' : ''); }
 });
 function renderAutoBox() {
-  const c = S.conf || {}, on = c.naverAuto === 'on', hour = Number(c.naverAutoHour) || 9, L = S.autoLog;
+  const c = S.conf || {}, on = c.naverAuto === 'on', hour = Number(c.naverAutoHour) || 9, L = S.autoLog, isApi = c.naverSource === 'api';
+  let push = null; try { push = JSON.parse(c.apiLastPush || 'null'); } catch (e) { push = null; }
+  const pushAge = push && push.at ? (Date.now() - new Date(String(push.at).replace(' ', 'T') + '+09:00').getTime()) / 60000 : Infinity;
   const box = $('up-auto');
   if (box) {
+    const srcRow = `<span class="small"><b>가져오는 곳</b></span>
+      <button type="button" class="chip" data-src="" aria-pressed="${!isApi}">원가 관리 시트 (매일)</button>
+      <button type="button" class="chip" data-src="api" aria-pressed="${isApi}">네이버 API (10분마다)</button>
+      ${isApi ? `<span class="small" style="flex-basis:100%">${push ? `주문 수집 프로그램 마지막 연락: <b>${esc(String(push.at).slice(5, 16))}</b> · 새로 받은 주문 ${fmt(push.count || 0)}건` + (pushAge > 40 ? ' · <b style="color:var(--bad)">40분 넘게 연락이 없습니다 (클라우드 PC·수집 프로그램 확인)</b>' : '') : '<b>아직 주문 수집 프로그램에서 받은 주문이 없습니다</b> (설치 후 10분 안에 들어옵니다)'}</span>` : ''}
+      <span style="flex-basis:100%;height:0"></span>`;
     const last = L ? (L.error ? `<span style="color:var(--bad)">마지막 실행 실패: ${esc(L.error)}</span>` : `마지막 자동 실행 ${esc((L.at || '').slice(5, 16))} · ${md(L.from)}${L.to !== L.from ? '~' + md(L.to) : ''} 주문 <b>${fmt(L.units || 0)}개</b> 출고${L.pendingCount ? ` · <b style="color:var(--warn)">확인 필요 ${L.pendingCount}건</b>` : ''}`) : '아직 자동 실행 기록이 없습니다';
-    box.innerHTML = `<b>매일 자동 출고</b> <span class="pill ${on ? 'ok' : 'mute'}">${on ? `켜짐 · 매일 ${hour}시` : '꺼짐'}</span>
-      <select id="up-auto-hour" style="height:30px">${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((h) => `<option value="${h}"${h === hour ? ' selected' : ''}>매일 ${h}시</option>`).join('')}</select>
-      <button class="sm ${on ? '' : 'primary'}" id="up-auto-toggle">${on ? '자동 출고 끄기' : '매일 자동 출고 켜기'}</button>
+    box.innerHTML = srcRow + `<b>${isApi ? '자동 출고' : '매일 자동 출고'}</b> <span class="pill ${on ? 'ok' : 'mute'}">${on ? (isApi ? '켜짐 · 10분마다' : `켜짐 · 매일 ${hour}시`) : '꺼짐'}</span>
+      <select id="up-auto-hour" style="height:30px"${isApi ? ' hidden' : ''}>${[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((h) => `<option value="${h}"${h === hour ? ' selected' : ''}>매일 ${h}시</option>`).join('')}</select>
+      <button class="sm ${on ? '' : 'primary'}" id="up-auto-toggle">${on ? '자동 출고 끄기' : isApi ? '자동 출고 켜기' : '매일 자동 출고 켜기'}</button>
       <button class="sm" id="up-auto-run" title="마지막으로 처리한 날 다음날부터 어제까지 지금 바로 처리">지금 실행</button>
       <span class="small grow">${last}</span>`;
   }
   const hb = $('hm-auto');
   if (hb) {
     const n = L && !L.error ? L.pendingCount || 0 : 0;
-    hb.hidden = !(n || (L && L.error));
+    const silent = isApi && on && push && pushAge > 40;
+    hb.hidden = !(n || (L && L.error) || silent);
+    if (silent && !(L && L.error) && !n) { hb.innerHTML = `<div class="banner">네이버 주문 수집 프로그램(클라우드 PC)이 <b>${Math.round(pushAge)}분째</b> 연락이 없습니다. 클라우드 PC가 켜져 있는지 확인해 주세요.</div>`; return; }
     hb.innerHTML = L && L.error ? `<div class="banner">네이버 자동 출고가 실패했습니다: ${esc(L.error)} <a href="#upload">확인하기</a></div>`
       : n ? `<div class="banner">네이버 자동 출고에서 <b>상품을 연결하지 못한 주문 ${n}건</b>이 있어 빼지 않았습니다. <button class="sm" id="hm-auto-fix">연결하러 가기</button></div>` : '';
   }

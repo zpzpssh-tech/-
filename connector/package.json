@@ -1,0 +1,7 @@
+{
+  "name": "atgn-connector",
+  "private": true,
+  "version": "1.0.0",
+  "description": "올투게더나우 주문 수집 프로그램 (네이버 커머스API → 재고DB)",
+  "dependencies": { "bcryptjs": "2.4.3" }
+}
