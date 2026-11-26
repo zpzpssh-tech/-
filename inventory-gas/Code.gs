@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-26.04';
+const APP_VERSION = '2026-11-26.05';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -208,7 +208,17 @@ const me_ = () => { try { return Session.getActiveUser().getEmail() || ''; } cat
 const appUrl_ = () => { try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; } };
 
 /* ---------- 읽기: 화면이 쓰는 데이터 전체 ---------- */
+// 빠른 저장: 화면이 먼저 반영하고 서버엔 저장만 시킴 → 저장 뒤 전체 데이터를 다시 읽지 않음
+let FAST_ = false;
+function runFast(name, args) {
+  const FN = { saveSkus, deleteSku, deleteBatch, savePartner, deletePartner, saveRules, deleteRule, saveMaps, deleteMap, saveConf, deleteConf, saveQuote, deleteQuote, saveMemo, applyUpload, editSku, deleteAllSkus, setAutoNaver, addMoves };
+  if (!FN[name]) throw new Error('빠른 저장을 지원하지 않는 기능: ' + name);
+  FAST_ = true;
+  try { FN[name].apply(null, args || []); } finally { FAST_ = false; }
+  return { ok: true };
+}
 function getData() {
+  if (FAST_) return { fast: true };
   const skus = rows_(TABS.SKU).filter((r) => str_(r[0])).map((r) => ({
     code: str_(r[0]), name: str_(r[1]), part: str_(r[2]), option: str_(r[3]),
     safety: num_(r[4]), lead: num_(r[5]) || 50, active: str_(r[6]) !== 'N',
@@ -241,9 +251,10 @@ function getData() {
 
 /* ---------- 쓰기 ---------- */
 function moveRows_(list, batchLabel) {
-  const batch = Utilities.getUuid().slice(0, 13), at = now_(), by = me_();
+  const given = (list.find((m) => m && m.batch) || {}).batch;
+  const batch = given ? String(given).slice(0, 40) : Utilities.getUuid().slice(0, 13), at = now_(), by = me_();
   return list.map((m) => [
-    Utilities.getUuid().slice(0, 13), m.date, MOVE_LABEL[m.type] || m.type, LOC_LABEL[m.loc] || m.loc,
+    m.id ? String(m.id).slice(0, 40) : Utilities.getUuid().slice(0, 13), m.date, MOVE_LABEL[m.type] || m.type, LOC_LABEL[m.loc] || m.loc,
     m.sku, Number(m.qty), m.memo || '', batch, batchLabel || '', at, by, m.partner || '', Number(m.price) || '', Number(m.usd) || '', Number(m.fx) || '',
   ]);
 }

@@ -1006,11 +1006,111 @@ const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const toNum = (v) => Number(String(v ?? '').replace(/[^\d.-]/g, '')) || 0;
 
-function api(fn, ...args) {
+function apiRaw(fn, ...args) {
   return new Promise((resolve, reject) => {
     if (!window.google || !google.script || !google.script.run) { reject(new Error('구글 Apps Script 웹앱으로 열어야 합니다')); return; }
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
   });
+}
+/* ---------- 바로 반영 (모든 저장·삭제 버튼) ----------
+ * 버튼을 누르면 ① 화면 데이터를 먼저 바꿔 바로 보여주고 ② 시트 저장은 뒤에서 순서대로 처리합니다.
+ * 저장이 실패하면 알려 주고 시트에서 다시 불러와 원래대로 맞춥니다. */
+const INSTANT = {
+  saveSkus(list) {
+    for (const s of list || []) {
+      const code = String(s.code || '').trim().toUpperCase(); if (!CODE_RE.test(code) || !String(s.name || '').trim()) continue;
+      S.skus.set(code, { code, name: String(s.name).trim(), part: s.part || '', option: s.option || '', safety: Math.max(0, Number(s.safety) || 0), lead: Math.max(1, Number(s.lead) || 50), active: s.active !== false, cost: Number(s.cost) || 0, retail: Number(s.retail) || 0, wholesale: Number(s.wholesale) || 0, costUsd: Number(s.costUsd) || 0 });
+    }
+  },
+  deleteSku(code) {
+    code = String(code || '').trim().toUpperCase();
+    const used = S.moves.filter((m) => String(m.sku).toUpperCase() === code).length;
+    if (used) throw new Error(`${code}는 입출고 기록이 ${used}건 있어서 지울 수 없습니다. 수정에서 '사용 중' 체크를 풀어 숨겨 주세요.`);
+    S.skus.delete(code); for (const [k, m] of S.maps) if (String(m.sku).toUpperCase() === code) S.maps.delete(k);
+  },
+  deleteBatch(b) { S.moves = S.moves.filter((m) => (m.batch || m.id) !== b); },
+  savePartner(p, oldName) {
+    const name = String(p.name || '').trim(); if (!name) throw new Error('거래처 이름을 적어 주세요');
+    if (oldName && oldName !== name) S.partners.delete(oldName);
+    S.partners.set(name, { name, basis: p.basis || '직접입력', memo: p.memo || '' });
+  },
+  deletePartner(name) { S.partners.delete(name); },
+  saveRules(list) {
+    for (const x of list || []) {
+      if (!x.id || !x.sku) continue;
+      const r = { id: x.id, name: x.name || '', opt: x.opt || '', sku: String(x.sku).toUpperCase(), mult: Math.max(1, Number(x.mult) || 1), memo: x.memo || '' };
+      const i = S.rules.findIndex((y) => y.id === x.id); if (i >= 0) S.rules[i] = r; else S.rules.push(r);
+    }
+  },
+  deleteRule(id) { S.rules = S.rules.filter((r) => r.id !== id); },
+  saveMaps(list) { for (const m of list || []) S.maps.set(m.id, { id: m.id, key: m.key, sku: m.sku, mult: Math.max(1, Number(m.mult) || 1) }); },
+  deleteMap(id) { S.maps.delete(id); },
+  saveConf(obj) { S.conf = { ...S.conf }; for (const k of Object.keys(obj || {})) S.conf[k] = String(obj[k] ?? ''); },
+  deleteConf(key) { S.conf = { ...S.conf }; delete S.conf[key]; },
+  saveQuote(q) {
+    const row = { no: q.no, date: q.date, to: q.to || '', total: Number(q.total) || 0, body: JSON.stringify(q.body || {}), by: S.me, at: nowText() };
+    const i = S.quotes.findIndex((x) => x.no === q.no); if (i >= 0) S.quotes[i] = row; else S.quotes.push(row);
+  },
+  deleteQuote(no) { S.quotes = S.quotes.filter((x) => x.no !== no); },
+  saveMemo(text) { S.memo = { text: String(text || '').slice(0, 5000), at: nowText(), by: S.me }; },
+  addMoves(list, label) { addLocalMoves(list, label); },
+  applyUpload(list, newMaps, sig, file, label, orderNos, orderDay) {
+    addLocalMoves(list, label || '주문서 차감');
+    for (const n of orderNos || []) { const no = typeof n === 'object' ? n.no : n, day = (typeof n === 'object' ? n.day : '') || orderDay || ''; if (!no) continue; S.orderDone.add(no); if (day) S.orderDays[day] = (S.orderDays[day] || 0) + 1; }
+    S.uploads.set(sig, { sig, file, units: (list || []).filter((m) => m.loc !== 'pending').reduce((a, m) => a + Math.abs(Number(m.qty)), 0), at: nowText() });
+    INSTANT.saveMaps(newMaps);
+  },
+  editSku(oldCode, s) {
+    oldCode = String(oldCode || '').trim().toUpperCase();
+    const code = String(s.code || '').trim().toUpperCase(), name = String(s.name || '').trim();
+    if (!CODE_RE.test(code)) throw new Error('코드는 영문 대문자·숫자·하이픈(-)만 쓸 수 있습니다.');
+    if (!name) throw new Error('상품명을 적어 주세요.');
+    const old = S.skus.get(oldCode); if (!old) throw new Error('수정할 상품을 찾지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+    if (code !== oldCode && S.skus.has(code)) throw new Error(`${code} 코드는 이미 다른 상품이 쓰고 있습니다.`);
+    const oldKey = productKeyOf(old), part = String(s.part || '').trim();
+    S.skus.delete(oldCode);
+    S.skus.set(code, { ...old, code, name, part, option: String(s.option || '').trim(), safety: Math.max(0, Number(s.safety) || 0), lead: Math.max(1, Number(s.lead) || 50), active: s.active !== false, retail: s.retail === undefined ? old.retail : Number(s.retail) || 0, wholesale: s.wholesale === undefined ? old.wholesale : Number(s.wholesale) || 0 });
+    if (code !== oldCode) { for (const m of S.moves) if (m.sku === oldCode) m.sku = code; for (const m of S.maps.values()) if (m.sku === oldCode) m.sku = code; for (const r of S.rules) if (r.sku === oldCode) r.sku = code; }
+    const newKey = `${part || '기타'}|${name}`, ph = photoOf(oldKey);
+    if (ph && !S.photos[photoKey(newKey)]) S.photos[photoKey(newKey)] = ph;
+  },
+  deleteAllSkus(opt) {
+    opt = opt || {}; S.skus = new Map();
+    if (opt.moves) { S.moves = []; S.orderDone = new Set(); S.orderDays = {}; S.uploads = new Map(); }
+    if (opt.maps) { S.maps = new Map(); S.rules = []; }
+    if (opt.photos) { S.photos = {}; S.photoNames = {}; }
+  },
+  setAutoNaver(on, hour, source) {
+    const c = S.conf || {}, src = source === undefined || source === null ? (c.naverSource || '') : (source === 'api' ? 'api' : '');
+    INSTANT.saveConf({ naverAuto: on ? 'on' : 'off', naverAutoHour: String(Number(hour) || 9), naverSource: src });
+  },
+};
+function nowText() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 19).replace('T', ' '); }
+function newId() { return (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2) + Date.now().toString(16)).replace(/-/g, '').slice(0, 13); }
+// 기록 줄에 ID를 미리 붙여 화면에 넣음 (서버도 같은 ID로 저장)
+function addLocalMoves(list, label) {
+  if (!list || !list.length) return;
+  const batch = list.find((m) => m.batch)?.batch || newId(), at = nowText();
+  const add = list.map((m) => { if (!m.id) m.id = newId(); m.batch = batch; return { id: m.id, date: m.date, type: m.type, loc: m.loc, sku: m.sku, qty: Number(m.qty) || 0, memo: m.memo || '', batch, batchLabel: label || '', at, by: S.me, partner: m.partner || '', price: Number(m.price) || 0, usd: Number(m.usd) || 0, fx: Number(m.fx) || 0 }; });
+  S.moves.push(...add);
+}
+// 지금 화면 데이터를 서버 응답 모양으로 (applyData에 그대로 넣을 수 있게)
+function stateAsData() {
+  return { skus: [...S.skus.values()], partners: [...S.partners.values()], moves: S.moves, maps: [...S.maps.values()], uploads: [...S.uploads.values()], rules: S.rules,
+    memo: S.memo, conf: S.conf, quotes: S.quotes, orderDone: [...S.orderDone], orderDays: S.orderDays, me: S.me, appUrl: S.appUrl, appVersion: (($('app-ver') || {}).textContent || '').replace(/^버전\s*/, '').replace(/ ⚠.*$/, '') || undefined };
+}
+function api(fn, ...args) {
+  if (INSTANT[fn] && ready() && !S.stale) {
+    try { INSTANT[fn](...args); } catch (e) { return Promise.reject(e); }   // 화면 기준으로 안 되는 일(예: 기록 있는 상품 삭제)은 바로 알려 줌
+    S.savingN = (S.savingN || 0) + 1; if (typeof showSaving === 'function') showSaving();
+    // 시트 저장은 누른 순서대로 하나씩
+    S.fastQ = (S.fastQ || Promise.resolve()).then(() => apiRaw('runFast', fn, args)).catch(async (e) => {
+      writeFail(e); toast('시트에 저장하지 못했습니다. 원래대로 다시 불러옵니다: ' + ((e && e.message) || e));
+      try { await load(true); } catch (e2) { /* 무시 */ }
+    }).finally(() => { S.savingN--; if (typeof showSaving === 'function') showSaving(); });
+    return Promise.resolve(stateAsData());
+  }
+  return apiRaw(fn, ...args);
 }
 
 // 엑셀·PDF 도구: 처음 켤 때 기다리지 않도록, 화면이 뜬 뒤(또는 필요할 때) 불러옴
@@ -1343,7 +1443,7 @@ async function runDelAll() {
   try {
     const d = await api('deleteAllSkus', { moves: $('da-moves').checked, maps: $('da-maps').checked, photos: $('da-photos').checked });
     applyData(d); closeDelAll(); S.confirmSku = null;
-    toast(`상품을 모두 지웠습니다 · 백업 탭: 백업_…_${(d.deleted || {}).backup || ''}`);
+    toast(d.deleted ? `상품을 모두 지웠습니다 · 백업 탭: 백업_…_${d.deleted.backup}` : '상품을 모두 지웠습니다 · 재고DB 시트에 \'백업_\' 탭으로 복사본을 남깁니다');
   } catch (e) { writeFail(e); $('da-go').disabled = false; }
 }
 
