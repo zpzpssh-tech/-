@@ -1350,7 +1350,11 @@ async function runDelAll() {
 /* ---------- 업데이트 (코드 붙여넣기 대신 버튼 한 번) ---------- */
 async function checkUpd(force) {
   try { const r = await api('checkUpdate', !!force); S.upd = r; renderUpd(); if (force && !r.available) toast(`최신 버전입니다 (${r.current})`); }
-  catch (e) { if (force) toast('업데이트 확인 실패: ' + e.message); }
+  catch (e) {
+    // 조용히 넘어가지 않고, 버전 글자에 표시 → 눌러서 이유 확인
+    $('app-ver').textContent = $('app-ver').textContent.replace(/ ⚠.*$/, '') + ' ⚠ 업데이트 확인 실패(눌러서 보기)';
+    if (force) toast('업데이트 확인 실패: ' + e.message);
+  }
 }
 function renderUpd() {
   const r = S.upd, b = $('upd-bar');

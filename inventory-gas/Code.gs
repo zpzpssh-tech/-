@@ -64,7 +64,7 @@ function fetchText_(name) {
   if (r.getResponseCode() !== 200) throw new Error(name + ' 파일을 받지 못했습니다 (' + r.getResponseCode() + ')');
   return r.getContentText('UTF-8');
 }
-/** 새 버전이 있는지 확인 (화면이 켜질 때 한 번, 1시간 동안은 기억해 둔 결과를 씀) */
+/** 새 버전이 있는지 확인 (화면이 켜질 때 한 번, 10분 동안은 기억해 둔 결과를 씀) */
 function checkUpdate(force) {
   const cache = CacheService.getScriptCache();
   let latest = force ? null : cache.get('latestVersion');
@@ -73,7 +73,7 @@ function checkUpdate(force) {
     const code = fetchText_('Code.gs');
     latest = (code.match(/const APP_VERSION = '([^']+)'/) || [])[1] || '';
     try { notes = fetchText_('CHANGELOG.txt').split(/\r?\n/).filter((l) => l.trim()).slice(0, 8).join('\n'); } catch (e) { notes = ''; }
-    cache.put('latestVersion', latest, 3600); cache.put('latestNotes', notes || '', 3600);
+    cache.put('latestVersion', latest, 600); cache.put('latestNotes', notes || '', 600);   // 10분만 기억 (새 버전을 빨리 알아채도록)
   }
   return { current: APP_VERSION, latest: latest, notes: notes || '', available: !!latest && latest > APP_VERSION };
 }
