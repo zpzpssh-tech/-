@@ -2136,6 +2136,8 @@ function matchRule(name, opt) {
   const n = norm(name).toLowerCase(), o = norm(opt).toLowerCase();
   return S.rules.find((r) => S.skus.has(r.sku) && (r.name || r.opt) && words(r.name).every((w) => n.includes(w)) && words(r.opt).every((w) => o.includes(w))) || null;
 }
+/** 매칭 규칙의 배수: 메모에 '배수고정'이 있으면 적힌 배수 그대로(1쌍=재고 1 같은 상품), 아니면 2 이상만 쓰고 1이면 옵션 글자로 짐작 */
+function ruleMult(rule, guess) { return rule.mult > 1 || /배수고정/.test(rule.memo || '') ? (rule.mult || 1) : guess; }
 /** 옵션 글자로 실제 개수 짐작: 한쪽·한팔·1p = 1개 · 1쌍·양쪽·양팔 = 2개 · 2쌍 = 4개 · 3p/3개 = 3개 (연결표에 저장된 배수가 있으면 그게 우선) */
 function packMult(name, opt) {
   const f = (t) => {
@@ -2155,7 +2157,7 @@ function upResolve(e) {
   const codeHit = !mapped ? (`${e.name} ${e.opt}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)) : null;
   const rule = !mapped ? (codeHit ? { sku: codeHit, mult: 1 } : matchRule(e.name, e.opt)) : null;
   const guess = packMult(e.name, e.opt);   // 한쪽 1개 · 1쌍 2개
-  const base = mapped || (rule ? { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : guess } : null);
+  const base = mapped || (rule ? { sku: rule.sku, mult: ruleMult(rule, guess) } : null);
   const sku = u.pick[e.key] ?? (base ? base.sku : '');
   const mult = u.mult[e.key] ?? (base ? base.mult : guess);
   return { sku, mult: Number(mult) || 1, known: !!mapped && u.pick[e.key] === undefined, rule: !!rule && u.pick[e.key] === undefined };
@@ -3385,7 +3387,7 @@ function ldResolve(row) {
   const setPcs = ldSetPcs(row);
   if (!auto) { const hit = (`${row.code} ${row.desc}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((t) => S.skus.has(t)); if (hit) auto = { sku: hit, mult: setPcs }; }
   if (!auto && row.code) { const pk = [...productMap().values()].find((p) => p.codes.some((c) => c.startsWith(row.code.toUpperCase() + '-'))); if (pk) auto = { sku: 'P:' + pk.key, mult: setPcs }; }
-  if (!auto) { const rule = matchRule(row.desc, row.code); if (rule) auto = { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : setPcs }; }
+  if (!auto) { const rule = matchRule(row.desc, row.code); if (rule) auto = { sku: rule.sku, mult: ruleMult(rule, setPcs) }; }
   const sku = L.pick[row.key] ?? (auto ? auto.sku : '');
   const mult = Number(L.mult[row.key] ?? (auto ? auto.mult : setPcs)) || 1;
   return { sku, mult, auto: !!auto && L.pick[row.key] === undefined };

@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-26.05';
+const APP_VERSION = '2026-11-26.06';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -621,7 +621,7 @@ function autoNaverShip_(opt) {
   const done = new Set(rows_(TABS.ORDER).map((r) => str_(r[0])));
   const skus = new Set(rows_(TABS.SKU).map((r) => str_(r[0]).toUpperCase()).filter(Boolean));
   const maps = new Map(rows_(TABS.MAP).filter((r) => str_(r[0])).map((r) => [str_(r[0]), { sku: str_(r[2]), mult: num_(r[3]) || 1 }]));
-  const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ name: str_(r[1]).toLowerCase(), opt: str_(r[2]).toLowerCase(), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1 }));
+  const rules = rows_(TABS.RULE).filter((r) => str_(r[0]) && str_(r[3])).map((r) => ({ name: str_(r[1]).toLowerCase(), opt: str_(r[2]).toLowerCase(), sku: str_(r[3]).toUpperCase(), mult: num_(r[4]) || 1, fix: /배수고정/.test(str_(r[5])) }));
   const words = (s) => s.split(' ').filter(Boolean);
   const seen = new Map(), agg = new Map(), orderNos = [], pending = [];
   let rowsUsed = 0, reversed = 0;
@@ -645,7 +645,7 @@ function autoNaverShip_(opt) {
     // 판매자관리코드·옵션관리코드에 SKU 코드를 적어 두면 바로 연결
     if (!hit) { const code = [cCode2, cCode1].map((c) => (c >= 0 ? NORM_(r[c]).toUpperCase() : '')).find((x) => x && skus.has(x)); if (code) hit = { sku: code, mult: 1 }; }
     if (!hit) { const t = (`${name} ${op}`.toUpperCase().match(/[A-Z0-9][A-Z0-9_\-.]*/g) || []).find((x) => skus.has(x)); if (t) hit = { sku: t, mult: packMult(name, op) }; }
-    if (!hit) { const n = name.toLowerCase(), o = op.toLowerCase(); const rule = rules.find((x) => skus.has(x.sku) && (x.name || x.opt) && words(x.name).every((w) => n.indexOf(w) >= 0) && words(x.opt).every((w) => o.indexOf(w) >= 0)); if (rule) hit = { sku: rule.sku, mult: rule.mult > 1 ? rule.mult : packMult(name, op) }; }
+    if (!hit) { const n = name.toLowerCase(), o = op.toLowerCase(); const rule = rules.find((x) => skus.has(x.sku) && (x.name || x.opt) && words(x.name).every((w) => n.indexOf(w) >= 0) && words(x.opt).every((w) => o.indexOf(w) >= 0)); if (rule) hit = { sku: rule.sku, mult: rule.mult > 1 || rule.fix ? rule.mult : packMult(name, op) }; }
     if (!hit || !hit.sku) { if (!finalCancel) pending.push({ day: d, name, opt: op, qty }); continue; }
     const loc = cAttr >= 0 && /N\s*배송|도착보장|풀필먼트|NFA|파스토|FASSTO/i.test(NORM_(r[cAttr])) ? 'fassto' : 'hq';
     if (finalCancel) {
