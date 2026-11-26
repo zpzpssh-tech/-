@@ -17,6 +17,7 @@ function setup() {
   PropertiesService.getScriptProperties().setProperty('SHEET_ID', ss.getId());
   Object.values(TABS).forEach((t) => tab_(ss, t));
   if (!rows_(TABS.PARTNER).length) append_(TABS.PARTNER, DEFAULT_PARTNERS.map((p) => [p[0], p[1], p[2], now_()]));
+  try { ensureAutoUpdate_(); } catch (e) { /* 자동 업데이트 예약 실패는 무시 */ }
   return '준비 완료: ' + ss.getName();
 }
 const TABS = {
@@ -56,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-26.03';
+const APP_VERSION = '2026-11-26.04';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -108,8 +109,20 @@ function applyUpdate() {
     const deps = (scriptApi_('get', '/deployments').deployments || []).filter((d) => d.deploymentConfig && d.deploymentConfig.versionNumber && (d.entryPoints || []).some((e) => e.entryPointType === 'WEB_APP'));
     deps.forEach((d) => scriptApi_('put', '/deployments/' + d.deploymentId, { deploymentConfig: { scriptId: ScriptApp.getScriptId(), versionNumber: ver.versionNumber, manifestFileName: 'appsscript', description: '자동 업데이트 ' + latest } }));
     CacheService.getScriptCache().remove('latestVersion');
+    try { ensureAutoUpdate_(); } catch (e) { /* 자동 업데이트 예약 실패는 무시 */ }
     return { ok: true, version: latest, versionNumber: ver.versionNumber, deployments: deps.length };
   } finally { lock.releaseLock(); }
+}
+
+/** 자동 업데이트: 매일 새벽 4시에 새 버전이 있으면 알아서 바꿔 끼움 (버튼 누를 필요 없음) */
+function autoUpdateTrigger() {
+  try {
+    const c = checkUpdate(true);
+    if (c.available) { const r = applyUpdate(); saveConf({ autoUpdateLog: JSON.stringify({ at: now_(), from: c.current, to: r.version }) }); }
+  } catch (e) { try { saveConf({ autoUpdateLog: JSON.stringify({ at: now_(), error: String((e && e.message) || e) }) }); } catch (e2) { /* 무시 */ } }
+}
+function ensureAutoUpdate_() {
+  if (!ScriptApp.getProjectTriggers().some((t) => t.getHandlerFunction() === 'autoUpdateTrigger')) ScriptApp.newTrigger('autoUpdateTrigger').timeBased().everyDays(1).atHour(4).create();
 }
 
 /* ---------- 웹페이지 열기 ---------- */
