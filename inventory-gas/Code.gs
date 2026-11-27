@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-26.07';
+const APP_VERSION = '2026-11-27.01';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -86,7 +86,8 @@ function scriptApi_(method, path, body) {
   const code = r.getResponseCode(), text = r.getContentText();
   if (code >= 300) {
     if (/has not (been used|enabled)|SERVICE_DISABLED|usersettings/i.test(text)) throw new Error('Apps Script API가 꺼져 있습니다. script.google.com/home/usersettings 에서 "Google Apps Script API"를 사용으로 켜고 다시 눌러 주세요.');
-    if (code === 403) throw new Error('업데이트 권한이 없습니다. 프로그램을 만든 대표님 계정으로 눌러 주세요.');
+    if (/insufficient.*scope|ACCESS_TOKEN_SCOPE_INSUFFICIENT/i.test(text)) throw new Error('업데이트 권한(scope)이 아직 승인되지 않았습니다. Apps Script 편집기에서 함수 목록의 applyUpdate 를 한 번 ▶실행하고 권한을 허용해 주세요.');
+    if (code === 403) throw new Error('업데이트 권한이 없습니다 (' + Session.getActiveUser().getEmail() + '). 프로그램을 만든 계정으로 열었는지 확인하거나, Apps Script 편집기에서 applyUpdate 를 ▶실행해 주세요. [' + text.replace(/\s+/g, ' ').slice(0, 160) + ']');
     throw new Error('업데이트 실패 (' + code + '): ' + text.slice(0, 200));
   }
   return text ? JSON.parse(text) : {};
