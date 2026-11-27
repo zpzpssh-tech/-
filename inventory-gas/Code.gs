@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-27.01';
+const APP_VERSION = '2026-11-27.02';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -94,6 +94,8 @@ function scriptApi_(method, path, body) {
 }
 /** 업데이트: 최신 코드 받기 → 프로젝트에 덮어쓰기 → 새 버전 → 지금 쓰는 웹앱 주소(배포)를 새 버전으로 */
 function applyUpdate() {
+  // 예전에 일부 권한만 허용했으면 여기서 허용 창을 다시 띄움 (편집기 실행 시)
+  try { ScriptApp.requireScopes(ScriptApp.AuthMode.FULL, ['https://www.googleapis.com/auth/script.projects', 'https://www.googleapis.com/auth/script.deployments']); } catch (e) { if (!/requireScopes is not a function/.test(String(e))) throw e; }
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) throw new Error('다른 업데이트가 진행 중입니다. 잠시 후 다시 시도해 주세요.');
   try {
