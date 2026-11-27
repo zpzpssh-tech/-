@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-27.03';
+const APP_VERSION = '2026-11-27.04';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -67,6 +67,7 @@ function fetchText_(name) {
 }
 /** 새 버전이 있는지 확인 (화면이 켜질 때 한 번, 10분 동안은 기억해 둔 결과를 씀) */
 function checkUpdate(force) {
+  if (loaderMode_()) return { current: APP_VERSION, latest: APP_VERSION, notes: '', available: false, loader: true };   // 로더는 항상 최신
   const cache = CacheService.getScriptCache();
   let latest = force ? null : cache.get('latestVersion');
   let notes = force ? null : cache.get('latestNotes');
@@ -125,12 +126,22 @@ function autoUpdateTrigger() {
   } catch (e) { try { saveConf({ autoUpdateLog: JSON.stringify({ at: now_(), error: String((e && e.message) || e) }) }); } catch (e2) { /* 무시 */ } }
 }
 function ensureAutoUpdate_() {
+  if (loaderMode_()) return;   // 로더가 알아서 최신 버전을 받으므로 예약 필요 없음
   if (!ScriptApp.getProjectTriggers().some((t) => t.getHandlerFunction() === 'autoUpdateTrigger')) ScriptApp.newTrigger('autoUpdateTrigger').timeBased().everyDays(1).atHour(4).create();
 }
 
 /* ---------- 웹페이지 열기 ---------- */
+/** 로더(자동 최신 버전)로 돌고 있는지: 로더가 L_html 함수를 갖고 있음 */
+function loaderMode_() { return typeof L_html === 'function'; }
+/** 화면이 부르는 모든 기능의 입구 (로더로 돌 때도, 코드를 직접 붙였을 때도 똑같이 동작) */
+function rpc(fn, args) {
+  if (!/^[A-Za-z][A-Za-z0-9]*$/.test(String(fn))) throw new Error('알 수 없는 기능: ' + fn);
+  const f = eval(fn);
+  if (typeof f !== 'function') throw new Error('알 수 없는 기능: ' + fn);
+  return f.apply(null, args || []);
+}
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  return (loaderMode_() ? HtmlService.createHtmlOutput(L_html()) : HtmlService.createHtmlOutputFromFile('Index'))
     .setTitle('올투게더나우 재고관리')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
