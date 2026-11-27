@@ -574,6 +574,16 @@ tbody tr:hover td { background: var(--sunken); }
   .panel, .view > .panel { padding: 14px; }
   .donutwrap { flex-direction: column; align-items: stretch; } .donut { align-self: center; }
 }
+
+/* SKU 검색 고르기 (엑셀 입출고 · 매칭 규칙) */
+.skupop { position: fixed; z-index: 9999; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(20,20,50,.18); display: flex; flex-direction: column; overflow: hidden; }
+.skupop input { margin: 8px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; font: inherit; background: var(--surface); color: var(--fg); }
+.skupop ul { list-style: none; margin: 0; padding: 0 0 6px; overflow-y: auto; }
+.skupop li { padding: 7px 12px; cursor: pointer; font-size: 13px; color: var(--fg); }
+.skupop li.on { background: var(--accent-soft); color: var(--accent); }
+.skupop li.sel { font-weight: 700; }
+.skupop li.none { color: var(--muted); cursor: default; }
+.skupop mark { background: none; color: var(--accent); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -3528,6 +3538,63 @@ setTimeout(() => { loadLib('xlsx').catch(() => {}); loadLib('h2c').catch(() => {
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
 setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden && !(S.savingN > 0)) load(true); }, 120000);
 })();
+
+/* ---------- SKU 검색해서 고르기 ----------
+ * SKU 고르는 칸(엑셀 입출고의 SKU 칸, 매칭 규칙의 SKU 칸)을 누르면 검색창이 달린 목록이 뜹니다.
+ * 코드·상품명·옵션 어느 글자로 쳐도 찾고(띄어쓰기로 여러 단어 가능), ↑↓ Enter로 고를 수 있습니다.
+ * 고르면 원래 칸 값이 바뀌고 'change'가 일어나므로 기존 기능은 그대로 동작합니다. */
+const SKUPICK = 'select[data-pick], select#ru-sku';
+const skuEsc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let skuPop = null;
+function closeSkuPop() { if (skuPop) { skuPop.el.remove(); skuPop = null; } }
+function openSkuPop(sel) {
+  closeSkuPop();
+  const opts = [...sel.options].map((o) => ({ v: o.value, t: o.textContent, low: (o.value + ' ' + o.textContent).toLowerCase().replace(/\s+/g, ' ') }));
+  const el = document.createElement('div'); el.className = 'skupop';
+  el.innerHTML = '<input type="search" placeholder="코드·상품명으로 검색 (예: 슬개건 블랙, WA01)" autocomplete="off"><ul></ul>';
+  document.body.appendChild(el);
+  const r = sel.getBoundingClientRect(), w = Math.max(r.width, 320), below = window.innerHeight - r.bottom;
+  el.style.width = Math.min(w, window.innerWidth - 16) + 'px';
+  el.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+  const h = Math.min(380, Math.max(below, r.top) - 12);
+  if (below >= 260 || below >= r.top) el.style.top = (r.bottom + 4) + 'px'; else el.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+  el.style.maxHeight = h + 'px';
+  const inp = el.querySelector('input'), ul = el.querySelector('ul');
+  skuPop = { el, sel, items: [], idx: 0 };
+  const draw = () => {
+    const words = inp.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const items = opts.filter((o) => words.every((w) => o.low.includes(w)));
+    skuPop.items = items; skuPop.idx = Math.max(0, items.findIndex((o) => o.v === sel.value && words.length === 0));
+    if (words.length && skuPop.idx < 0) skuPop.idx = 0;
+    const hl = (t) => { let h = skuEsc(t); for (const w of words) h = h.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), (m) => '<mark>' + m + '</mark>'); return h; };
+    ul.innerHTML = items.length ? items.map((o, i) => `<li data-i="${i}" class="${i === skuPop.idx ? 'on' : ''}${o.v === sel.value ? ' sel' : ''}">${hl(o.t)}</li>`).join('') : '<li class="none">찾는 상품이 없어요</li>';
+    const on = ul.querySelector('li.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  };
+  const choose = (i) => { const o = skuPop && skuPop.items[i]; if (!o) return; const s2 = skuPop.sel; closeSkuPop(); if (s2.value !== o.v) { s2.value = o.v; s2.dispatchEvent(new Event('change', { bubbles: true })); } s2.focus(); };
+  inp.addEventListener('input', draw);
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const n = skuPop.items.length; if (!n) return; skuPop.idx = (skuPop.idx + (e.key === 'ArrowDown' ? 1 : n - 1)) % n; ul.querySelectorAll('li').forEach((li, i) => li.classList.toggle('on', i === skuPop.idx)); const on = ul.querySelector('li.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+    else if (e.key === 'Enter') { e.preventDefault(); choose(skuPop.idx); }
+    else if (e.key === 'Escape') { e.preventDefault(); const s2 = skuPop.sel; closeSkuPop(); s2.focus(); }
+  });
+  ul.addEventListener('mousedown', (e) => { const li = e.target.closest('li[data-i]'); if (li) { e.preventDefault(); choose(Number(li.dataset.i)); } });
+  draw(); inp.focus({ preventScroll: true }); skuPop.at = Date.now();
+}
+document.addEventListener('mousedown', (e) => {
+  const sel = e.target.closest && e.target.closest(SKUPICK);
+  if (sel && !sel.disabled) { e.preventDefault(); if (skuPop && skuPop.sel === sel) closeSkuPop(); else openSkuPop(sel); return; }
+  if (skuPop && !skuPop.el.contains(e.target)) closeSkuPop();
+}, true);
+document.addEventListener('keydown', (e) => {   // 키보드로 칸에 와서 Enter/스페이스/글자를 치면 검색창 열기
+  const sel = e.target.matches && e.target.matches(SKUPICK) ? e.target : null;
+  if (!sel || skuPop) return;
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || (e.key.length === 1 && !e.ctrlKey && !e.metaKey)) {
+    e.preventDefault(); openSkuPop(sel);
+    if (e.key.length === 1 && e.key !== ' ') { const inp = skuPop.el.querySelector('input'); inp.value = e.key; inp.dispatchEvent(new Event('input')); }
+  }
+}, true);
+window.addEventListener('resize', closeSkuPop);
+document.addEventListener('scroll', (e) => { if (skuPop && Date.now() - skuPop.at > 400 && !skuPop.el.contains(e.target) && (e.target === document || (e.target.contains && e.target.contains(skuPop.sel)))) closeSkuPop(); }, true);
 </script>
 </body>
 </html>
