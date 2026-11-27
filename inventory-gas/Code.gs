@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-27.07';
+const APP_VERSION = '2026-11-27.08';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -131,6 +131,37 @@ function ensureAutoUpdate_() {
 }
 
 /* ---------- 웹페이지 열기 ---------- */
+/** 한 번만 하는 상품 합치기: 예전 코드의 기록·연결·규칙을 새 코드로 옮기고 예전 상품은 지움 (재고 수량은 합쳐짐) */
+const SKU_MERGES = [{ id: 'SH01', to: 'SH01', from: ['SH01-L', 'SH01-R'], option: '', why: '어깨보호대는 좌우 구분 없음' }];
+function mergeSkus_() {
+  const P = PropertiesService.getScriptProperties();
+  SKU_MERGES.forEach((m) => {
+    if (P.getProperty('MERGED_' + m.id)) return;
+    withLock_(() => {
+      const vals = rows_(TABS.SKU), up = (r) => str_(r[0]).toUpperCase();
+      const has = vals.map(up), olds = m.from.filter((c) => has.includes(c));
+      if (olds.length) {
+        const sh = tab_(book_(), TABS.SKU);
+        if (!has.includes(m.to)) {   // 첫 번째 예전 상품을 새 코드로 바꿔서 남김 (상품명·사진·가격 유지)
+          const i = has.indexOf(olds[0]), o = vals[i].slice();
+          o[0] = m.to; o[3] = m.option; o[7] = now_();
+          putRow_(TABS.SKU, i, o);
+        }
+        [[TABS.MOVE, 5], [TABS.MAP, 3], [TABS.RULE, 4]].forEach(([t, col]) => {
+          const tsh = tab_(book_(), t), n = tsh.getLastRow() - 1;
+          if (n < 1) return;
+          const rng = tsh.getRange(2, col, n, 1), v = rng.getValues();
+          let changed = false;
+          v.forEach((r) => { if (m.from.includes(String(r[0]).trim().toUpperCase())) { r[0] = m.to; changed = true; } });
+          if (changed) rng.setValues(v);
+        });
+        const now = rows_(TABS.SKU);
+        for (let i = now.length - 1; i >= 0; i--) if (m.from.includes(up(now[i]))) sh.deleteRow(i + 2);
+      }
+      P.setProperty('MERGED_' + m.id, now_());
+    });
+  });
+}
 /** 로더(자동 최신 버전)로 돌고 있는지: 로더가 L_html 함수를 갖고 있음 */
 function loaderMode_() { return typeof L_html === 'function'; }
 /** 화면이 부르는 모든 기능의 입구 (로더로 돌 때도, 코드를 직접 붙였을 때도 똑같이 동작) */
@@ -141,6 +172,7 @@ function rpc(fn, args) {
   return f.apply(null, args || []);
 }
 function doGet() {
+  try { mergeSkus_(); } catch (e) { /* 합치기 실패해도 화면은 열림 (다음에 다시 시도) */ }
   return (loaderMode_() ? HtmlService.createHtmlOutput(L_html()) : HtmlService.createHtmlOutputFromFile('Index'))
     .setTitle('올투게더나우 재고관리')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
