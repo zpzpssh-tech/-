@@ -2506,6 +2506,7 @@ function impPlan() {
   for (const r of m.rows) {
     const code = cell(r, 'code').toUpperCase(); if (!code) continue;
     if (!S.skus.has(code)) { unknown.add(code); continue; }
+    if (String(cell(r, 'qty')).trim() === '') continue;   // 실사 수량 칸이 비어 있으면 안 센 것 → 재고 그대로 둠 (0은 0으로 적어야 0이 됨)
     const loc = locOf(cell(r, 'loc'), m.loc), k = code + '|' + loc;
     agg.set(k, (agg.get(k) || 0) + toNum(cell(r, 'qty')));
   }
