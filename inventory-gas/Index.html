@@ -2682,6 +2682,7 @@ function applyData(d, fromCache) {
   }
   S.me = d.me || ''; S.appUrl = d.appUrl || '';
   if (d.appVersion) $('app-ver').textContent = '버전 ' + d.appVersion;
+  if (d.appVersion && !fromCache && !S.pageVer) S.pageVer = d.appVersion;   // 지금 화면(코드)의 버전 — 새 버전 자동 적용에 씀
   if (!fromCache && !S.updChecked) { S.updChecked = true; setTimeout(() => checkUpd(false), 1500); }
   if (d.sheetUrl) { $('sheet-link').href = d.sheetUrl; $('sheet-link').hidden = false; }
   S.loaded = true; S.ver++;
@@ -3537,7 +3538,6 @@ load();
 setTimeout(() => { loadLib('xlsx').catch(() => {}); loadLib('h2c').catch(() => {}); loadLib('jspdf').catch(() => {}); }, 2500);
 // 다른 사람이 기록한 내용: 화면을 보고 있을 때 2분마다 조용히 다시 불러옴
 setInterval(() => { if (document.visibilityState === 'visible' && ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden && !(S.savingN > 0)) load(true); }, 120000);
-})();
 
 /* ---------- SKU 검색해서 고르기 ----------
  * SKU 고르는 칸(엑셀 입출고의 SKU 칸, 매칭 규칙의 SKU 칸)을 누르면 검색창이 달린 목록이 뜹니다.
@@ -3595,6 +3595,44 @@ document.addEventListener('keydown', (e) => {   // 키보드로 칸에 와서 En
 }, true);
 window.addEventListener('resize', closeSkuPop);
 document.addEventListener('scroll', (e) => { if (skuPop && Date.now() - skuPop.at > 400 && !skuPop.el.contains(e.target) && (e.target === document || (e.target.contains && e.target.contains(skuPop.sel)))) closeSkuPop(); }, true);
+
+/* ---------- 새 버전 자동 적용 (새로고침 안 해도 됨) ----------
+ * 2분마다(그리고 창으로 돌아올 때) 새 버전이 나왔는지 확인합니다.
+ * 새 버전이 서버에 준비되면, 하던 일이 없을 때(창·저장 중·입력 중·엑셀 반영 중이 아닐 때) 알아서 새 버전으로 다시 엽니다. */
+function idleForUpdate() {
+  const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && document.activeElement.id !== 'gsearch';
+  return ready() && $('modal').hidden && $('skumodal').hidden && $('pmodal').hidden && $('regmodal').hidden && $('delmodal').hidden &&
+    !(S.savingN > 0) && !S.up && !S.memoDirty && !typing && !(typeof skuPop !== 'undefined' && skuPop);
+}
+function goNewVersion() {
+  if (!S.newVer) return;
+  if (!idleForUpdate()) { clearTimeout(S.newVerT); S.newVerT = setTimeout(goNewVersion, 15000); return; }
+  try { localStorage.setItem('inv-just-upd', S.newVer); } catch (e) { /* 무시 */ }
+  const url = (S.appUrl || '') + (S.appUrl ? '?view=' + encodeURIComponent(S.view || 'home') : '');
+  let moved = false;
+  try { if (url) { window.top.location.replace(url); moved = true; } } catch (e) { moved = false; }
+  if (!moved) { try { location.reload(); moved = true; } catch (e) { /* 아래 안내로 */ } }
+  setTimeout(() => {   // 브라우저가 막아서 그대로면 한 번 누르는 안내
+    const b = $('upd-bar'); b.hidden = false;
+    b.innerHTML = `<span><b>새 버전(${esc(S.newVer)})이 준비됐어요.</b></span><span class="grow"></span>` + (S.appUrl ? `<a class="primary sm" style="padding:6px 12px;border-radius:8px;text-decoration:none" href="${esc(url)}" target="_top">눌러서 바로 적용</a>` : '<span class="small">창을 한 번 새로고침해 주세요</span>');
+  }, 4000);
+}
+async function watchVersion() {
+  if (document.visibilityState !== 'visible' || !S.pageVer || S.newVer) return;
+  try {
+    const r = await api('latestVersion');
+    if (!r || !r.latest || r.latest === S.pageVer) return;
+    if (r.running === r.latest) { S.newVer = r.latest; goNewVersion(); }
+    else if (r.loader) setTimeout(watchVersion, 15000);   // 서버가 새 코드를 받는 중 → 잠시 뒤 다시 확인
+  } catch (e) { /* 다음 확인 때 다시 */ }
+}
+setInterval(watchVersion, 120000);
+window.__ver = { check: watchVersion, go: goNewVersion, state: () => ({ pageVer: S.pageVer, newVer: S.newVer }) };   // 시험용
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') watchVersion(); });
+setTimeout(watchVersion, 20000);
+try { const j = localStorage.getItem('inv-just-upd'); if (j) { localStorage.removeItem('inv-just-upd'); setTimeout(() => toast(`새 버전(${j})으로 바뀌었습니다`), 1500); } } catch (e) { /* 무시 */ }
+
+})();
 </script>
 </body>
 </html>

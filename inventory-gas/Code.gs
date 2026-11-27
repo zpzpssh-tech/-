@@ -57,7 +57,7 @@ const MOVE_CODE = rev_(MOVE_LABEL), LOC_CODE = rev_(LOC_LABEL);
  * 프로그램 안의 [업데이트] 버튼을 누르면 GitHub에 올라간 최신 코드를 받아 이 프로젝트에 덮어쓰고 새 버전으로 배포합니다.
  * (코드를 직접 복사·붙여넣기 할 필요 없음)
  * 처음 한 번: https://script.google.com/home/usersettings 에서 'Google Apps Script API'를 '사용'으로 켜 두어야 합니다. */
-const APP_VERSION = '2026-11-27.08';
+const APP_VERSION = '2026-11-27.09';
 const UPDATE_SRC = 'https://raw.githubusercontent.com/zpzpssh-tech/-/refs/heads/claude/fervent-wozniak-wow6ha/inventory-gas/';
 function updateSrc_() { try { return PropertiesService.getScriptProperties().getProperty('UPDATE_SRC') || UPDATE_SRC; } catch (e) { return UPDATE_SRC; } }
 function fetchText_(name) {
@@ -78,6 +78,18 @@ function checkUpdate(force) {
     cache.put('latestVersion', latest, 600); cache.put('latestNotes', notes || '', 600);   // 10분만 기억 (새 버전을 빨리 알아채도록)
   }
   return { current: APP_VERSION, latest: latest, notes: notes || '', available: !!latest && latest > APP_VERSION };
+}
+/** 열려 있는 화면이 2분마다 물어봄: GitHub의 최신 버전과 지금 돌고 있는 버전.
+ * 로더로 돌 때 새 버전이 보이면 로더의 '최근에 확인함' 표시를 지워서 다음 실행부터 새 코드를 쓰게 함 */
+function latestVersion() {
+  const c = CacheService.getScriptCache();
+  let v = c.get('gh:ver');
+  if (!v) {
+    try { v = (fetchText_('Code.gs').match(/const APP_VERSION = '([^']+)'/) || [])[1] || APP_VERSION; } catch (e) { v = APP_VERSION; }
+    c.put('gh:ver', v, 60);
+  }
+  if (loaderMode_() && v !== APP_VERSION) c.remove('L:fresh');
+  return { running: APP_VERSION, latest: v, loader: loaderMode_() };
 }
 function scriptApi_(method, path, body) {
   const r = UrlFetchApp.fetch('https://script.googleapis.com/v1/projects/' + ScriptApp.getScriptId() + path, {
